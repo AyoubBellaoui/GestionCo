@@ -1,0 +1,180 @@
+@if (loading) {
+  <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:14px">Chargement…</div>
+} @else {
+
+<div class="topbar">
+  <div class="topbar-left" style="display:flex;align-items:center;gap:14px">
+    <button class="back-btn" (click)="router.navigate(['/clients'])">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    </button>
+    <div>
+      <h1>{{ isEdit ? '✏️ Modifier client' : '👥 Nouveau client' }}</h1>
+      <div class="breadcrumb"><span class="breadcrumb-link" (click)="router.navigate(['/clients'])">Clients</span><span class="breadcrumb-sep">/</span><span>{{ isEdit ? (form.nomClient || 'Modification') : 'Nouveau' }}</span></div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-ghost" (click)="router.navigate(['/clients'])">Annuler</button>
+    @if (!isEdit) {
+      <button class="btn btn-ghost" (click)="save(true)" [disabled]="saving">💾 Enregistrer + nouveau</button>
+    }
+    <button class="btn btn-primary" (click)="save(false)" [disabled]="saving">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      {{ saving ? 'Enregistrement…' : (isEdit ? 'Mettre à jour' : 'Enregistrer') }}
+    </button>
+  </div>
+</div>
+
+<div class="content">
+  <div class="form-layout-2col">
+    <div class="form-main">
+      <!-- Type client -->
+      <div class="form-card">
+        <div class="form-card-header"><h3>🏷️ Type de client</h3></div>
+        <div class="form-card-body">
+          <div class="type-selector">
+            <label [class]="'type-card ' + (form.type === 'Entreprise' ? 'active' : '')">
+              <input type="radio" name="type" value="Entreprise" [(ngModel)]="form.type" />
+              <div class="type-icon">🏢</div>
+              <div class="type-info"><div class="type-label">Entreprise</div><div class="type-desc">SARL, SA, SAS — avec ICE</div></div>
+            </label>
+            <label [class]="'type-card ' + (form.type === 'Particulier' ? 'active' : '')">
+              <input type="radio" name="type" value="Particulier" [(ngModel)]="form.type" />
+              <div class="type-icon">👤</div>
+              <div class="type-info"><div class="type-label">Particulier</div><div class="type-desc">Personne physique</div></div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Identité -->
+      <div class="form-card">
+        <div class="form-card-header"><h3>📝 Informations principales</h3></div>
+        <div class="form-card-body">
+          <div class="form-grid">
+            <div class="form-field full">
+              <label class="label">{{ isEntreprise ? 'Raison sociale' : 'Nom complet' }} *</label>
+              <input class="form-input" [(ngModel)]="form.nomClient" [placeholder]="isEntreprise ? 'Société Atlas SARL' : 'Karim El Amrani'" />
+            </div>
+            @if (isEntreprise) {
+              <div class="form-field full">
+                <label class="label">Personne de contact</label>
+                <input class="form-input" [(ngModel)]="form.personneContact" placeholder="M. Karim Atlas" />
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Identifiants fiscaux -->
+      @if (isEntreprise) {
+        <div class="form-card">
+          <div class="form-card-header"><h3>📑 Identifiants fiscaux (Maroc)</h3></div>
+          <div class="form-card-body">
+            <div class="form-grid">
+              <div class="form-field">
+                <label class="label">ICE (15 chiffres)</label>
+                <input class="form-input" [(ngModel)]="form.ice" placeholder="001234567890012" maxlength="15" style="font-family:monospace" />
+                @if (form.ice && form.ice.length > 0 && form.ice.length !== 15) {
+                  <div class="field-hint" style="color:var(--warning)">⚠️ {{ form.ice.length }}/15 chiffres</div>
+                }
+              </div>
+              <div class="form-field">
+                <label class="label">RC (Registre Commerce)</label>
+                <input class="form-input" [(ngModel)]="form.rc" placeholder="125678" />
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Contact -->
+      <div class="form-card">
+        <div class="form-card-header"><h3>📞 Contact</h3></div>
+        <div class="form-card-body">
+          <div class="form-grid">
+            <div class="form-field">
+              <label class="label">Email</label>
+              <input type="email" class="form-input" [(ngModel)]="form.email" placeholder="contact@atlas.ma" />
+            </div>
+            <div class="form-field">
+              <label class="label">Téléphone</label>
+              <input class="form-input" [(ngModel)]="form.telephone" placeholder="+212 5 22 34 56 78" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Adresse -->
+      <div class="form-card">
+        <div class="form-card-header"><h3>📍 Adresse</h3></div>
+        <div class="form-card-body">
+          <div class="form-grid">
+            <div class="form-field full">
+              <label class="label">Adresse complète</label>
+              <input class="form-input" [(ngModel)]="form.adresse" placeholder="25 Rue Hassan II" />
+            </div>
+            <div class="form-field full">
+              <label class="label">Ville</label>
+              <select class="form-select" [(ngModel)]="form.ville">
+                <option value="">— Sélectionner —</option>
+                @for (v of villes; track v) { <option [value]="v">{{ v }}</option> }
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statut -->
+      <div class="form-card">
+        <div class="form-card-header"><h3>⚡ Statut du compte</h3></div>
+        <div class="form-card-body">
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Client actif</div>
+              <div class="settings-row-desc">Décochez pour désactiver ce client</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" [checked]="form.isActive !== false" (change)="form.isActive = $any($event.target).checked" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="form-sidebar">
+      <div class="form-card sticky">
+        <div class="form-card-header"><h3>👁️ Aperçu</h3></div>
+        <div class="form-card-body" style="padding:18px">
+          <div class="preview-card">
+            <div class="preview-avatar">{{ initiales }}</div>
+            <div class="preview-name">{{ form.nomClient || 'Nom du client' }}</div>
+            <div class="preview-type">{{ isEntreprise ? '🏢 Entreprise' : '👤 Particulier' }}</div>
+          </div>
+          <div class="preview-info">
+            @if (form.email) { <div class="preview-row">📧 <span>{{ form.email }}</span></div> }
+            @if (form.telephone) { <div class="preview-row">📞 <span>{{ form.telephone }}</span></div> }
+            @if (form.ville) { <div class="preview-row">📍 <span>{{ form.ville }}</span></div> }
+            @if (form.ice && form.ice.length === 15) {
+              <div class="preview-row">📑 <span style="font-family:monospace;font-size:11px">{{ form.ice }}</span></div>
+            }
+          </div>
+          @if (!form.isActive) {
+            <div class="info-box" style="margin-top:14px;background:#fef3c7;border-color:#fcd34d;color:#78350f">⚠️ Client désactivé</div>
+          }
+          <button class="btn btn-primary" (click)="save(false)" [disabled]="saving" style="width:100%;justify-content:center;margin-top:18px;height:44px">
+            {{ saving ? 'Enregistrement…' : (isEdit ? '✓ Mettre à jour' : '✓ Enregistrer') }}
+          </button>
+          @if (isEntreprise) {
+            <div class="info-box" style="margin-top:14px;font-size:12px">
+              💡 L'ICE est <strong>obligatoire au Maroc</strong> pour les entreprises et apparaîtra sur toutes les factures.
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+}

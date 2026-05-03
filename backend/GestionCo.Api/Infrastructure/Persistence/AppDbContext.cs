@@ -1,0 +1,67 @@
+using GestionCo.Api.Application.Common.Interfaces;
+using GestionCo.Api.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+using System.Reflection;
+
+namespace GestionCo.Api.Infrastructure.Persistence;
+
+public class AppDbContext : DbContext, IAppDbContext
+{
+    private readonly ICurrentUserService? _currentUserService;
+
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    {
+    }
+
+    public AppDbContext(
+        DbContextOptions<AppDbContext> options,
+        ICurrentUserService currentUserService) : base(options)
+    {
+        _currentUserService = currentUserService;
+    }
+
+    public DbSet<Utilisateur> Utilisateurs => Set<Utilisateur>();
+    public DbSet<Client> Clients => Set<Client>();
+    public DbSet<Categorie> Categories => Set<Categorie>();
+    public DbSet<Fournisseur> Fournisseurs => Set<Fournisseur>();
+    public DbSet<Produit> Produits => Set<Produit>();
+    public DbSet<Achat> Achats => Set<Achat>();
+    public DbSet<LigneAchat> LignesAchat => Set<LigneAchat>();
+    public DbSet<Vente> Ventes => Set<Vente>();
+    public DbSet<LigneVente> LignesVente => Set<LigneVente>();
+    public DbSet<Paiement> Paiements => Set<Paiement>();
+    public DbSet<Facture> Factures => Set<Facture>();
+    public DbSet<MouvementStock> MouvementsStock => Set<MouvementStock>();
+    public DbSet<Log> Logs => Set<Log>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        // Appliquer toutes les configurations IEntityTypeConfiguration du projet
+        modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+        base.OnModelCreating(modelBuilder);
+    }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        // Audit automatique pour les entités AuditableEntity
+        var userId = _currentUserService?.UserId;
+        var now = DateTime.UtcNow;
+
+        foreach (var entry in ChangeTracker.Entries<Domain.Common.AuditableEntity>())
+        {
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                    entry.Entity.CreatedAt = now;
+                    entry.Entity.CreatedBy = userId;
+                    break;
+                case EntityState.Modified:
+                    entry.Entity.UpdatedAt = now;
+                    entry.Entity.UpdatedBy = userId;
+                    break;
+            }
+        }
+
+        return await base.SaveChangesAsync(cancellationToken);
+    }
+}

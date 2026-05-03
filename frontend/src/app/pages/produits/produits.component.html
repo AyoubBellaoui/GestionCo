@@ -1,0 +1,73 @@
+<app-topbar title="Produits" [subtitle]="produits.length + ' produit' + (produits.length > 1 ? 's' : '') + ' — Catalogue et stock'" icon="📦">
+  <button class="btn btn-primary" (click)="router.navigate(['/produits/nouveau'])">+ Nouveau produit</button>
+</app-topbar>
+
+<div class="content">
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-icon blue">📦</div><div><div class="stat-label">Total produits</div><div class="stat-value">{{ formatNum(stats.total) }}</div><div class="stat-trend neutral">Catalogue</div></div></div>
+    <div class="stat-card"><div class="stat-icon green">💵</div><div><div class="stat-label">Valeur stock</div><div class="stat-value">{{ formatNum(stats.valeur) }} <small>MAD</small></div><div class="stat-trend neutral">Prix HT</div></div></div>
+    <div class="stat-card"><div class="stat-icon orange">⚠️</div><div><div class="stat-label">Stock faible</div><div class="stat-value">{{ formatNum(stats.faible) }}</div><div class="stat-trend down">À réapprovisionner</div></div></div>
+    <div class="stat-card"><div class="stat-icon red">🚫</div><div><div class="stat-label">Ruptures</div><div class="stat-value">{{ formatNum(stats.rupture) }}</div><div class="stat-trend down">Indisponibles</div></div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrapper">
+      <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+      <input class="search-input" placeholder="Rechercher par référence, nom…" [(ngModel)]="search" />
+    </div>
+    <select class="filter-select" [(ngModel)]="categorieFilter">
+      <option value="">Toutes catégories</option>
+      @for (c of categories; track c) { <option [value]="c">{{ c }}</option> }
+    </select>
+    <select class="filter-select" [(ngModel)]="stockFilter">
+      <option value="">Tous stocks</option>
+      <option value="ok">Disponible</option>
+      <option value="low">Stock faible</option>
+      <option value="out">Rupture</option>
+    </select>
+    <div class="toolbar-divider"></div>
+    <button class="btn btn-ghost btn-sm" (click)="resetFilters()">🔄 Réinitialiser</button>
+  </div>
+
+  <div class="table-card">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr><th>Référence</th><th>Nom</th><th>Catégorie</th><th style="text-align:right">Prix HT</th><th style="text-align:right">Prix TTC</th><th style="text-align:right">Stock</th><th>État</th><th style="text-align:right">Actions</th></tr>
+        </thead>
+        <tbody>
+          @if (loading) { <tr><td colspan="8" class="loading-row">Chargement…</td></tr> }
+          @if (!loading && filtered.length === 0) {
+            <tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">Aucun produit</div><div class="empty-sub">Ajoutez votre premier produit au catalogue</div></div></td></tr>
+          }
+          @for (p of filtered; track p.id) {
+            @let ss = stockStatus(p);
+            <tr>
+              <td><span class="mono">{{ p.reference }}</span></td>
+              <td>
+                <div style="font-weight:600">{{ p.nom }}</div>
+                @if (p.description) { <div style="font-size:11.5px;color:var(--text-muted)">{{ p.description }}</div> }
+              </td>
+              <td><span class="items-badge">{{ p.categorieNom || '—' }}</span></td>
+              <td style="text-align:right"><div class="price-val">{{ formatNum(p.prixHT) }} <small>MAD</small></div></td>
+              <td style="text-align:right"><div class="price-val" style="color:var(--primary)">{{ formatNum(p.prixTTC) }} <small>MAD</small></div></td>
+              <td style="text-align:right">
+                <div style="font-weight:700">{{ formatNum(p.quantiteStock) }} <small style="font-size:11px;color:var(--text-muted);font-weight:400">unités</small></div>
+                <div style="font-size:11px;color:var(--text-muted)">seuil : {{ p.seuilAlerte }}</div>
+              </td>
+              <td><span [class]="'status-badge ' + ss.cls">{{ ss.label }}</span></td>
+              <td class="actions-cell">
+                <button class="btn-icon primary" title="Modifier" (click)="router.navigate(['/produits', p.id, 'modifier'])">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="btn-icon danger" title="Supprimer" (click)="handleDelete(p.id)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

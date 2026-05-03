@@ -1,0 +1,178 @@
+@if (loading) {
+  <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:14px">Chargement…</div>
+} @else {
+
+<div class="topbar">
+  <div class="topbar-left" style="display:flex;align-items:center;gap:14px">
+    <button class="back-btn" (click)="router.navigate(['/produits'])">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    </button>
+    <div>
+      <h1>{{ isEdit ? 'Modifier : ' + (form.nom || '') : 'Nouveau produit' }}</h1>
+      <div class="breadcrumb"><span class="breadcrumb-link" (click)="router.navigate(['/produits'])">Produits</span><span class="breadcrumb-sep">/</span><span>{{ isEdit ? 'Modifier' : 'Nouveau' }}</span></div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-ghost" (click)="router.navigate(['/produits'])">Annuler</button>
+    @if (!isEdit) {
+      <button class="btn btn-ghost" (click)="save(true)" [disabled]="saving">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Enregistrer et créer un autre
+      </button>
+    }
+    <button class="btn btn-primary" (click)="save(false)" [disabled]="saving">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      {{ saving ? 'Enregistrement…' : 'Enregistrer' }}
+    </button>
+  </div>
+</div>
+
+<div class="content form-page-content">
+  <div class="form-layout">
+    <div class="form-card">
+
+      <!-- Infos générales -->
+      <div class="form-section">
+        <div class="form-section-title">📝 Informations générales</div>
+        <div class="form-section-sub">Les informations de base qui identifient ce produit</div>
+        <div class="form-grid-2">
+          <div class="form-group full-col">
+            <label class="form-label">Nom du produit <span class="required">*</span></label>
+            <input class="form-input" [value]="form.nom || ''" (input)="setField('nom', $any($event.target).value)" placeholder='Ex : Ordinateur portable ProMax 15"' />
+          </div>
+          @if (isEdit) {
+            <div class="form-group">
+              <label class="form-label">Référence <span class="form-hint-inline">(auto)</span></label>
+              <input class="form-input computed-field" [value]="form.reference || ''" readonly />
+              <div class="form-help">Non modifiable</div>
+            </div>
+          }
+          <div class="form-group full-col">
+            <label class="form-label">Description</label>
+            <textarea class="form-textarea" [value]="form.description || ''" (input)="setField('description', $any($event.target).value)" placeholder="Décrivez le produit…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Classification -->
+      <div class="form-section">
+        <div class="form-section-title">🏷️ Classification</div>
+        <div class="form-section-sub">Catégorie et fournisseur principal</div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Catégorie</label>
+            <select class="form-select" [value]="form.categorieId || ''" (change)="onCategorieChange($any($event.target).value)">
+              <option value="">— Sélectionner une catégorie —</option>
+              @for (c of categories; track c.id) { <option [value]="c.id">{{ c.icone || '📂' }} {{ c.nom }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fournisseur principal</label>
+            <select class="form-select" [value]="form.fournisseurId || ''" (change)="onFournisseurChange($any($event.target).value)">
+              <option value="">— Sélectionner un fournisseur —</option>
+              @for (f of fournisseurs; track f.id) { <option [value]="f.id">{{ f.icone || '🏢' }} {{ f.nom }}</option> }
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarification -->
+      <div class="form-section">
+        <div class="form-section-title">💰 Tarification</div>
+        <div class="form-section-sub">Prix et taxe sur la valeur ajoutée</div>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label class="form-label">Prix HT <span class="required">*</span></label>
+            <div class="input-group">
+              <input type="number" step="0.01" min="0" class="form-input with-suffix" [value]="form.prixHT ?? 0" (input)="setField('prixHT', +$any($event.target).value)" />
+              <span class="input-suffix">MAD</span>
+            </div>
+            <div class="form-help">Doit être &gt; 0</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">TVA <span class="required">*</span></label>
+            <div class="radio-group">
+              @for (t of tvaOptions; track t) {
+                <label [class]="'radio-option ' + (form.tva === t ? 'active' : '')">
+                  <input type="radio" name="tva" [value]="t" [checked]="form.tva === t" (change)="setField('tva', t)" />
+                  {{ t }}%
+                </label>
+              }
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Prix TTC <span class="form-hint-inline">(calculé)</span></label>
+            <div class="input-group">
+              <input class="form-input with-suffix computed-field" [value]="formatNum(prixTTC)" readonly />
+              <span class="input-suffix">MAD</span>
+            </div>
+            <div class="form-help success">= HT × (1 + TVA / 100)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stock -->
+      <div class="form-section last">
+        <div class="form-section-title">📦 Stock</div>
+        <div class="form-section-sub">Quantité disponible et seuil d'alerte</div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Quantité {{ isEdit ? 'en stock' : 'initiale' }} <span class="required">*</span></label>
+            <div class="input-group">
+              <input type="number" min="0" class="form-input with-suffix" [value]="form.quantiteStock ?? 0" (input)="setField('quantiteStock', +$any($event.target).value)" />
+              <span class="input-suffix">unités</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Seuil d'alerte <span class="required">*</span></label>
+            <div class="input-group">
+              <input type="number" min="0" class="form-input with-suffix" [value]="form.seuilAlerte ?? 5" (input)="setField('seuilAlerte', +$any($event.target).value)" />
+              <span class="input-suffix">unités</span>
+            </div>
+            <div class="form-help">Alerte si stock ≤ ce seuil</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="form-sidebar">
+      <div class="form-card">
+        <div class="form-section-title">⚙️ Statut</div>
+        <div class="form-section-sub" style="margin-bottom:14px">Visibilité dans le catalogue</div>
+        <div class="status-toggle-row">
+          <div class="status-info">
+            <span [class]="'status-dot-lg ' + (form.isActive ? 'active' : 'inactive')"></span>
+            <div>
+              <div class="status-toggle-label">{{ form.isActive ? 'Produit actif' : 'Produit inactif' }}</div>
+              <div class="status-toggle-hint">{{ form.isActive ? 'Visible dans le catalogue' : 'Masqué du catalogue' }}</div>
+            </div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" [checked]="!!form.isActive" (change)="setField('isActive', $any($event.target).checked)" />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <div class="form-section-title">👁 Aperçu en temps réel</div>
+        <div class="form-section-sub">Valeurs saisies dans le formulaire</div>
+        <div class="preview-rows">
+          <div class="preview-row"><span class="preview-label">Nom</span><span [class]="'preview-value' + (!form.nom ? ' empty' : '')">{{ form.nom || '—' }}</span></div>
+          @if (isEdit) {
+            <div class="preview-row"><span class="preview-label">Référence</span><span class="preview-value mono">{{ form.reference || '—' }}</span></div>
+          }
+          <div class="preview-row"><span class="preview-label">Catégorie</span><span [class]="'preview-value' + (!form.categorieNom ? ' empty' : '')">{{ form.categorieNom || '—' }}</span></div>
+          <div class="preview-row"><span class="preview-label">Prix HT</span><span [class]="'preview-value' + (!form.prixHT ? ' empty' : '')">{{ form.prixHT ? formatNum(form.prixHT) + ' MAD' : '—' }}</span></div>
+          <div class="preview-row"><span class="preview-label">TVA</span><span class="preview-value">{{ form.tva ?? 20 }}%</span></div>
+          <div class="preview-row"><span class="preview-label">Prix TTC</span><span class="preview-value price">{{ formatNum(prixTTC) }} MAD</span></div>
+          <div class="preview-row"><span class="preview-label">Stock</span><span [class]="'preview-value' + (!form.quantiteStock ? ' empty' : '')">{{ form.quantiteStock != null ? form.quantiteStock + ' unités' : '—' }}</span></div>
+          <div class="preview-row"><span class="preview-label">Seuil alerte</span><span class="preview-value">{{ form.seuilAlerte ?? 5 }} unités</span></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+}

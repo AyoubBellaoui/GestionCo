@@ -1,0 +1,12 @@
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>
+      @if (icon) { <span style="margin-right:8px">{{ icon }}</span> }
+      {{ title }}
+    </h1>
+    @if (subtitle) { <p>{{ subtitle }}</p> }
+  </div>
+  <div class="topbar-right">
+    <ng-content></ng-content>
+  </div>
+</div>

@@ -1,0 +1,141 @@
+@if (loading) {
+  <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:14px">Chargement…</div>
+} @else {
+
+<div class="topbar">
+  <div class="topbar-left" style="display:flex;align-items:center;gap:14px">
+    <button class="back-btn" (click)="router.navigate(['/fournisseurs'])">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    </button>
+    <div>
+      <h1>{{ isEdit ? '✏️ Modifier fournisseur' : '🚚 Nouveau fournisseur' }}</h1>
+      <div class="breadcrumb"><span class="breadcrumb-link" (click)="router.navigate(['/fournisseurs'])">Fournisseurs</span><span class="breadcrumb-sep">/</span><span>{{ isEdit ? (form.nom || 'Modification') : 'Nouveau' }}</span></div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-ghost" (click)="router.navigate(['/fournisseurs'])">Annuler</button>
+    @if (!isEdit) {
+      <button class="btn btn-ghost" (click)="save(true)" [disabled]="saving">💾 Enregistrer + nouveau</button>
+    }
+    <button class="btn btn-primary" (click)="save(false)" [disabled]="saving">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      {{ saving ? 'Enregistrement…' : (isEdit ? 'Mettre à jour' : 'Enregistrer') }}
+    </button>
+  </div>
+</div>
+
+<div class="content">
+  <div class="form-layout-2col">
+    <div class="form-main">
+      <!-- Icône + Nom -->
+      <div class="form-card">
+        <div class="form-card-header"><h3>📝 Informations principales</h3></div>
+        <div class="form-card-body">
+          <div class="form-grid">
+            <div class="form-field full">
+              <label class="label">Choisir une icône</label>
+              <div class="icon-picker">
+                @for (ic of icones; track ic) {
+                  <button type="button" [class]="'icon-option ' + (form.icone === ic ? 'active' : '')" (click)="form.icone = ic">{{ ic }}</button>
+                }
+              </div>
+            </div>
+            <div class="form-field full">
+              <label class="label">Nom / Raison sociale *</label>
+              <input class="form-input" [(ngModel)]="form.nom" placeholder="TechImport Maroc SARL" />
+            </div>
+            <div class="form-field full">
+              <label class="label">Personne de contact</label>
+              <input class="form-input" [(ngModel)]="form.personneContact" placeholder="M. Karim Atlas" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Coordonnées -->
+      <div class="form-card">
+        <div class="form-card-header"><h3>📞 Coordonnées</h3></div>
+        <div class="form-card-body">
+          <div class="form-grid">
+            <div class="form-field">
+              <label class="label">Email</label>
+              <input type="email" class="form-input" [(ngModel)]="form.email" placeholder="contact@techimport.ma" />
+            </div>
+            <div class="form-field">
+              <label class="label">Téléphone</label>
+              <input class="form-input" [(ngModel)]="form.telephone" placeholder="+212 5 22 30 40 50" />
+            </div>
+            <div class="form-field full">
+              <label class="label">Site web</label>
+              <input class="form-input" [(ngModel)]="form.siteWeb" placeholder="https://www.techimport.ma" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Adresse -->
+      <div class="form-card">
+        <div class="form-card-header"><h3>📍 Adresse</h3></div>
+        <div class="form-card-body">
+          <div class="form-field full">
+            <label class="label">Adresse complète</label>
+            <input class="form-input" [(ngModel)]="form.adresse" placeholder="25 Zone Industrielle Sidi Maarouf, Casablanca" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Statut -->
+      <div class="form-card">
+        <div class="form-card-header"><h3>⚡ Statut</h3></div>
+        <div class="form-card-body">
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Fournisseur actif</div>
+              <div class="settings-row-desc">Décochez pour désactiver ce fournisseur</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" [checked]="form.isActive !== false" (change)="form.isActive = $any($event.target).checked" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="form-sidebar">
+      <div class="form-card sticky">
+        <div class="form-card-header"><h3>👁️ Aperçu</h3></div>
+        <div class="form-card-body" style="padding:18px">
+          <div class="preview-card">
+            <div class="preview-icon-big">{{ form.icone || '🏢' }}</div>
+            <div class="preview-name">{{ form.nom || 'Nom du fournisseur' }}</div>
+            @if (form.personneContact) { <div class="preview-type">{{ form.personneContact }}</div> }
+          </div>
+          <div class="preview-info">
+            @if (form.email) { <div class="preview-row">📧 <span>{{ form.email }}</span></div> }
+            @if (form.telephone) { <div class="preview-row">📞 <span>{{ form.telephone }}</span></div> }
+            @if (form.adresse) { <div class="preview-row">📍 <span>{{ form.adresse }}</span></div> }
+            @if (form.siteWeb) { <div class="preview-row">🌐 <span>{{ form.siteWeb }}</span></div> }
+          </div>
+          @if (isEdit && (form.nombreProduits || form.nombreAchats)) {
+            <div style="margin-top:14px;padding:12px;background:var(--surface2);border-radius:8px">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;font-weight:600">STATISTIQUES</div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Produits</span><strong>{{ form.nombreProduits || 0 }}</strong></div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Achats</span><strong>{{ form.nombreAchats || 0 }}</strong></div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Total</span><strong>{{ formatNum(form.montantTotalAchats || 0) }} MAD</strong></div>
+            </div>
+          }
+          @if (!form.isActive) {
+            <div class="info-box" style="margin-top:14px;background:#fef3c7;border-color:#fcd34d;color:#78350f">⚠️ Fournisseur désactivé</div>
+          }
+          <button class="btn btn-primary" (click)="save(false)" [disabled]="saving" style="width:100%;justify-content:center;margin-top:18px;height:44px">
+            {{ saving ? 'Enregistrement…' : (isEdit ? '✓ Mettre à jour' : '✓ Enregistrer') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+}

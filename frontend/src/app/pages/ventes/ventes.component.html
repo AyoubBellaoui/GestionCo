@@ -1,0 +1,149 @@
+<app-topbar title="Ventes" [subtitle]="ventes.length + ' vente' + (ventes.length > 1 ? 's' : '') + ' — Gérez vos ventes et paiements clients'" icon="🛒">
+  <button class="btn btn-primary" (click)="router.navigate(['/ventes/nouvelle'])">+ Nouvelle vente</button>
+</app-topbar>
+
+<div class="content">
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-icon blue">💰</div><div><div class="stat-label">CA du mois</div><div class="stat-value">{{ formatNum(stats.ca) }} <small>MAD</small></div><div class="stat-trend neutral">Ce mois</div></div></div>
+    <div class="stat-card"><div class="stat-icon green">🧾</div><div><div class="stat-label">Ventes ce mois</div><div class="stat-value">{{ formatNum(stats.count) }}</div><div class="stat-trend neutral">Transactions</div></div></div>
+    <div class="stat-card"><div class="stat-icon orange">🎯</div><div><div class="stat-label">Panier moyen</div><div class="stat-value">{{ formatNum(Math.round(stats.panier)) }} <small>MAD</small></div><div class="stat-trend neutral">Moyenne</div></div></div>
+    <div class="stat-card"><div class="stat-icon red">⏳</div><div><div class="stat-label">Impayés</div><div class="stat-value">{{ formatNum(stats.impayes) }} <small>MAD</small></div><div class="stat-trend down">{{ stats.nbImpayes }} facture{{ stats.nbImpayes > 1 ? 's' : '' }}</div></div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrapper">
+      <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+      <input class="search-input" placeholder="Rechercher par n° vente, client..." [(ngModel)]="search" (ngModelChange)="page=1" />
+    </div>
+    <div class="date-input-wrapper">
+      <input type="date" class="form-input" style="width:200px" [(ngModel)]="selectedDate" (ngModelChange)="page=1" />
+      @if (selectedDate && venteDates.includes(selectedDate)) {
+        <span class="date-indicator has-vente">●</span>
+      } @else if (selectedDate && !venteDates.includes(selectedDate)) {
+        <span class="date-indicator no-vente">○</span>
+      }
+    </div>
+        <select class="filter-select" [(ngModel)]="statusFilter" (ngModelChange)="page=1">
+      <option value="">Tous statuts</option>
+      <option value="Paye">Payée</option>
+      <option value="Partiel">Partiel</option>
+      <option value="EnAttente">En attente</option>
+      <option value="Annule">Annulée</option>
+    </select>
+    <select class="filter-select" [(ngModel)]="clientFilter" (ngModelChange)="page=1">
+      <option value="">Tous clients</option>
+      @for (c of clients; track c.id) { <option [value]="c.id">{{ c.nomClient }}</option> }
+    </select>
+    <div class="toolbar-divider"></div>
+    <button class="btn btn-ghost btn-sm" (click)="resetFilters()">🔄 Réinitialiser</button>
+  </div>
+
+  <div class="table-card">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>N° Vente</th><th>Client</th><th>Date</th><th>Articles</th><th style="text-align:right">Montant</th><th>Paiement</th><th>Statut</th><th style="text-align:right">Actions</th></tr></thead>
+        <tbody>
+          @if (loading) { <tr><td colspan="8" class="loading-row">Chargement…</td></tr> }
+          @if (!loading && paged.length === 0) {
+            <tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🛒</div><div class="empty-title">Aucune vente trouvée</div><div class="empty-sub">Ajustez vos filtres ou créez une nouvelle vente</div></div></td></tr>
+          }
+          @for (v of paged; track v.id) {
+            @let d = formatDate(v.dateVente);
+            @let pay = getPayStatus(v.montantPaye, v.montantTotal);
+            @let st = venteStatus(v);
+            <tr>
+              <td><span class="mono">{{ v.reference }}</span></td>
+              <td>
+                <div class="client-cell">
+                  <div [class]="'client-avatar ' + getAvatarClass(v.nomClient || '')">{{ v.clientInitiales || getInitials(v.nomClient || '') }}</div>
+                  <div style="min-width:0">
+                    <div class="client-name">{{ v.nomClient }}</div>
+                    <div class="client-sub">{{ v.clientICE ? 'ICE: ' + v.clientICE : 'Client particulier' }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="date-cell"><div class="date-main">{{ d.main }}</div><div class="date-sub">{{ d.time }}</div></td>
+              <td><span class="items-badge">📦 {{ v.nombreArticles }} article{{ v.nombreArticles > 1 ? 's' : '' }}</span></td>
+              <td style="text-align:right"><div class="price-val">{{ formatNum(v.montantTotal) }} <small>MAD</small></div></td>
+              <td>
+                <div class="payment-wrap">
+                  <div class="payment-val"><strong>{{ formatNum(v.montantPaye) }}</strong> / {{ formatNum(v.montantTotal) }} MAD</div>
+                  <div class="payment-bar"><div [class]="'payment-bar-fill ' + pay.cls" [style.width]="pay.pct + '%'"></div></div>
+                </div>
+              </td>
+              <td><span [class]="'status-badge ' + st.cls">{{ st.label }}</span></td>
+              <td class="actions-cell">
+                <button class="btn-icon primary" title="Voir le détail" (click)="openDetail(v)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <button class="btn-icon danger" title="Annuler" (click)="handleCancel(v.id)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <div class="pagination-info">Affichage <strong>{{ total === 0 ? 0 : (page-1)*pageSize+1 }}–{{ Math.min(page*pageSize, total) }}</strong> sur <strong>{{ total }}</strong></div>
+      <div class="pagination-controls">
+        <select class="page-size" [(ngModel)]="pageSize" (ngModelChange)="page=1">
+          <option [value]="10">10 / page</option><option [value]="25">25 / page</option><option [value]="50">50 / page</option>
+        </select>
+        <button class="page-btn" [disabled]="page===1" (click)="page=page-1">←</button>
+        @for (p of buildPageList(); track $index) {
+          @if (isPageNum(p)) { <button [class]="'page-btn' + (page===p ? ' active' : '')" (click)="page=p">{{ p }}</button> }
+          @else { <button class="page-btn" disabled>…</button> }
+        }
+        <button class="page-btn" [disabled]="page===pageCount" (click)="page=page+1">→</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+@if (viewVente) {
+  <app-modal [open]="modalOpen" [title]="'Vente ' + viewVente.reference" (closed)="modalOpen=false; viewVente=null" [large]="true">
+    <div body>
+      @let d = formatDate(viewVente.dateVente);
+      @let pay = getPayStatus(viewVente.montantPaye, viewVente.montantTotal);
+      @let st = venteStatus(viewVente);
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+        <div style="padding:12px;background:var(--surface2);border-radius:8px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Client</div><div style="font-size:13.5px;font-weight:600">{{ viewVente.nomClient || '—' }}</div></div>
+        <div style="padding:12px;background:var(--surface2);border-radius:8px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Date</div><div style="font-size:13.5px;font-weight:600">{{ d.main }} {{ d.time }}</div></div>
+        <div style="padding:12px;background:var(--surface2);border-radius:8px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Statut</div><div><span [class]="'status-badge ' + st.cls">{{ st.label }}</span></div></div>
+      </div>
+      <table class="data-table" style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
+        <thead><tr><th>Produit</th><th style="text-align:right">Qté</th><th style="text-align:right">Prix unit.</th><th style="text-align:right">TVA</th><th style="text-align:right">Total</th></tr></thead>
+        <tbody>
+          @if (viewVente.lignes.length === 0) { <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px">Aucune ligne</td></tr> }
+          @for (l of viewVente.lignes; track $index) {
+            <tr>
+              <td><div style="font-weight:600">{{ l.nomProduit }}</div><div style="font-size:11.5px;color:var(--text-muted)">{{ l.referenceProduit }}</div></td>
+              <td style="text-align:right">{{ l.quantite }}</td>
+              <td style="text-align:right">{{ formatNum(l.prixUnitaire) }} MAD</td>
+              <td style="text-align:right">{{ l.tva }}%</td>
+              <td style="text-align:right;font-weight:700">{{ formatNum(l.total) }} MAD</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <div style="margin-top:14px">
+        <div class="payment-wrap" style="margin-bottom:8px">
+          <div class="payment-val"><strong>{{ formatNum(viewVente.montantPaye) }}</strong> / {{ formatNum(viewVente.montantTotal) }} MAD payés</div>
+          <div class="payment-bar"><div [class]="'payment-bar-fill ' + pay.cls" [style.width]="pay.pct + '%'"></div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;background:var(--surface2);border-radius:8px">
+          <div><div style="font-size:12px;color:var(--text-muted)">HT</div><div style="font-weight:700">{{ formatNum(viewVente.montantTotalHT) }} MAD</div></div>
+          <div><div style="font-size:12px;color:var(--text-muted)">TVA</div><div style="font-weight:700">{{ formatNum(viewVente.montantTVA) }} MAD</div></div>
+          <div><div style="font-size:12px;color:var(--text-muted)">Payé</div><div style="font-weight:700;color:var(--success)">{{ formatNum(viewVente.montantPaye) }} MAD</div></div>
+          @if (viewVente.reste > 0) {
+            <div><div style="font-size:12px;color:var(--text-muted)">Reste dû</div><div style="font-weight:700;color:#dc2626">{{ formatNum(viewVente.reste) }} MAD</div></div>
+          }
+          <div style="text-align:right"><div style="font-size:12px;color:var(--text-muted)">Total TTC</div><div style="font-size:20px;font-weight:700;color:var(--primary)">{{ formatNum(viewVente.montantTotal) }} MAD</div></div>
+        </div>
+      </div>
+    </div>
+    <div footer></div>
+  </app-modal>
+}

@@ -1,0 +1,61 @@
+<app-topbar title="Mouvements de stock" [subtitle]="mouvements.length + ' mouvement' + (mouvements.length > 1 ? 's' : '')" icon="📈">
+</app-topbar>
+
+<div class="content">
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-icon blue">📊</div><div><div class="stat-label">Total mouvements</div><div class="stat-value">{{ formatNum(stats.total) }}</div><div class="stat-trend neutral">Tous</div></div></div>
+    <div class="stat-card"><div class="stat-icon green">📥</div><div><div class="stat-label">Entrées</div><div class="stat-value">{{ formatNum(stats.entrees) }}</div><div class="stat-trend neutral">Stock entrant</div></div></div>
+    <div class="stat-card"><div class="stat-icon red">📤</div><div><div class="stat-label">Sorties</div><div class="stat-value">{{ formatNum(stats.sorties) }}</div><div class="stat-trend down">Stock sortant</div></div></div>
+    <div class="stat-card"><div class="stat-icon orange">⚖️</div><div><div class="stat-label">Ajustements</div><div class="stat-value">{{ formatNum(stats.ajustements) }}</div><div class="stat-trend neutral">Corrections</div></div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrapper">
+      <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+      <input class="search-input" placeholder="Rechercher par produit, référence..." [(ngModel)]="search" />
+    </div>
+    <select class="filter-select" [(ngModel)]="typeFilter">
+      <option value="">Tous types</option>
+      <option value="Entree">Entrée</option>
+      <option value="Sortie">Sortie</option>
+      <option value="Ajustement">Ajustement</option>
+      <option value="VenteClient">Vente</option>
+      <option value="AchatFournisseur">Achat</option>
+    </select>
+    <div class="toolbar-divider"></div>
+    <button class="btn btn-ghost btn-sm" (click)="resetFilters()">🔄 Réinitialiser</button>
+  </div>
+
+  <div class="table-card">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Produit</th><th>Type</th><th>Source</th><th style="text-align:right">Quantité</th><th style="text-align:right">Avant</th><th style="text-align:right">Après</th><th>Utilisateur</th><th>Date</th></tr></thead>
+        <tbody>
+          @if (loading) { <tr><td colspan="8" class="loading-row">Chargement…</td></tr> }
+          @if (!loading && filtered.length === 0) {
+            <tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📈</div><div class="empty-title">Aucun mouvement</div><div class="empty-sub">Les mouvements de stock apparaîtront ici</div></div></td></tr>
+          }
+          @for (m of filtered; track m.id) {
+            @let d = formatDate(m.dateMouvement);
+            @let ti = typeInfo(m.type);
+            <tr>
+              <td>
+                <div style="font-weight:600">{{ m.nomProduit }}</div>
+                <div style="font-size:11.5px;color:var(--text-muted)">{{ m.referenceProduit }}</div>
+              </td>
+              <td><span [class]="'status-badge ' + ti.cls">{{ ti.icon }} {{ ti.label }}</span></td>
+              <td><span class="items-badge">{{ m.sourceLibelle }}</span></td>
+              <td style="text-align:right;font-weight:700" [style.color]="isPositif(m.type) ? 'var(--success)' : 'var(--danger)'">
+                {{ isPositif(m.type) ? '+' : '−' }}{{ formatNum(Math.abs(m.quantite)) }}
+              </td>
+              <td style="text-align:right;color:var(--text-muted)">{{ formatNum(m.stockAvant) }}</td>
+              <td style="text-align:right;font-weight:600">{{ formatNum(m.stockApres) }}</td>
+              <td style="font-size:12.5px">{{ m.nomUtilisateur }}</td>
+              <td class="date-cell"><div class="date-main">{{ d.main }}</div><div class="date-sub">{{ d.time }}</div></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

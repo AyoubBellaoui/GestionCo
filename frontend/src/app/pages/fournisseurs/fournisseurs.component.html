@@ -1,0 +1,60 @@
+<app-topbar title="Fournisseurs" [subtitle]="fournisseurs.length + ' fournisseur' + (fournisseurs.length > 1 ? 's' : '')" icon="🚚">
+  <button class="btn btn-primary" (click)="router.navigate(['/fournisseurs/nouveau'])">+ Nouveau fournisseur</button>
+</app-topbar>
+
+<div class="content">
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-icon blue">🚚</div><div><div class="stat-label">Total fournisseurs</div><div class="stat-value">{{ formatNum(stats.total) }}</div><div class="stat-trend neutral">Annuaire</div></div></div>
+    <div class="stat-card"><div class="stat-icon green">📦</div><div><div class="stat-label">Produits référencés</div><div class="stat-value">{{ formatNum(stats.produits) }}</div><div class="stat-trend neutral">Catalogue</div></div></div>
+    <div class="stat-card"><div class="stat-icon cyan">📥</div><div><div class="stat-label">Total commandes</div><div class="stat-value">{{ formatNum(stats.commandes) }}</div><div class="stat-trend neutral">Tous temps</div></div></div>
+    <div class="stat-card"><div class="stat-icon orange">💵</div><div><div class="stat-label">Total achats</div><div class="stat-value">{{ formatNum(stats.achats) }} <small>MAD</small></div><div class="stat-trend neutral">Cumul</div></div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrapper">
+      <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+      <input class="search-input" placeholder="Rechercher par nom, email, contact..." [(ngModel)]="search" />
+    </div>
+    <div class="toolbar-divider"></div>
+    <button class="btn btn-ghost btn-sm" (click)="search=''">🔄 Réinitialiser</button>
+  </div>
+
+  <div class="table-card">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Fournisseur</th><th>Contact</th><th>Produits</th><th style="text-align:right">Commandes</th><th style="text-align:right">Total achats</th><th style="text-align:right">Actions</th></tr></thead>
+        <tbody>
+          @if (loading) { <tr><td colspan="6" class="loading-row">Chargement…</td></tr> }
+          @if (!loading && filtered.length === 0) {
+            <tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🚚</div><div class="empty-title">Aucun fournisseur</div><div class="empty-sub">Ajoutez votre premier fournisseur</div></div></td></tr>
+          }
+          @for (f of filtered; track f.id) {
+            <tr>
+              <td>
+                <div class="client-cell">
+                  <div [class]="'client-avatar ' + getAvatarClass(f.nom)" style="font-size:18px">{{ f.icone || getInitials(f.nom) }}</div>
+                  <div><div class="client-name">{{ f.nom }}</div><div class="client-sub">{{ f.personneContact || '—' }}</div></div>
+                </div>
+              </td>
+              <td>
+                @if (f.email) { <div style="font-size:12.5px">{{ f.email }}</div> }
+                @if (f.telephone) { <div style="font-size:12px;color:var(--text-muted)">{{ f.telephone }}</div> }
+              </td>
+              <td><span class="items-badge">📦 {{ f.nombreProduits }}</span></td>
+              <td style="text-align:right;font-weight:600">{{ formatNum(f.nombreAchats) }}</td>
+              <td style="text-align:right"><div class="price-val">{{ formatNum(f.montantTotalAchats) }} <small>MAD</small></div></td>
+              <td class="actions-cell">
+                <button class="btn-icon primary" (click)="router.navigate(['/fournisseurs', f.id, 'modifier'])" title="Modifier">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="btn-icon danger" (click)="handleDelete(f.id)" title="Supprimer">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

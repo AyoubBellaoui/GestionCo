@@ -1,0 +1,16 @@
+@if (open) {
+  <div class="modal-backdrop" (click)="close()">
+    <div [class]="'modal' + (large ? ' large' : '')" (click)="stopPropagation($event)">
+      <div class="modal-header">
+        <div class="modal-title">{{ title }}</div>
+        <button class="modal-close" (click)="close()">×</button>
+      </div>
+      <div class="modal-body">
+        <ng-content select="[body]"></ng-content>
+      </div>
+      <div class="modal-footer">
+        <ng-content select="[footer]"></ng-content>
+      </div>
+    </div>
+  </div>
+}

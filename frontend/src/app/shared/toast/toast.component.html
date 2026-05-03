@@ -1,0 +1,8 @@
+<div class="toast-container">
+  @for (t of toastService.toasts$ | async; track t.id) {
+    <div [class]="'toast ' + t.type">
+      <span class="toast-icon">{{ toastService.iconFor(t.type) }}</span>
+      <span>{{ t.message }}</span>
+    </div>
+  }
+</div>

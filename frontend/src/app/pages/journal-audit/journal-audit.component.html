@@ -1,0 +1,69 @@
+<app-topbar title="Journal d'audit" [subtitle]="logs.length + ' entrée' + (logs.length > 1 ? 's' : '') + ' — Historique des actions'" icon="🔎">
+</app-topbar>
+
+<div class="content">
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-icon blue">📋</div><div><div class="stat-label">Total entrées</div><div class="stat-value">{{ logs.length }}</div><div class="stat-trend neutral">Journal complet</div></div></div>
+    <div class="stat-card"><div class="stat-icon green">➕</div><div><div class="stat-label">Créations</div><div class="stat-value">{{ getCreateCount() }}</div><div class="stat-trend neutral">Enregistrements</div></div></div>
+    <div class="stat-card"><div class="stat-icon orange">✏️</div><div><div class="stat-label">Modifications</div><div class="stat-value">{{ getUpdateCount() }}</div><div class="stat-trend neutral">Mises à jour</div></div></div>
+    <div class="stat-card"><div class="stat-icon red">⚠️</div><div><div class="stat-label">Actions sensibles</div><div class="stat-value">{{ getSensibleCount() }}</div><div class="stat-trend down">À surveiller</div></div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrapper">
+      <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+      <input class="search-input" placeholder="Rechercher par utilisateur, action, entité..." [(ngModel)]="search" />
+    </div>
+    <select class="filter-select" [(ngModel)]="actionFilter">
+      <option value="">Toutes actions</option>
+      @for (a of uniqueActions; track a.value) { <option [value]="a.value">{{ a.label }}</option> }
+    </select>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-muted);cursor:pointer;white-space:nowrap">
+      <input type="checkbox" [(ngModel)]="sensibleOnly" />
+      Sensibles seulement
+    </label>
+    <div class="toolbar-divider"></div>
+    <button class="btn btn-ghost btn-sm" (click)="resetFilters()">🔄 Réinitialiser</button>
+  </div>
+
+  <div class="table-card">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Date</th><th>Utilisateur</th><th>Action</th><th>Entité</th><th>Description</th><th>IP</th></tr></thead>
+        <tbody>
+          @if (loading) { <tr><td colspan="6" class="loading-row">Chargement…</td></tr> }
+          @if (!loading && filtered.length === 0) {
+            <tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🔎</div><div class="empty-title">Aucune entrée</div><div class="empty-sub">Le journal d'audit est vide</div></div></td></tr>
+          }
+          @for (l of filtered; track l.id) {
+            @let d = formatDate(l.dateAction);
+            @let as_ = actionStyle(l.action);
+            <tr [style.background]="l.estSensible ? 'rgba(239,68,68,0.03)' : null">
+              <td class="date-cell"><div class="date-main">{{ d.main }}</div><div class="date-sub">{{ d.time }}</div></td>
+              <td>
+                <div class="client-cell">
+                  <div [class]="'client-avatar ' + getAvatarClass(l.nomUtilisateur)">{{ l.initialesUtilisateur || getInitials(l.nomUtilisateur) }}</div>
+                  <div><div class="client-name">{{ l.nomUtilisateur }}</div></div>
+                </div>
+              </td>
+              <td>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span [class]="'status-badge ' + as_.cls">{{ as_.icon }} {{ l.actionLibelle }}</span>
+                  @if (l.estSensible) { <span title="Action sensible">🔴</span> }
+                </div>
+              </td>
+              <td>
+                <div style="font-weight:600">{{ l.entite }}</div>
+                @if (l.entiteReference) { <div style="font-size:11.5px;color:var(--text-muted)">{{ l.entiteReference }}</div> }
+              </td>
+              <td style="font-size:12.5px;color:var(--text-muted);max-width:280px">
+                <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ l.description || '—' }}</div>
+              </td>
+              <td style="font-size:12px;font-family:monospace;color:var(--text-muted)">{{ l.ipAddress || '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
