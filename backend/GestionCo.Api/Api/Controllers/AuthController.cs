@@ -44,4 +44,19 @@ public class AuthController : ControllerBase
         var user = await _mediator.Send(new GetCurrentUserQuery(), ct);
         return Ok(user);
     }
+
+    [HttpPut("profile")]
+    [Authorize]
+    public async Task<ActionResult<UserDto>> UpdateProfile([FromBody] UpdateProfileRequest req, CancellationToken ct)
+    {
+        var user = await _mediator.Send(new UpdateProfileCommand(req.Prenom, req.Nom, req.Telephone), ct);
+        return Ok(user);
+    }
+}
+
+public class UpdateProfileRequest
+{
+    public string Prenom { get; set; } = string.Empty;
+    public string Nom { get; set; } = string.Empty;
+    public string? Telephone { get; set; }
 }

@@ -12,6 +12,7 @@ public interface IAppDbContext
     DbSet<Produit> Produits { get; }
     DbSet<Achat> Achats { get; }
     DbSet<LigneAchat> LignesAchat { get; }
+    DbSet<PaiementAchat> PaiementsAchat { get; }
     DbSet<Vente> Ventes { get; }
     DbSet<LigneVente> LignesVente { get; }
     DbSet<Paiement> Paiements { get; }

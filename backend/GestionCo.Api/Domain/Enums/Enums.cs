@@ -27,7 +27,16 @@ public enum MethodePaiement
 {
     Espece = 1,
     Carte = 2,
-    Virement = 3
+    Virement = 3,
+    Cheque = 4
+}
+
+public enum StatutAchat
+{
+    EnAttente = 1,
+    Partiel = 2,
+    Paye = 3,
+    Annule = 4
 }
 
 public enum StatutPaiement

@@ -27,6 +27,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<Produit> Produits => Set<Produit>();
     public DbSet<Achat> Achats => Set<Achat>();
     public DbSet<LigneAchat> LignesAchat => Set<LigneAchat>();
+    public DbSet<PaiementAchat> PaiementsAchat => Set<PaiementAchat>();
     public DbSet<Vente> Ventes => Set<Vente>();
     public DbSet<LigneVente> LignesVente => Set<LigneVente>();
     public DbSet<Paiement> Paiements => Set<Paiement>();

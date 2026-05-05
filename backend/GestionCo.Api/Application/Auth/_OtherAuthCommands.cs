@@ -90,6 +90,43 @@ public class LogoutHandler : IRequestHandler<LogoutCommand, Unit>
     }
 }
 
+// ============ UPDATE PROFILE ============
+public record UpdateProfileCommand(string Prenom, string Nom, string? Telephone) : IRequest<UserDto>;
+
+public class UpdateProfileHandler : IRequestHandler<UpdateProfileCommand, UserDto>
+{
+    private readonly IAppDbContext _db;
+    private readonly ICurrentUserService _current;
+
+    public UpdateProfileHandler(IAppDbContext db, ICurrentUserService current)
+    {
+        _db = db; _current = current;
+    }
+
+    public async Task<UserDto> Handle(UpdateProfileCommand req, CancellationToken ct)
+    {
+        if (_current.UserId == null) throw new UnauthorizedException();
+
+        var user = await _db.Utilisateurs
+            .Include(u => u.Client)
+            .FirstOrDefaultAsync(u => u.Id == _current.UserId.Value, ct)
+            ?? throw new NotFoundException("Utilisateur", _current.UserId.Value);
+
+        user.Prenom = req.Prenom.Trim();
+        user.Nom = req.Nom.Trim();
+        user.Telephone = req.Telephone?.Trim();
+        await _db.SaveChangesAsync(ct);
+
+        return new UserDto
+        {
+            Id = user.Id, Nom = user.Nom, Prenom = user.Prenom,
+            Email = user.Email, Role = user.Role, Telephone = user.Telephone,
+            ClientId = user.ClientId, NomClient = user.Client?.NomClient,
+            IsActive = user.IsActive, LastLoginAt = user.LastLoginAt
+        };
+    }
+}
+
 // ============ GET CURRENT USER ============
 public record GetCurrentUserQuery : IRequest<UserDto>;
 

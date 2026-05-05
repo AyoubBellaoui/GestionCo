@@ -38,6 +38,8 @@ export class AchatFormComponent implements OnInit {
   fournisseurId: number | '' = '';
   notes = '';
   lignes: LigneForm[] = [];
+  paiementInitial = 0;
+  methodePaiement = 'Espece';
   saving = false;
 
   newFournisseurModalOpen = false;
@@ -45,6 +47,7 @@ export class AchatFormComponent implements OnInit {
   newFournisseurForm: NewFournisseurForm = { nom: '', icone: '🏢', telephone: '', email: '', adresse: '', siteWeb: '', personneContact: '' };
 
   formatNum = formatNum;
+  Math = Math;
 
   constructor(private api: ApiService, private toast: ToastService, public router: Router) {}
 
@@ -61,6 +64,11 @@ export class AchatFormComponent implements OnInit {
   get totalGeneral(): number { return this.lignes.reduce((s, l) => s + l.quantite * l.prixUnitaire, 0); }
   get totalArticles(): number { return this.lignes.reduce((s, l) => s + (Number(l.quantite) || 0), 0); }
   get selectedFournisseur(): Fournisseur | undefined { return this.fournisseurs.find(f => f.id === this.fournisseurId); }
+  get reste(): number { return this.totalGeneral - this.paiementInitial; }
+
+  capPaiement(): void {
+    this.paiementInitial = Math.min(this.paiementInitial, this.totalGeneral);
+  }
 
   addLigne(): void {
     this.lignes = [...this.lignes, { produitId: 0, quantite: 1, prixUnitaire: 0, total: 0 }];
@@ -131,6 +139,8 @@ export class AchatFormComponent implements OnInit {
         fournisseurId: this.fournisseurId as number,
         notes: this.notes || undefined,
         lignes: this.lignes as any,
+        paiementInitial: this.paiementInitial > 0 ? this.paiementInitial : undefined,
+        methodePaiementInitial: this.paiementInitial > 0 ? this.methodePaiement : undefined,
       });
       this.toast.notify('Achat créé avec succès — Stock mis à jour', 'success');
       this.router.navigate(['/achats']);

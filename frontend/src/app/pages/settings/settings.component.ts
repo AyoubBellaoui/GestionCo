@@ -56,9 +56,8 @@ export class SettingsComponent implements OnInit {
   ngOnInit(): void {
     const u = this.auth.user;
     if (u) {
-      const parts = (u.nom || '').split(' ');
-      this.profil.prenom = u.prenom || parts[0] || '';
-      this.profil.nom = parts.slice(1).join(' ') || '';
+      this.profil.prenom = u.prenom || '';
+      this.profil.nom = u.nom || '';
       this.profil.telephone = u.telephone || '';
     }
   }
@@ -93,14 +92,22 @@ export class SettingsComponent implements OnInit {
     this.toast.notify('Paramètres sauvegardés', 'success');
   }
 
-  handleSaveProfil(): void {
+  async handleSaveProfil(): Promise<void> {
     if (!this.profil.prenom.trim() || !this.profil.nom.trim()) {
       this.toast.notify('Prénom et nom sont requis', 'warning'); return;
     }
-    const nomComplet = `${this.profil.prenom.trim()} ${this.profil.nom.trim()}`;
-    const initiales = `${this.profil.prenom.trim()[0] || ''}${this.profil.nom.trim()[0] || ''}`.toUpperCase();
-    this.auth.updateUser({ nom: nomComplet, prenom: this.profil.prenom.trim(), telephone: this.profil.telephone.trim(), initiales });
-    this.toast.notify('Profil mis à jour', 'success');
+    try {
+      const updated = await this.api.updateProfile({
+        prenom: this.profil.prenom.trim(),
+        nom: this.profil.nom.trim(),
+        telephone: this.profil.telephone.trim() || undefined,
+      });
+      const initiales = `${updated.prenom[0] || ''}${updated.nom[0] || ''}`.toUpperCase();
+      this.auth.updateUser({ prenom: updated.prenom, nom: updated.nom, telephone: updated.telephone, initiales });
+      this.toast.notify('Profil mis à jour', 'success');
+    } catch {
+      this.toast.notify('Erreur lors de la mise à jour', 'error');
+    }
   }
 
   handleChangePassword(): void {

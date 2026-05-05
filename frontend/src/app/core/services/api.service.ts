@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, firstValueFrom, map } from 'rxjs';
+import { firstValueFrom, map } from 'rxjs';
 import {
   User, LoginResponse, DashboardStats, Vente, Achat, Produit, Client,
   Fournisseur, Categorie, Paiement, MouvementStock, Facture, AuditLog,
@@ -32,6 +32,9 @@ export class ApiService {
 
   me(): Promise<User> {
     return firstValueFrom(this.http.get<User>(`${this.base}/auth/me`));
+  }
+  updateProfile(data: { prenom: string; nom: string; telephone?: string }): Promise<User> {
+    return firstValueFrom(this.http.put<User>(`${this.base}/auth/profile`, data));
   }
 
   // ── DASHBOARD ──
@@ -71,6 +74,9 @@ export class ApiService {
   }
   achatCreate(data: any): Promise<Achat> {
     return firstValueFrom(this.http.post<Achat>(`${this.base}/achats`, data));
+  }
+  achatAddPaiement(id: number, data: any): Promise<Achat> {
+    return firstValueFrom(this.http.post<Achat>(`${this.base}/achats/${id}/paiements`, data));
   }
 
   // ── PRODUITS ──

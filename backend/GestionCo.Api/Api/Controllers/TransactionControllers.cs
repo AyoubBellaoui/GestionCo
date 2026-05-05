@@ -59,6 +59,13 @@ public class AchatsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateAchatDto dto, CancellationToken ct)
         => Ok(await _mediator.Send(new CreateAchatCommand(dto), ct));
+
+    [HttpPost("{id}/paiements")]
+    public async Task<IActionResult> AddPaiement(int id, [FromBody] AddPaiementAchatDto dto, CancellationToken ct)
+    {
+        dto.AchatId = id;
+        return Ok(await _mediator.Send(new AddPaiementAchatCommand(dto), ct));
+    }
 }
 
 [ApiController]

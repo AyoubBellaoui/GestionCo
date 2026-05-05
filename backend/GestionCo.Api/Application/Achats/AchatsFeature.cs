@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GestionCo.Api.Application.Achats;
 
+// ============ DTOs ============
 public class AchatDto
 {
     public int Id { get; set; }
@@ -20,6 +21,11 @@ public class AchatDto
     public string NomUtilisateur { get; set; } = string.Empty;
     public DateTime DateAchat { get; set; }
     public decimal MontantTotal { get; set; }
+    public decimal MontantPaye { get; set; }
+    public decimal Reste { get; set; }
+    public int ProgressionPaiement { get; set; }
+    public StatutAchat Statut { get; set; }
+    public string StatutLibelle => Statut.ToString();
     public string? Notes { get; set; }
     public int NombreArticles { get; set; }
     public List<LigneAchatDto> Lignes { get; set; } = new();
@@ -42,6 +48,8 @@ public class CreateAchatDto
     public DateTime? DateAchat { get; set; }
     public string? Notes { get; set; }
     public List<CreateLigneAchatDto> Lignes { get; set; } = new();
+    public decimal? PaiementInitial { get; set; }
+    public MethodePaiement? MethodePaiementInitial { get; set; }
 }
 
 public class CreateLigneAchatDto
@@ -49,6 +57,14 @@ public class CreateLigneAchatDto
     public int ProduitId { get; set; }
     public int Quantite { get; set; }
     public decimal PrixUnitaire { get; set; }
+}
+
+public class AddPaiementAchatDto
+{
+    public int AchatId { get; set; }
+    public decimal Montant { get; set; }
+    public MethodePaiement Methode { get; set; } = MethodePaiement.Espece;
+    public string? Notes { get; set; }
 }
 
 // ============ COMMANDS ============
@@ -69,6 +85,9 @@ public class CreateAchatValidator : AbstractValidator<CreateAchatCommand>
     }
 }
 
+public record AddPaiementAchatCommand(AddPaiementAchatDto Dto) : IRequest<AchatDto>;
+
+// ============ HANDLERS ============
 public class CreateAchatHandler : IRequestHandler<CreateAchatCommand, AchatDto>
 {
     private readonly IAppDbContext _db;
@@ -118,6 +137,22 @@ public class CreateAchatHandler : IRequestHandler<CreateAchatCommand, AchatDto>
         };
         achat.MontantTotal = achat.Lignes.Sum(l => l.Quantite * l.PrixUnitaire);
 
+        // Paiement initial
+        var paiementInitial = dto.PaiementInitial ?? 0;
+        if (paiementInitial > 0)
+        {
+            paiementInitial = Math.Min(paiementInitial, achat.MontantTotal);
+            achat.MontantPaye = paiementInitial;
+            achat.Statut = paiementInitial >= achat.MontantTotal ? StatutAchat.Paye : StatutAchat.Partiel;
+            achat.PaiementsAchat.Add(new PaiementAchat
+            {
+                Montant = paiementInitial,
+                Methode = dto.MethodePaiementInitial ?? MethodePaiement.Espece,
+                Statut = StatutPaiement.Confirme,
+                DatePaiement = now
+            });
+        }
+
         _db.Achats.Add(achat);
         await _db.SaveChangesAsync(ct);
 
@@ -157,6 +192,65 @@ public class CreateAchatHandler : IRequestHandler<CreateAchatCommand, AchatDto>
         var a = await _db.Achats
             .Include(a => a.Fournisseur).Include(a => a.Utilisateur)
             .Include(a => a.Lignes).ThenInclude(l => l.Produit)
+            .Include(a => a.PaiementsAchat)
+            .FirstAsync(a => a.Id == id, ct);
+        return AchatMapper.ToDto(a);
+    }
+}
+
+public class AddPaiementAchatHandler : IRequestHandler<AddPaiementAchatCommand, AchatDto>
+{
+    private readonly IAppDbContext _db;
+    private readonly ICurrentUserService _current;
+    private readonly IAuditLogger _audit;
+
+    public AddPaiementAchatHandler(IAppDbContext db, ICurrentUserService current, IAuditLogger audit)
+    {
+        _db = db; _current = current; _audit = audit;
+    }
+
+    public async Task<AchatDto> Handle(AddPaiementAchatCommand req, CancellationToken ct)
+    {
+        var dto = req.Dto;
+        var userId = _current.UserId ?? throw new UnauthorizedException();
+
+        var achat = await _db.Achats
+            .Include(a => a.PaiementsAchat)
+            .Include(a => a.Fournisseur)
+            .FirstOrDefaultAsync(a => a.Id == dto.AchatId, ct)
+            ?? throw new NotFoundException("Achat", dto.AchatId);
+
+        var montant = Math.Min(dto.Montant, achat.Reste);
+        if (montant <= 0) throw new BusinessException("Montant invalide ou achat déjà soldé");
+
+        achat.PaiementsAchat.Add(new PaiementAchat
+        {
+            AchatId = achat.Id,
+            Montant = montant,
+            Methode = dto.Methode,
+            Statut = StatutPaiement.Confirme,
+            DatePaiement = DateTime.UtcNow,
+            Notes = dto.Notes
+        });
+
+        achat.MontantPaye += montant;
+        achat.Statut = achat.MontantPaye >= achat.MontantTotal ? StatutAchat.Paye : StatutAchat.Partiel;
+
+        await _db.SaveChangesAsync(ct);
+
+        await _audit.LogAsync(ActionLog.Update, "achats",
+            $"Paiement de {montant:N2} MAD ajouté à {achat.Reference}",
+            achat.Id, achat.Reference, ct: ct);
+
+        return await GetAchatDetails(achat.Id, ct);
+    }
+
+    private async Task<AchatDto> GetAchatDetails(int id, CancellationToken ct)
+    {
+        var a = await _db.Achats
+            .Include(a => a.Fournisseur).Include(a => a.Utilisateur)
+            .Include(a => a.Lignes).ThenInclude(l => l.Produit)
+            .Include(a => a.PaiementsAchat)
             .FirstAsync(a => a.Id == id, ct);
         return AchatMapper.ToDto(a);
     }
@@ -181,7 +275,8 @@ public class GetAchatsHandler : IRequestHandler<GetAchatsQuery, PagedList<AchatD
         var query = _db.Achats
             .Include(a => a.Fournisseur)
             .Include(a => a.Utilisateur)
-            .Include(a => a.Lignes)
+            .Include(a => a.Lignes).ThenInclude(l => l.Produit)
+            .Include(a => a.PaiementsAchat)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(q.Search))
@@ -219,6 +314,7 @@ public class GetAchatByIdHandler : IRequestHandler<GetAchatByIdQuery, AchatDto>
         var a = await _db.Achats
             .Include(a => a.Fournisseur).Include(a => a.Utilisateur)
             .Include(a => a.Lignes).ThenInclude(l => l.Produit)
+            .Include(a => a.PaiementsAchat)
             .FirstOrDefaultAsync(a => a.Id == q.Id, ct)
             ?? throw new NotFoundException("Achat", q.Id);
         return AchatMapper.ToDto(a);
@@ -235,7 +331,12 @@ public static class AchatMapper
         IconeFournisseur = a.Fournisseur?.Icone,
         UtilisateurId = a.UtilisateurId,
         NomUtilisateur = a.Utilisateur?.NomComplet ?? "",
-        DateAchat = a.DateAchat, MontantTotal = a.MontantTotal,
+        DateAchat = a.DateAchat,
+        MontantTotal = a.MontantTotal,
+        MontantPaye = a.MontantPaye,
+        Reste = a.Reste,
+        ProgressionPaiement = a.ProgressionPaiement,
+        Statut = a.Statut,
         Notes = a.Notes,
         NombreArticles = a.Lignes?.Sum(l => l.Quantite) ?? 0,
         Lignes = a.Lignes?.Select(l => new LigneAchatDto

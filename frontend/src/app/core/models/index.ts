@@ -165,6 +165,11 @@ export interface Achat {
   nomUtilisateur: string;
   dateAchat: string;
   montantTotal: number;
+  montantPaye: number;
+  reste: number;
+  progressionPaiement: number;
+  statut: string;
+  statutLibelle: string;
   notes?: string;
   nombreArticles: number;
   lignes: LigneAchat[];

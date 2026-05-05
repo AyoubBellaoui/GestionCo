@@ -78,8 +78,8 @@ Fichier : `backend/GestionCo.Api/appsettings.json`
 | Rôle | Email | Mot de passe |
 |------|-------|--------------|
 | Admin | admin@gestionco.ma | Admin123! |
-| Gestionnaire | s.fassi@gestionco.ma | Manager123! |
-| Client | direction@atlas.ma | Client123! |
+| Admin |  admin10@gestionco.ma | Admin1234  |
+
 
 ---
 
