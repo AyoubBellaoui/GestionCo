@@ -24,6 +24,7 @@ public class ClientDto
     public string? Email { get; set; }
     public string? PersonneContact { get; set; }
     public bool IsActive { get; set; }
+    public string? SourceAcquisition { get; set; }
     public string Initiales { get; set; } = "??";
     public int NombreCommandes { get; set; }
     public decimal TotalDepense { get; set; }
@@ -45,6 +46,7 @@ public class CreateClientDto
     public string? Email { get; set; }
     public string? PersonneContact { get; set; }
     public bool IsActive { get; set; } = true;
+    public string? SourceAcquisition { get; set; }
     public bool CreerCompte { get; set; } = false;
     public string? MotDePasse { get; set; }
 }
@@ -124,6 +126,7 @@ public class CreateClientHandler : IRequestHandler<CreateClientCommand, ClientDt
             Email = dto.Email?.Trim().ToLower(),
             PersonneContact = dto.PersonneContact?.Trim(),
             IsActive = dto.IsActive,
+            SourceAcquisition = dto.SourceAcquisition?.Trim(),
             UtilisateurId = user?.Id
         };
 
@@ -169,6 +172,7 @@ public class UpdateClientHandler : IRequestHandler<UpdateClientCommand, ClientDt
         client.Email = dto.Email?.Trim().ToLower();
         client.PersonneContact = dto.PersonneContact?.Trim();
         client.IsActive = dto.IsActive;
+        client.SourceAcquisition = dto.SourceAcquisition?.Trim();
 
         await _db.SaveChangesAsync(ct);
 
@@ -195,18 +199,13 @@ public class DeleteClientHandler : IRequestHandler<DeleteClientCommand, Unit>
 
         var hasVentes = await _db.Ventes.AnyAsync(v => v.ClientId == req.Id, ct);
         if (hasVentes)
-        {
-            client.IsActive = false;
-            await _db.SaveChangesAsync(ct);
-        }
-        else
-        {
-            _db.Clients.Remove(client);
-            await _db.SaveChangesAsync(ct);
-        }
+            throw new BusinessException("Ce client ne peut pas être supprimé car il possède des ventes associées. Désactivez-le à la place.");
+
+        _db.Clients.Remove(client);
+        await _db.SaveChangesAsync(ct);
 
         await _audit.LogAsync(ActionLog.Delete, "clients",
-            $"Client {(hasVentes ? "désactivé" : "supprimé")} : {client.NomClient}",
+            $"Client supprimé : {client.NomClient}",
             client.Id, estSensible: true, ct: ct);
 
         return Unit.Value;
@@ -307,7 +306,7 @@ public static class ClientMapper
         ICE = c.ICE, RC = c.RC, IF = c.IF,
         Adresse = c.Adresse, Ville = c.Ville, Telephone = c.Telephone,
         Email = c.Email, PersonneContact = c.PersonneContact,
-        IsActive = c.IsActive, Initiales = c.Initiales,
-        CreatedAt = c.CreatedAt, UtilisateurId = c.UtilisateurId
+        IsActive = c.IsActive, SourceAcquisition = c.SourceAcquisition,
+        Initiales = c.Initiales, CreatedAt = c.CreatedAt, UtilisateurId = c.UtilisateurId
     };
 }

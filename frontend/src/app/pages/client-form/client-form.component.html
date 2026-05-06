@@ -124,6 +124,22 @@
         </div>
       </div>
 
+      <!-- Source d'acquisition -->
+      <div class="form-card">
+        <div class="form-card-header"><h3>📣 Source d'acquisition</h3></div>
+        <div class="form-card-body">
+          <div class="form-grid">
+            <div class="form-field full">
+              <label class="label">Comment avez-vous connu ce client ? <span style="color:var(--text-muted);font-weight:400">(optionnel)</span></label>
+              <select class="form-select" [(ngModel)]="form.sourceAcquisition">
+                <option value="">— Non renseigné —</option>
+                @for (s of sourcesAcquisition; track s) { <option [value]="s">{{ s }}</option> }
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Statut -->
       <div class="form-card">
         <div class="form-card-header"><h3>⚡ Statut du compte</h3></div>
@@ -158,6 +174,9 @@
             @if (form.ville) { <div class="preview-row">📍 <span>{{ form.ville }}</span></div> }
             @if (form.ice && form.ice.length === 15) {
               <div class="preview-row">📑 <span style="font-family:monospace;font-size:11px">{{ form.ice }}</span></div>
+            }
+            @if (form.sourceAcquisition) {
+              <div class="preview-row">📣 <span>{{ form.sourceAcquisition }}</span></div>
             }
           </div>
           @if (!form.isActive) {

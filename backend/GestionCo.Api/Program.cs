@@ -170,6 +170,9 @@ using (var scope = app.Services.CreateScope())
         else
             logger.LogInformation("✅ Base de données 'StockVenteDb' déjà existante");
 
+        // Colonnes ajoutées après la création initiale (ALTER TABLE manuel)
+        await ApplyManualColumnsAsync(db, logger);
+
         // Seed des données de démo
         logger.LogInformation("🌱 Insertion des données de démo...");
         await SeedData.SeedAsync(db, hasher);
@@ -232,3 +235,30 @@ app.MapControllers();
 app.MapGet("/", () => Results.Redirect("/swagger"));
 
 app.Run();
+
+// Ajoute les colonnes manquantes sans migrations EF formelles
+static async Task ApplyManualColumnsAsync(AppDbContext db, ILogger logger)
+{
+    var columns = new[]
+    {
+        ("Clients", "SourceAcquisition", "NVARCHAR(100) NULL"),
+    };
+
+    foreach (var (table, column, definition) in columns)
+    {
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync($"""
+                IF NOT EXISTS (
+                    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_NAME = '{table}' AND COLUMN_NAME = '{column}'
+                )
+                ALTER TABLE [{table}] ADD [{column}] {definition}
+                """);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("Impossible d'ajouter la colonne {Column} sur {Table} : {Msg}", column, table, ex.Message);
+        }
+    }
+}

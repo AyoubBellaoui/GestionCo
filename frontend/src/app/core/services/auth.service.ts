@@ -32,10 +32,14 @@ export class AuthService {
     this.userSubject.next(user);
   }
 
-  logout(): void {
+  clearAuth(): void {
     localStorage.removeItem('gc_token');
     localStorage.removeItem('gc_user');
     this.userSubject.next(null);
+  }
+
+  logout(): void {
+    this.clearAuth();
     window.location.href = '/login';
   }
 

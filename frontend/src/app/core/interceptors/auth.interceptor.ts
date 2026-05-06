@@ -1,9 +1,12 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
   const token = localStorage.getItem('gc_token');
   const authReq = token
     ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
@@ -11,10 +14,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authReq).pipe(
     catchError(err => {
-      if (err.status === 401 && !window.location.pathname.includes('/login')) {
-        localStorage.removeItem('gc_token');
-        localStorage.removeItem('gc_user');
-        window.location.href = '/login';
+      if (err.status === 401 && !router.url.includes('/login')) {
+        auth.clearAuth();
+        router.navigate(['/login']);
       }
       return throwError(() => err);
     })

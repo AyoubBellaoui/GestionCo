@@ -23,6 +23,9 @@ public class Client : AuditableEntity
 
     public bool IsActive { get; set; } = true;
 
+    // Comment ce client a été acquis (optionnel)
+    public string? SourceAcquisition { get; set; }
+
     // Lien vers utilisateur (optionnel — si client a un accès)
     public int? UtilisateurId { get; set; }
     public Utilisateur? Utilisateur { get; set; }

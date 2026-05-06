@@ -225,6 +225,13 @@
             </div>
           </div>
         }
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Source d'acquisition <span style="color:var(--text-muted);font-weight:400;font-size:11px">(optionnel)</span></label>
+          <select class="form-select" [(ngModel)]="newClientForm.sourceAcquisition">
+            <option value="">— Non renseigné —</option>
+            @for (s of sourcesAcquisition; track s) { <option [value]="s">{{ s }}</option> }
+          </select>
+        </div>
       </div>
       <div style="display:flex;justify-content:flex-end;gap:10px;padding:14px 22px;border-top:1px solid var(--border);background:var(--surface2)">
         <button class="btn btn-ghost" (click)="newClientModalOpen=false" [disabled]="newClientSaving">Annuler</button>

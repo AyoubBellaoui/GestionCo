@@ -55,8 +55,14 @@ export class ClientsComponent implements OnInit {
 
   async handleDelete(id: number): Promise<void> {
     if (!confirm('Supprimer ce client ?')) return;
-    try { await this.api.clientDelete(id); this.toast.notify('Client supprimé', 'success'); this.load(); }
-    catch { this.toast.notify('Erreur', 'error'); }
+    try {
+      await this.api.clientDelete(id);
+      this.toast.notify('Client supprimé avec succès', 'success');
+      this.load();
+    } catch (err: any) {
+      const msg = err?.error?.message || 'Erreur lors de la suppression';
+      this.toast.notify(msg, 'error');
+    }
   }
 
   resetFilters(): void { this.search = ''; this.typeFilter = ''; }

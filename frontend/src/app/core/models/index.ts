@@ -81,6 +81,7 @@ export interface Client {
   email?: string;
   personneContact?: string;
   isActive: boolean;
+  sourceAcquisition?: string;
   initiales: string;
   nombreCommandes: number;
   totalDepense: number;

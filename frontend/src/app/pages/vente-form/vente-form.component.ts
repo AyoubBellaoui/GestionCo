@@ -15,6 +15,7 @@ interface NewClientForm {
   ville: string;
   ice: string;
   personneContact: string;
+  sourceAcquisition: string;
 }
 
 interface LigneForm {
@@ -47,7 +48,8 @@ export class VenteFormComponent implements OnInit {
 
   newClientModalOpen = false;
   newClientSaving = false;
-  newClientForm: NewClientForm = { nomClient: '', type: 'Particulier', telephone: '', email: '', ville: '', ice: '', personneContact: '' };
+  readonly sourcesAcquisition = ['Facebook', 'Instagram', 'WhatsApp', 'Email', 'Recommandation', 'Site web', 'Salon / Événement', 'Autre'];
+  newClientForm: NewClientForm = { nomClient: '', type: 'Particulier', telephone: '', email: '', ville: '', ice: '', personneContact: '', sourceAcquisition: '' };
 
   formatNum = formatNum;
   Math = Math;
@@ -114,7 +116,7 @@ export class VenteFormComponent implements OnInit {
   }
 
   openNewClientModal(): void {
-    this.newClientForm = { nomClient: '', type: 'Particulier', telephone: '', email: '', ville: '', ice: '', personneContact: '' };
+    this.newClientForm = { nomClient: '', type: 'Particulier', telephone: '', email: '', ville: '', ice: '', personneContact: '', sourceAcquisition: '' };
     this.newClientModalOpen = true;
   }
 
@@ -132,6 +134,7 @@ export class VenteFormComponent implements OnInit {
         ville: this.newClientForm.ville.trim() || undefined,
         ice: this.newClientForm.ice.trim() || undefined,
         personneContact: this.newClientForm.personneContact.trim() || undefined,
+        sourceAcquisition: this.newClientForm.sourceAcquisition.trim() || undefined,
       });
       this.clients = [...this.clients, created];
       this.clientId = created.id;
