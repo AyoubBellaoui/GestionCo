@@ -7,6 +7,8 @@
     @if (subtitle) { <p>{{ subtitle }}</p> }
   </div>
   <div class="topbar-right">
+    <app-notification-bell></app-notification-bell>
+    <ng-content select=".btn-ghost"></ng-content>
     <ng-content></ng-content>
   </div>
 </div>

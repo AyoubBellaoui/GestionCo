@@ -1,0 +1,292 @@
+<app-topbar title="Rapports financiers" subtitle="Compte de résultat et déclaration TVA" icon="📊">
+  <button class="btn btn-ghost" (click)="exportExcel()" [disabled]="loading" title="Exporter Excel">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    Excel
+  </button>
+  <button class="btn btn-ghost" (click)="exportPdf()" [disabled]="loading || exportingPdf" title="Télécharger PDF">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+    {{ exportingPdf ? 'PDF…' : 'PDF' }}
+  </button>
+</app-topbar>
+
+<div class="content">
+
+  <!-- Header controls -->
+  <div class="toolbar" style="margin-bottom:0">
+    <!-- Tabs -->
+    <div style="display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:10px">
+      <button [class]="'btn btn-sm' + (tab === 'pl' ? ' btn-primary' : ' btn-ghost')" (click)="tab='pl'">
+        📈 Compte de résultat (P&L)
+      </button>
+      <button [class]="'btn btn-sm' + (tab === 'tva' ? ' btn-primary' : ' btn-ghost')" (click)="tab='tva'">
+        🧾 Déclaration TVA
+      </button>
+    </div>
+    <div class="toolbar-divider"></div>
+    <label style="font-size:13px;color:var(--text-secondary);font-weight:500">Exercice :</label>
+    <select class="filter-select" style="width:110px" [(ngModel)]="annee" (ngModelChange)="onAnneeChange()">
+      @for (y of annees; track y) { <option [value]="y">{{ y }}</option> }
+    </select>
+    @if (loading) {
+      <div class="spinner" style="width:16px;height:16px;border-width:2px"></div>
+    }
+  </div>
+
+  @if (loading && !plReport) {
+    <div class="loading-state" style="margin-top:40px"><div class="spinner"></div><div>Chargement du rapport…</div></div>
+  }
+
+  <!-- ══════════════════════════════════ P&L ══════════════════════════════════ -->
+  @if (!loading || plReport) {
+    @if (tab === 'pl' && plReport) {
+
+      <!-- Annual KPI cards -->
+      <div class="stats-row" style="margin-top:16px">
+        <div class="stat-card">
+          <div class="stat-icon green">💰</div>
+          <div>
+            <div class="stat-label">CA HT {{ annee }}</div>
+            <div class="stat-value">{{ formatNum(plReport.totalRevenuHT) }} <small>MAD</small></div>
+            <div class="stat-trend neutral">TTC : {{ formatNum(plReport.totalRevenuTTC) }} MAD</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon red">🛒</div>
+          <div>
+            <div class="stat-label">Coût d'achat</div>
+            <div class="stat-value">{{ formatNum(plReport.totalCoutAchat) }} <small>MAD</small></div>
+            <div class="stat-trend neutral">Marchandises achetées</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon orange">📋</div>
+          <div>
+            <div class="stat-label">Charges opérat.</div>
+            <div class="stat-value">{{ formatNum(plReport.totalChargesOp) }} <small>MAD</small></div>
+            <div class="stat-trend neutral">Loyer, salaires, etc.</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div [class]="'stat-icon ' + (plReport.totalResultatNet >= 0 ? 'green' : 'red')">
+            {{ plReport.totalResultatNet >= 0 ? '📈' : '📉' }}
+          </div>
+          <div>
+            <div class="stat-label">Résultat net {{ annee }}</div>
+            <div [class]="'stat-value ' + resultClass(plReport.totalResultatNet)">
+              {{ sign(plReport.totalResultatNet) }}{{ formatNum(plReport.totalResultatNet) }} <small>MAD</small>
+            </div>
+            <div [class]="'stat-trend ' + (plReport.totalResultatBrut >= 0 ? 'up' : 'down')">
+              Marge brute : {{ formatNum(plReport.totalResultatBrut) }} MAD
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Monthly P&L table -->
+      <div class="table-card" style="margin-top:16px">
+        <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:600;font-size:15px">Détail mensuel — {{ annee }}</div>
+          <div style="font-size:12px;color:var(--text-muted)">Montants en MAD HT</div>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:110px">Mois</th>
+                <th style="text-align:right">CA HT</th>
+                <th style="text-align:right">TVA collectée</th>
+                <th style="text-align:right">Coût achat</th>
+                <th style="text-align:right">Charges</th>
+                <th style="text-align:right;width:140px">Résultat brut</th>
+                <th style="text-align:right;width:140px">Résultat net</th>
+                <th style="width:160px">Visualisation</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (m of plReport.mois; track m.mois) {
+                <tr [style.opacity]="m.revenuHT === 0 && m.coutAchat === 0 && m.chargesOp === 0 ? '0.45' : '1'">
+                  <td style="font-weight:500">{{ m.nomMois }}</td>
+                  <td style="text-align:right">{{ formatNum(m.revenuHT) }}</td>
+                  <td style="text-align:right;color:var(--text-secondary)">{{ formatNum(m.revenuTVA) }}</td>
+                  <td style="text-align:right;color:var(--danger)">{{ m.coutAchat > 0 ? '−' + formatNum(m.coutAchat) : '—' }}</td>
+                  <td style="text-align:right;color:var(--warning)">{{ m.chargesOp > 0 ? '−' + formatNum(m.chargesOp) : '—' }}</td>
+                  <td style="text-align:right;font-weight:600" [class]="resultClass(m.resultatBrut)">
+                    {{ sign(m.resultatBrut) }}{{ formatNum(m.resultatBrut) }}
+                  </td>
+                  <td style="text-align:right;font-weight:700" [class]="resultClass(m.resultatNet)">
+                    {{ sign(m.resultatNet) }}{{ formatNum(m.resultatNet) }}
+                  </td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:6px;height:20px">
+                      <div style="flex:1;background:var(--surface2);border-radius:4px;overflow:hidden;height:8px">
+                        <div
+                          [style.width.%]="barWidth(m.resultatNet)"
+                          [style.background]="m.resultatNet >= 0 ? 'var(--success)' : 'var(--danger)'"
+                          style="height:100%;border-radius:4px;transition:width .3s">
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr style="font-weight:700;border-top:2px solid var(--border);background:var(--surface2)">
+                <td>TOTAL {{ annee }}</td>
+                <td style="text-align:right">{{ formatNum(plReport.totalRevenuHT) }}</td>
+                <td style="text-align:right;color:var(--text-secondary)">{{ formatNum(plReport.totalRevenuTVA) }}</td>
+                <td style="text-align:right;color:var(--danger)">−{{ formatNum(plReport.totalCoutAchat) }}</td>
+                <td style="text-align:right;color:var(--warning)">−{{ formatNum(plReport.totalChargesOp) }}</td>
+                <td style="text-align:right" [class]="resultClass(plReport.totalResultatBrut)">
+                  {{ sign(plReport.totalResultatBrut) }}{{ formatNum(plReport.totalResultatBrut) }}
+                </td>
+                <td style="text-align:right" [class]="resultClass(plReport.totalResultatNet)">
+                  {{ sign(plReport.totalResultatNet) }}{{ formatNum(plReport.totalResultatNet) }}
+                </td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- P&L formula note -->
+      <div style="margin-top:12px;padding:12px 16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);font-size:12px;color:var(--text-muted);display:flex;gap:24px;flex-wrap:wrap">
+        <span>📐 <strong>Résultat brut</strong> = CA HT − Coût d'achat</span>
+        <span>📐 <strong>Résultat net</strong> = Résultat brut − Charges opérationnelles</span>
+        <span>ℹ️ Ventes annulées exclues · Coût d'achat = somme des lignes achat (HT)</span>
+      </div>
+
+    }
+
+    <!-- ══════════════════════════════════ TVA ══════════════════════════════════ -->
+    @if (tab === 'tva' && tvaReport) {
+
+      <!-- TVA KPI cards -->
+      <div class="stats-row" style="margin-top:16px">
+        <div class="stat-card">
+          <div class="stat-icon blue">📥</div>
+          <div>
+            <div class="stat-label">TVA collectée {{ annee }}</div>
+            <div class="stat-value">{{ formatNum(tvaReport.totalTVACollectee) }} <small>MAD</small></div>
+            <div class="stat-trend neutral">Sur ventes clients</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green">📤</div>
+          <div>
+            <div class="stat-label">TVA déductible</div>
+            <div class="stat-value">{{ formatNum(tvaReport.totalTVADeductible) }} <small>MAD</small></div>
+            <div class="stat-trend neutral">Sur achats fournisseurs</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div [class]="'stat-icon ' + (tvaReport.totalTVANette >= 0 ? 'orange' : 'green')">
+            {{ tvaReport.totalTVANette >= 0 ? '🏛️' : '💚' }}
+          </div>
+          <div>
+            <div class="stat-label">TVA nette à reverser</div>
+            <div [class]="'stat-value ' + (tvaReport.totalTVANette >= 0 ? '' : 'pos')">
+              {{ formatNum(tvaReport.totalTVANette) }} <small>MAD</small>
+            </div>
+            <div class="stat-trend neutral">
+              {{ tvaReport.totalTVANette >= 0 ? 'À reverser à l\'État' : 'Crédit de TVA' }}
+            </div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon purple">📊</div>
+          <div>
+            <div class="stat-label">Taux de récupération</div>
+            <div class="stat-value">
+              {{ tvaReport.totalTVACollectee > 0 ? (tvaReport.totalTVADeductible / tvaReport.totalTVACollectee * 100 | number:'1.0-1') : 0 }}%
+            </div>
+            <div class="stat-trend neutral">TVA récupérée / collectée</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TVA monthly table -->
+      <div class="table-card" style="margin-top:16px">
+        <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:600;font-size:15px">Déclaration TVA mensuelle — {{ annee }}</div>
+          <div style="font-size:12px;color:var(--text-muted)">Montants en MAD</div>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:130px">Mois</th>
+                <th style="text-align:right">TVA collectée</th>
+                <th style="text-align:right">TVA déductible</th>
+                <th style="text-align:right;width:180px">TVA nette</th>
+                <th style="width:120px;text-align:center">Situation</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (m of tvaReport.mois; track m.mois) {
+                <tr [style.opacity]="m.tvaCollectee === 0 && m.tvaDeductible === 0 ? '0.45' : '1'">
+                  <td style="font-weight:500">{{ m.nomMois }}</td>
+                  <td style="text-align:right;color:var(--primary);font-weight:500">
+                    {{ m.tvaCollectee > 0 ? formatNum(m.tvaCollectee) : '—' }}
+                  </td>
+                  <td style="text-align:right;color:var(--success)">
+                    {{ m.tvaDeductible > 0 ? formatNum(m.tvaDeductible) : '—' }}
+                  </td>
+                  <td style="text-align:right;font-weight:700" [class]="m.tvaNette > 0 ? 'neg' : m.tvaNette < 0 ? 'pos' : ''">
+                    {{ m.tvaCollectee === 0 && m.tvaDeductible === 0 ? '—' : formatNum(m.tvaNette) }}
+                  </td>
+                  <td style="text-align:center">
+                    @if (m.tvaCollectee === 0 && m.tvaDeductible === 0) {
+                      <span class="status-badge neutral">Aucune opération</span>
+                    } @else if (m.tvaNette > 0) {
+                      <span class="status-badge bad">À reverser</span>
+                    } @else if (m.tvaNette < 0) {
+                      <span class="status-badge good">Crédit TVA</span>
+                    } @else {
+                      <span class="status-badge neutral">Nul</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr style="font-weight:700;border-top:2px solid var(--border);background:var(--surface2)">
+                <td>TOTAL {{ annee }}</td>
+                <td style="text-align:right;color:var(--primary)">{{ formatNum(tvaReport.totalTVACollectee) }}</td>
+                <td style="text-align:right;color:var(--success)">{{ formatNum(tvaReport.totalTVADeductible) }}</td>
+                <td style="text-align:right" [class]="tvaReport.totalTVANette > 0 ? 'neg' : tvaReport.totalTVANette < 0 ? 'pos' : ''">
+                  {{ formatNum(tvaReport.totalTVANette) }}
+                </td>
+                <td style="text-align:center">
+                  @if (tvaReport.totalTVANette > 0) {
+                    <span class="status-badge bad">À reverser</span>
+                  } @else if (tvaReport.totalTVANette < 0) {
+                    <span class="status-badge good">Crédit TVA</span>
+                  } @else {
+                    <span class="status-badge neutral">Équilibre</span>
+                  }
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- TVA formula note -->
+      <div style="margin-top:12px;padding:12px 16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);font-size:12px;color:var(--text-muted);display:flex;gap:24px;flex-wrap:wrap">
+        <span>📐 <strong>TVA nette</strong> = TVA collectée (ventes) − TVA déductible (achats)</span>
+        <span>🟢 Crédit TVA = la TVA déductible dépasse la collectée (remboursable)</span>
+        <span>🔴 À reverser = montant dû à l'administration fiscale</span>
+        <span>ℹ️ TVA déductible estimée depuis le taux TVA de chaque produit acheté</span>
+      </div>
+
+    }
+  }
+
+</div>
+
+<style>
+.pos { color: var(--success) !important; }
+.neg { color: var(--danger) !important; }
+</style>

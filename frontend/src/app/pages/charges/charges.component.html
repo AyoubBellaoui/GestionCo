@@ -1,0 +1,273 @@
+<app-topbar title="Charges" [subtitle]="charges.length + ' charge' + (charges.length > 1 ? 's' : '') + ' — Gestion des dépenses'" icon="💸">
+  <button class="btn btn-ghost btn-sm" (click)="openNewCatModal()" title="Gérer les catégories">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+    Catégories
+  </button>
+  <button class="btn btn-primary" (click)="router.navigate(['/charges/nouvelle'])">+ Nouvelle charge</button>
+</app-topbar>
+
+<div class="content">
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-icon red">💸</div><div><div class="stat-label">Charges du mois</div><div class="stat-value">{{ formatNum(stats.totalMois) }} <small>MAD</small></div><div class="stat-trend neutral">{{ stats.count }} transaction{{ stats.count > 1 ? 's' : '' }}</div></div></div>
+    <div class="stat-card"><div class="stat-icon orange">⏳</div><div><div class="stat-label">Impayées</div><div class="stat-value">{{ formatNum(stats.impayes) }} <small>MAD</small></div><div class="stat-trend down">{{ stats.nbImpayes }} charge{{ stats.nbImpayes > 1 ? 's' : '' }}</div></div></div>
+    <div class="stat-card"><div class="stat-icon blue">📂</div><div><div class="stat-label">Catégories</div><div class="stat-value">{{ categories.length }}</div><div class="stat-trend neutral">Actives</div></div></div>
+    <div class="stat-card"><div class="stat-icon purple">📊</div><div><div class="stat-label">Total global</div><div class="stat-value">{{ formatNum(stats.totalGlobal) }} <small>MAD</small></div><div class="stat-trend neutral">Toutes périodes</div></div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrapper">
+      <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+      <input class="search-input" placeholder="Rechercher par référence, titre..." [(ngModel)]="search" (ngModelChange)="page=1" />
+    </div>
+    <input type="date" class="form-input" style="width:200px" [(ngModel)]="selectedDate" (ngModelChange)="page=1" />
+    <select class="filter-select" [(ngModel)]="categorieFilter" (ngModelChange)="page=1">
+      <option value="">Toutes catégories</option>
+      @for (cat of categories; track cat.id) {
+        <option [value]="cat.id">{{ cat.icone || '📋' }} {{ cat.nom }}</option>
+      }
+    </select>
+    <select class="filter-select" [(ngModel)]="statusFilter" (ngModelChange)="page=1">
+      <option value="">Tous statuts</option>
+      <option value="Paye">Payée</option>
+      <option value="Partiel">Partiel</option>
+      <option value="EnAttente">En attente</option>
+      <option value="Annule">Annulée</option>
+    </select>
+    <div class="toolbar-divider"></div>
+    <button class="btn btn-ghost btn-sm" (click)="resetFilters()">🔄 Réinitialiser</button>
+  </div>
+
+  <div class="table-card">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Référence</th>
+            <th>Titre</th>
+            <th>Catégorie</th>
+            <th>Date</th>
+            <th style="text-align:right">Montant</th>
+            <th>Paiement</th>
+            <th>Statut</th>
+            <th style="text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading) { <tr><td colspan="8" class="loading-row">Chargement…</td></tr> }
+          @if (!loading && paged.length === 0) {
+            <tr><td colspan="8">
+              <div class="empty-state">
+                <div class="empty-icon">💸</div>
+                <div class="empty-title">Aucune charge trouvée</div>
+                <div class="empty-sub">Ajustez vos filtres ou créez une nouvelle charge</div>
+              </div>
+            </td></tr>
+          }
+          @for (c of paged; track c.id) {
+            @let d = formatDate(c.dateCharge);
+            @let pay = getPayStatus(c.montantPaye, c.montant);
+            @let st = chargeStatus(c);
+            <tr>
+              <td><span class="mono">{{ c.reference }}</span></td>
+              <td>
+                <div style="font-weight:600;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.titre }}</div>
+                @if (c.nomFournisseur) { <div style="font-size:11.5px;color:var(--text-muted)">{{ c.iconeFournisseur || '🏢' }} {{ c.nomFournisseur }}</div> }
+              </td>
+              <td>
+                <span style="display:inline-flex;align-items:center;gap:5px;background:var(--surface2);padding:3px 9px;border-radius:20px;font-size:12px;font-weight:600">
+                  {{ c.iconeCategorie || '📋' }} {{ c.nomCategorie }}
+                </span>
+              </td>
+              <td class="date-cell"><div class="date-main">{{ d.main }}</div><div class="date-sub">{{ d.time }}</div></td>
+              <td style="text-align:right"><div class="price-val">{{ formatNum(c.montant) }} <small>MAD</small></div></td>
+              <td>
+                <div class="payment-wrap">
+                  <div class="payment-val"><strong>{{ formatNum(c.montantPaye) }}</strong> / {{ formatNum(c.montant) }} MAD</div>
+                  <div class="payment-bar"><div [class]="'payment-bar-fill ' + pay.cls" [style.width]="pay.pct + '%'"></div></div>
+                </div>
+              </td>
+              <td><span [class]="'status-badge ' + st.cls">{{ st.label }}</span></td>
+              <td class="actions-cell">
+                <button class="btn-icon primary" title="Voir le détail" (click)="openDetail(c)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <div class="pagination-info">Affichage <strong>{{ total === 0 ? 0 : (page-1)*pageSize+1 }}–{{ Math.min(page*pageSize, total) }}</strong> sur <strong>{{ total }}</strong></div>
+      <div class="pagination-controls">
+        <select class="page-size" [(ngModel)]="pageSize" (ngModelChange)="page=1">
+          <option [value]="10">10 / page</option><option [value]="25">25 / page</option><option [value]="50">50 / page</option>
+        </select>
+        <button class="page-btn" [disabled]="page===1" (click)="page=page-1">←</button>
+        @for (p of buildPageList(); track $index) {
+          @if (isPageNum(p)) { <button [class]="'page-btn' + (page===p ? ' active' : '')" (click)="page=p">{{ p }}</button> }
+          @else { <button class="page-btn" disabled>…</button> }
+        }
+        <button class="page-btn" [disabled]="page===pageCount" (click)="page=page+1">→</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL DÉTAIL ===== -->
+@if (viewCharge) {
+  <app-modal [open]="modalOpen" [title]="'Charge ' + viewCharge.reference" (closed)="modalOpen=false; viewCharge=null" [large]="true">
+    <div body>
+      @let d = formatDate(viewCharge.dateCharge);
+      @let pay = getPayStatus(viewCharge.montantPaye, viewCharge.montant);
+      @let st = chargeStatus(viewCharge);
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+        <div style="padding:12px;background:var(--surface2);border-radius:8px;grid-column:1/-1">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Titre</div>
+          <div style="font-size:15px;font-weight:700">{{ viewCharge.titre }}</div>
+        </div>
+        <div style="padding:12px;background:var(--surface2);border-radius:8px">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Catégorie</div>
+          <div style="font-size:13.5px;font-weight:600">{{ viewCharge.iconeCategorie || '📋' }} {{ viewCharge.nomCategorie }}</div>
+        </div>
+        <div style="padding:12px;background:var(--surface2);border-radius:8px">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Date</div>
+          <div style="font-size:13.5px;font-weight:600">{{ d.main }}</div>
+        </div>
+        <div style="padding:12px;background:var(--surface2);border-radius:8px">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Statut</div>
+          <span [class]="'status-badge ' + st.cls">{{ st.label }}</span>
+        </div>
+      </div>
+
+      @if (viewCharge.nomFournisseur) {
+        <div style="padding:12px;background:var(--surface2);border-radius:8px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">{{ viewCharge.iconeFournisseur || '🏢' }}</span>
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Fournisseur</div>
+            <div style="font-weight:600">{{ viewCharge.nomFournisseur }}</div>
+          </div>
+        </div>
+      }
+
+      @if (viewCharge.description) {
+        <div style="padding:12px;background:var(--surface2);border-radius:8px;margin-bottom:16px">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Description</div>
+          <div style="font-size:13.5px">{{ viewCharge.description }}</div>
+        </div>
+      }
+
+      <!-- Récapitulatif paiement -->
+      <div style="margin-bottom:16px">
+        <div class="payment-wrap" style="margin-bottom:8px">
+          <div class="payment-val"><strong>{{ formatNum(viewCharge.montantPaye) }}</strong> / {{ formatNum(viewCharge.montant) }} MAD payés</div>
+          <div class="payment-bar"><div [class]="'payment-bar-fill ' + pay.cls" [style.width]="pay.pct + '%'"></div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;background:var(--surface2);border-radius:8px">
+          <div><div style="font-size:12px;color:var(--text-muted)">Payé</div><div style="font-weight:700;color:var(--success)">{{ formatNum(viewCharge.montantPaye) }} MAD</div></div>
+          @if (viewCharge.reste > 0) {
+            <div><div style="font-size:12px;color:var(--text-muted)">Reste dû</div><div style="font-weight:700;color:#dc2626">{{ formatNum(viewCharge.reste) }} MAD</div></div>
+          }
+          <div style="text-align:right"><div style="font-size:12px;color:var(--text-muted)">Total</div><div style="font-size:20px;font-weight:700;color:var(--primary)">{{ formatNum(viewCharge.montant) }} MAD</div></div>
+        </div>
+      </div>
+
+      <!-- Historique paiements -->
+      @if (viewCharge.paiements.length > 0) {
+        <div style="margin-bottom:16px">
+          <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Historique des paiements</div>
+          <table class="data-table" style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
+            <thead><tr><th>Date</th><th>Méthode</th><th style="text-align:right">Montant</th></tr></thead>
+            <tbody>
+              @for (p of viewCharge.paiements; track p.id) {
+                @let pd = formatDate(p.datePaiement);
+                <tr>
+                  <td>{{ pd.main }}</td>
+                  <td>{{ p.methodeLibelle }}</td>
+                  <td style="text-align:right;font-weight:700;color:var(--success)">{{ formatNum(p.montant) }} MAD</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <!-- Formulaire paiement rapide -->
+      @if (viewCharge.statut !== 'Paye' && viewCharge.statut !== 'Annule') {
+        <div style="padding:16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+          <div style="font-size:13px;font-weight:700;margin-bottom:12px">💳 Enregistrer un paiement</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end">
+            <div>
+              <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Montant (max {{ formatNum(viewCharge.reste) }} MAD)</label>
+              <div class="input-group">
+                <input type="number" class="form-input with-suffix" [min]="0.01" [max]="viewCharge.reste" step="0.01" [(ngModel)]="paiementMontant" />
+                <span class="input-suffix">MAD</span>
+              </div>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Méthode</label>
+              <select class="form-select" [(ngModel)]="paiementMethode">
+                <option value="Espece">Espèces</option>
+                <option value="Carte">Carte bancaire</option>
+                <option value="Virement">Virement</option>
+                <option value="Cheque">Chèque</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" (click)="addPaiement()" [disabled]="paiementSaving || paiementMontant <= 0">
+              {{ paiementSaving ? '…' : '✓ Payer' }}
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+    <div footer></div>
+  </app-modal>
+}
+
+<!-- ===== MODAL NOUVELLE CATÉGORIE ===== -->
+<app-modal [open]="newCatModalOpen" title="Gérer les catégories" (closed)="newCatModalOpen=false">
+  <div body>
+    <div style="margin-bottom:20px">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Catégories existantes</div>
+      @if (categories.length === 0) {
+        <div style="text-align:center;color:var(--text-muted);padding:16px">Aucune catégorie</div>
+      }
+      @for (cat of categories; track cat.id) {
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:8px;margin-bottom:6px">
+          <span style="font-weight:600">{{ cat.icone || '📋' }} {{ cat.nom }}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;color:var(--text-muted)">{{ cat.nombreCharges }} charge{{ cat.nombreCharges > 1 ? 's' : '' }}</span>
+            @if (cat.nombreCharges === 0) {
+              <button class="btn-icon danger" title="Supprimer" (click)="deleteCat(cat.id, cat.nom)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <div style="border-top:1px solid var(--border);padding-top:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Nouvelle catégorie</div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px">Icône</label>
+        <div class="emoji-grid">
+          @for (e of emojiOptions; track e) {
+            <button type="button" class="emoji-btn" [class.selected]="newCatIcone === e" (click)="newCatIcone = e">{{ e }}</button>
+          }
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <div style="flex:1">
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Nom *</label>
+          <input type="text" class="form-input" placeholder="Ex: Loyer, Électricité..." [(ngModel)]="newCatNom" (keyup.enter)="saveNewCat()" />
+        </div>
+        <button class="btn btn-primary" (click)="saveNewCat()" [disabled]="newCatSaving || !newCatNom.trim()">
+          {{ newCatSaving ? '…' : '+ Ajouter' }}
+        </button>
+      </div>
+    </div>
+  </div>
+  <div footer></div>
+</app-modal>

@@ -1,4 +1,8 @@
 <app-topbar title="Produits" [subtitle]="produits.length + ' produit' + (produits.length > 1 ? 's' : '') + ' — Catalogue et stock'" icon="📦">
+  <button class="btn btn-ghost" (click)="exportExcel()" title="Exporter en Excel">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    Exporter Excel
+  </button>
   <button class="btn btn-primary" (click)="router.navigate(['/produits/nouveau'])">+ Nouveau produit</button>
 </app-topbar>
 
@@ -57,6 +61,9 @@
               </td>
               <td><span [class]="'status-badge ' + ss.cls">{{ ss.label }}</span></td>
               <td class="actions-cell">
+                <button class="btn-icon" title="Ajuster le stock" (click)="openAjust(p)" style="color:var(--primary)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
                 <button class="btn-icon primary" title="Modifier" (click)="router.navigate(['/produits', p.id, 'modifier'])">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
@@ -71,3 +78,79 @@
     </div>
   </div>
 </div>
+
+<!-- ══ MODAL AJUSTEMENT STOCK ══ -->
+@if (ajustModal && ajustProduit) {
+  <div class="modal-backdrop" (click)="closeAjust()">
+    <div class="modal" style="max-width:460px" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">📦 Ajustement de stock</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">{{ ajustProduit.reference }} — {{ ajustProduit.nom }}</div>
+        </div>
+        <button class="modal-close" (click)="closeAjust()">✕</button>
+      </div>
+
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:16px">
+
+        <!-- Stock actuel → nouveau -->
+        <div class="ajust-stock-preview">
+          <div class="ajust-stock-item">
+            <div class="ajust-stock-label">Stock actuel</div>
+            <div class="ajust-stock-val">{{ ajustProduit.quantiteStock }} <span>unités</span></div>
+          </div>
+          <div class="ajust-stock-arrow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </div>
+          <div class="ajust-stock-item">
+            <div class="ajust-stock-label">Nouveau stock</div>
+            <div [class]="'ajust-stock-val ' + (ajustForm.type === 'Entree' ? 'up' : 'down')">
+              {{ ajustNewStock }} <span>unités</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Type Entrée / Sortie -->
+        <div class="form-field">
+          <label class="form-label">Type de mouvement</label>
+          <div class="ajust-type-row">
+            <button [class]="'ajust-type-btn' + (ajustForm.type === 'Entree' ? ' active-in' : '')" (click)="ajustForm.type = 'Entree'">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Entrée
+            </button>
+            <button [class]="'ajust-type-btn' + (ajustForm.type === 'Sortie' ? ' active-out' : '')" (click)="ajustForm.type = 'Sortie'">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Sortie
+            </button>
+          </div>
+        </div>
+
+        <!-- Quantité -->
+        <div class="form-field">
+          <label class="form-label">Quantité <span style="color:var(--danger)">*</span></label>
+          <input type="number" min="1" class="form-input" [(ngModel)]="ajustForm.quantite" placeholder="Ex : 10" />
+        </div>
+
+        <!-- Raison -->
+        <div class="form-field">
+          <label class="form-label">Raison <span style="color:var(--danger)">*</span></label>
+          <input class="form-input" [(ngModel)]="ajustForm.raison" placeholder="Ex : Inventaire physique, Casse, Retour fournisseur…" />
+        </div>
+
+        <!-- Commentaire -->
+        <div class="form-field">
+          <label class="form-label">Commentaire <span style="font-weight:400;color:var(--text-muted)">(optionnel)</span></label>
+          <textarea class="form-input" rows="2" [(ngModel)]="ajustForm.commentaire" placeholder="Détails supplémentaires…" style="height:auto;padding:8px 12px;resize:none"></textarea>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="closeAjust()">Annuler</button>
+        <button class="btn btn-primary" (click)="saveAjust()" [disabled]="ajustSaving">
+          {{ ajustSaving ? 'Enregistrement…' : 'Appliquer l\'ajustement' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

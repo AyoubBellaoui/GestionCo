@@ -10,7 +10,7 @@ public static class SeedData
     public static async Task SeedAsync(AppDbContext db, IPasswordHasher hasher, CancellationToken ct = default)
     {
         // La DB est déjà créée par Program.cs via EnsureCreatedAsync
-        if (await db.Utilisateurs.AnyAsync(ct)) return; // Déjà seedé
+        if (await db.Produits.AnyAsync(ct)) return; // Déjà seedé
 
         // ============ UTILISATEURS ============
         var admin = new Utilisateur
@@ -47,6 +47,24 @@ public static class SeedData
         };
 
         db.Utilisateurs.AddRange(admin, admin2, manager);
+        await db.SaveChangesAsync(ct);
+
+        // ============ CATÉGORIES CHARGES ============
+        var chargeCategories = new List<CategorieCharge>
+        {
+            new() { Nom = "Loyer", Icone = "🏢" },
+            new() { Nom = "Électricité", Icone = "⚡" },
+            new() { Nom = "Internet", Icone = "🌐" },
+            new() { Nom = "Transport", Icone = "🚗" },
+            new() { Nom = "Salaires", Icone = "👤" },
+            new() { Nom = "Maintenance", Icone = "🔧" },
+            new() { Nom = "Eau", Icone = "💧" },
+            new() { Nom = "Assurance", Icone = "🛡️" },
+            new() { Nom = "Fournitures bureau", Icone = "📎" },
+            new() { Nom = "Marketing", Icone = "📣" },
+            new() { Nom = "Autres", Icone = "📋" }
+        };
+        db.CategoriesCharge.AddRange(chargeCategories);
         await db.SaveChangesAsync(ct);
 
         // ============ CATÉGORIES ============

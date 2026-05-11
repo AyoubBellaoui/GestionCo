@@ -117,11 +117,20 @@
         <div class="form-section-sub">Quantité disponible et seuil d'alerte</div>
         <div class="form-grid-2">
           <div class="form-group">
-            <label class="form-label">Quantité {{ isEdit ? 'en stock' : 'initiale' }} <span class="required">*</span></label>
+            <label class="form-label">Quantité {{ isEdit ? 'en stock' : 'initiale' }}@if (!isEdit) {<span class="required">*</span>}</label>
             <div class="input-group">
-              <input type="number" min="0" class="form-input with-suffix" [value]="form.quantiteStock ?? 0" (input)="setField('quantiteStock', +$any($event.target).value)" />
+              <input type="number" min="0"
+                [class]="'form-input with-suffix' + (isEdit ? ' computed-field' : '')"
+                [value]="form.quantiteStock ?? 0"
+                [readonly]="isEdit"
+                (input)="!isEdit && setField('quantiteStock', +$any($event.target).value)" />
               <span class="input-suffix">unités</span>
             </div>
+            @if (isEdit) {
+              <div class="form-help stock-locked-hint">
+                🔒 Géré via Achats ou <strong>Ajustement de stock</strong> depuis la liste des produits
+              </div>
+            }
           </div>
           <div class="form-group">
             <label class="form-label">Seuil d'alerte <span class="required">*</span></label>

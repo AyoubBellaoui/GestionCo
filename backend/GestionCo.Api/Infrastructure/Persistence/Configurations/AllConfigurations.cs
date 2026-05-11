@@ -256,3 +256,136 @@ public class LogConfiguration : IEntityTypeConfiguration<Log>
         b.HasIndex(x => x.UtilisateurId);
     }
 }
+
+public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
+{
+    public void Configure(EntityTypeBuilder<Notification> b)
+    {
+        b.ToTable("notifications");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Titre).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Message).HasMaxLength(500).IsRequired();
+        b.Property(x => x.Type).HasConversion<int>();
+        b.Property(x => x.Categorie).HasConversion<int>();
+        b.Property(x => x.EntiteReference).HasMaxLength(30);
+        b.Property(x => x.LienUrl).HasMaxLength(200);
+        b.HasIndex(x => x.IsRead);
+        b.HasIndex(x => x.CreatedAt);
+    }
+}
+
+public class CategorieChargeConfiguration : IEntityTypeConfiguration<CategorieCharge>
+{
+    public void Configure(EntityTypeBuilder<CategorieCharge> b)
+    {
+        b.ToTable("categories_charge");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Nom).HasMaxLength(100).IsRequired();
+        b.Property(x => x.Icone).HasMaxLength(10);
+        b.HasIndex(x => x.Nom).IsUnique();
+    }
+}
+
+public class ChargeConfiguration : IEntityTypeConfiguration<Charge>
+{
+    public void Configure(EntityTypeBuilder<Charge> b)
+    {
+        b.ToTable("charges");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Reference).HasMaxLength(30).IsRequired();
+        b.Property(x => x.Titre).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Description).HasMaxLength(1000);
+        b.Property(x => x.Montant).HasColumnType("decimal(18,2)");
+        b.Property(x => x.MontantPaye).HasColumnType("decimal(18,2)");
+        b.Property(x => x.Justificatif).HasMaxLength(500);
+        b.Property(x => x.Statut).HasConversion<int>();
+        b.HasIndex(x => x.Reference).IsUnique();
+
+        b.HasOne(x => x.CategorieCharge)
+            .WithMany(c => c.Charges)
+            .HasForeignKey(x => x.CategorieChargeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        b.HasOne(x => x.Utilisateur)
+            .WithMany()
+            .HasForeignKey(x => x.UtilisateurId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        b.HasOne(x => x.Fournisseur)
+            .WithMany()
+            .HasForeignKey(x => x.FournisseurId)
+            .OnDelete(DeleteBehavior.SetNull);
+    }
+}
+
+public class PaiementChargeConfiguration : IEntityTypeConfiguration<PaiementCharge>
+{
+    public void Configure(EntityTypeBuilder<PaiementCharge> b)
+    {
+        b.ToTable("paiements_charge");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Montant).HasColumnType("decimal(18,2)");
+        b.Property(x => x.Methode).HasConversion<int>();
+        b.Property(x => x.Statut).HasConversion<int>();
+        b.Property(x => x.Reference).HasMaxLength(100);
+        b.Property(x => x.Notes).HasMaxLength(500);
+
+        b.HasOne(x => x.Charge)
+            .WithMany(c => c.Paiements)
+            .HasForeignKey(x => x.ChargeId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class DevisConfiguration : IEntityTypeConfiguration<Devis>
+{
+    public void Configure(EntityTypeBuilder<Devis> b)
+    {
+        b.ToTable("devis");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Reference).HasMaxLength(30).IsRequired();
+        b.Property(x => x.MontantTotalHT).HasColumnType("decimal(18,2)");
+        b.Property(x => x.MontantTVA).HasColumnType("decimal(18,2)");
+        b.Property(x => x.MontantTotal).HasColumnType("decimal(18,2)");
+        b.Property(x => x.Statut).HasConversion<int>();
+        b.Property(x => x.Notes).HasMaxLength(1000);
+        b.HasIndex(x => x.Reference).IsUnique();
+
+        b.HasOne(x => x.Client)
+            .WithMany()
+            .HasForeignKey(x => x.ClientId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        b.HasOne(x => x.Utilisateur)
+            .WithMany()
+            .HasForeignKey(x => x.UtilisateurId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        b.HasOne(x => x.Vente)
+            .WithMany()
+            .HasForeignKey(x => x.VenteId)
+            .OnDelete(DeleteBehavior.SetNull);
+    }
+}
+
+public class LigneDevisConfiguration : IEntityTypeConfiguration<LigneDevis>
+{
+    public void Configure(EntityTypeBuilder<LigneDevis> b)
+    {
+        b.ToTable("lignes_devis");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.PrixUnitaire).HasColumnType("decimal(18,2)");
+        b.Property(x => x.Tva).HasColumnType("decimal(5,2)");
+        b.Ignore(x => x.Total);
+
+        b.HasOne(x => x.Devis)
+            .WithMany(d => d.Lignes)
+            .HasForeignKey(x => x.DevisId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        b.HasOne(x => x.Produit)
+            .WithMany()
+            .HasForeignKey(x => x.ProduitId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}

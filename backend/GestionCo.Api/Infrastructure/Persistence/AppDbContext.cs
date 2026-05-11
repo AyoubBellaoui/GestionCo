@@ -2,6 +2,8 @@ using GestionCo.Api.Application.Common.Interfaces;
 using GestionCo.Api.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
+using DevisEntity = GestionCo.Api.Domain.Entities.Devis;
+using LigneDevisEntity = GestionCo.Api.Domain.Entities.LigneDevis;
 
 namespace GestionCo.Api.Infrastructure.Persistence;
 
@@ -34,6 +36,12 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<Facture> Factures => Set<Facture>();
     public DbSet<MouvementStock> MouvementsStock => Set<MouvementStock>();
     public DbSet<Log> Logs => Set<Log>();
+    public DbSet<CategorieCharge> CategoriesCharge => Set<CategorieCharge>();
+    public DbSet<Charge> Charges => Set<Charge>();
+    public DbSet<PaiementCharge> PaiementsCharge => Set<PaiementCharge>();
+    public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<DevisEntity> Devis => Set<DevisEntity>();
+    public DbSet<LigneDevisEntity> LignesDevis => Set<LigneDevisEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

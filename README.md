@@ -31,7 +31,7 @@ Application ERP complète pour le marché marocain : **backend .NET 9** + **fron
 ### Terminal 1 — Backend
 
 ```bash
-cd backend/GestionCo.Api
+cd backend/GestionCo.Api 
 dotnet run
 ```
 

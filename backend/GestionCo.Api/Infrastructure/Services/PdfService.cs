@@ -1,4 +1,5 @@
 using GestionCo.Api.Application.Common.Interfaces;
+using GestionCo.Api.Application.Reports;
 using GestionCo.Api.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
@@ -307,6 +308,241 @@ public class PdfService : IPdfService
                             .Text("Ce document est conforme à l'article 145 du Code Général des Impôts (CGI) du Maroc.")
                             .FontSize(8).FontColor(muted);
                     });
+            });
+        }).GeneratePdf();
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // P&L REPORT PDF
+    // ═══════════════════════════════════════════════════════
+    public byte[] GeneratePLReportPdf(PLReportDto r, string entreprise)
+    {
+        const string primary = "#4F46E5";
+        const string success = "#22c55e";
+        const string danger  = "#ef4444";
+        const string muted   = "#6b7280";
+        const string border  = "#e2e4ee";
+        const string bg      = "#f5f6fa";
+
+        return Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4.Landscape());
+                page.Margin(1.2f, Unit.Centimetre);
+                page.DefaultTextStyle(x => x.FontSize(9).FontFamily("Arial"));
+
+                page.Content().Column(col =>
+                {
+                    // Header
+                    col.Item().BorderBottom(3).BorderColor(primary).PaddingBottom(10).Row(row =>
+                    {
+                        row.RelativeItem().Column(c =>
+                        {
+                            c.Item().Text(entreprise).FontSize(16).Bold().FontColor(primary);
+                            c.Item().PaddingTop(2).Text("Compte de Résultat (P&L)").FontSize(11).FontColor(muted);
+                        });
+                        row.AutoItem().AlignRight().Column(c =>
+                        {
+                            c.Item().AlignRight().Text($"Exercice {r.Annee}").FontSize(20).Bold().FontColor(primary);
+                            c.Item().AlignRight().PaddingTop(2).Text($"Généré le {DateTime.Now:dd/MM/yyyy}").FontSize(9).FontColor(muted);
+                        });
+                    });
+
+                    col.Item().Height(12);
+
+                    // Summary KPIs
+                    col.Item().Background(bg).Padding(10).Row(kpis =>
+                    {
+                        void Kpi(string label, decimal val, string color)
+                        {
+                            kpis.RelativeItem().Column(c =>
+                            {
+                                c.Item().Text(label).FontSize(7).FontColor(muted);
+                                c.Item().PaddingTop(2).Text($"{val:N2} MAD").FontSize(11).Bold().FontColor(color);
+                            });
+                        }
+                        Kpi("CA HT",             r.TotalRevenuHT,      primary);
+                        Kpi("TVA Collectée",      r.TotalRevenuTVA,     muted);
+                        Kpi("Coût Achats",        r.TotalCoutAchat,     danger);
+                        Kpi("Charges Opérat.",    r.TotalChargesOp,     "#f59e0b");
+                        Kpi("Résultat Brut",      r.TotalResultatBrut,  r.TotalResultatBrut >= 0 ? success : danger);
+                        Kpi("Résultat Net",       r.TotalResultatNet,   r.TotalResultatNet  >= 0 ? success : danger);
+                    });
+
+                    col.Item().Height(10);
+
+                    // Table
+                    col.Item().Table(table =>
+                    {
+                        table.ColumnsDefinition(cols =>
+                        {
+                            cols.ConstantColumn(70);   // Mois
+                            cols.RelativeColumn();      // CA HT
+                            cols.RelativeColumn();      // TVA Coll.
+                            cols.RelativeColumn();      // Coût Achat
+                            cols.RelativeColumn();      // Charges
+                            cols.RelativeColumn();      // Résult. Brut
+                            cols.RelativeColumn();      // Résult. Net
+                        });
+
+                        // Header row
+                        table.Header(h =>
+                        {
+                            IContainer Hdr(IContainer c) => c.Background(primary).Padding(7).AlignMiddle();
+                            string[] headers = ["Mois", "CA HT", "TVA Coll.", "Coût Achat", "Charges Op.", "Rés. Brut", "Rés. Net"];
+                            foreach (var lbl in headers)
+                                Hdr(h.Cell()).AlignCenter().Text(lbl).FontSize(8).Bold().FontColor("#fff");
+                        });
+
+                        // Data rows
+                        int idx = 0;
+                        foreach (var m in r.Mois)
+                        {
+                            var rowBg = idx++ % 2 == 0 ? "#ffffff" : "#f9fafb";
+                            var isEmpty = m.RevenuHT == 0 && m.CoutAchat == 0;
+                            IContainer Cell(IContainer c) => c.Background(rowBg).BorderBottom(1).BorderColor(border).PaddingVertical(6).PaddingHorizontal(7).AlignMiddle();
+
+                            Cell(table.Cell()).Text(m.NomMois).Bold().FontSize(8.5f).FontColor(isEmpty ? "#9ca3af" : "#1a1d2e");
+                            Cell(table.Cell()).AlignRight().Text(m.RevenuHT == 0 ? "—" : $"{m.RevenuHT:N2}").FontColor(isEmpty ? "#9ca3af" : "#1a1d2e");
+                            Cell(table.Cell()).AlignRight().Text(m.RevenuTVA == 0 ? "—" : $"{m.RevenuTVA:N2}").FontColor(muted);
+                            Cell(table.Cell()).AlignRight().Text(m.CoutAchat == 0 ? "—" : $"{m.CoutAchat:N2}").FontColor(danger);
+                            Cell(table.Cell()).AlignRight().Text(m.ChargesOp == 0 ? "—" : $"{m.ChargesOp:N2}").FontColor("#f59e0b");
+                            Cell(table.Cell()).AlignRight().Text(isEmpty ? "—" : $"{m.ResultatBrut:N2}").Bold().FontColor(m.ResultatBrut >= 0 ? success : danger);
+                            Cell(table.Cell()).AlignRight().Text(isEmpty ? "—" : $"{m.ResultatNet:N2}").Bold().FontColor(m.ResultatNet >= 0 ? success : danger);
+                        }
+
+                        // Totals row
+                        IContainer Tot(IContainer c) => c.Background("#1a1d2e").PaddingVertical(8).PaddingHorizontal(7).AlignMiddle();
+                        Tot(table.Cell()).Text("TOTAL").FontSize(9).Bold().FontColor("#fff");
+                        Tot(table.Cell()).AlignRight().Text($"{r.TotalRevenuHT:N2}").Bold().FontColor("#fff");
+                        Tot(table.Cell()).AlignRight().Text($"{r.TotalRevenuTVA:N2}").FontColor("#9ca3af");
+                        Tot(table.Cell()).AlignRight().Text($"{r.TotalCoutAchat:N2}").FontColor("#fca5a5");
+                        Tot(table.Cell()).AlignRight().Text($"{r.TotalChargesOp:N2}").FontColor("#fcd34d");
+                        Tot(table.Cell()).AlignRight().Text($"{r.TotalResultatBrut:N2}").Bold().FontColor(r.TotalResultatBrut >= 0 ? "#86efac" : "#fca5a5");
+                        Tot(table.Cell()).AlignRight().Text($"{r.TotalResultatNet:N2}").Bold().FontColor(r.TotalResultatNet >= 0 ? "#86efac" : "#fca5a5");
+                    });
+                });
+
+                page.Footer().BorderTop(1).BorderColor(border).PaddingTop(6)
+                    .AlignCenter().Text($"{entreprise} · Rapport P&L {r.Annee} · Confidentiel")
+                    .FontSize(8).FontColor(muted);
+            });
+        }).GeneratePdf();
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // TVA REPORT PDF
+    // ═══════════════════════════════════════════════════════
+    public byte[] GenerateTVAReportPdf(TVAReportDto r, string entreprise)
+    {
+        const string primary = "#4F46E5";
+        const string success = "#22c55e";
+        const string danger  = "#ef4444";
+        const string muted   = "#6b7280";
+        const string border  = "#e2e4ee";
+        const string bg      = "#f5f6fa";
+
+        return Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(1.5f, Unit.Centimetre);
+                page.DefaultTextStyle(x => x.FontSize(9.5f).FontFamily("Arial"));
+
+                page.Content().Column(col =>
+                {
+                    // Header
+                    col.Item().BorderBottom(3).BorderColor(primary).PaddingBottom(10).Row(row =>
+                    {
+                        row.RelativeItem().Column(c =>
+                        {
+                            c.Item().Text(entreprise).FontSize(16).Bold().FontColor(primary);
+                            c.Item().PaddingTop(2).Text("Déclaration TVA").FontSize(11).FontColor(muted);
+                        });
+                        row.AutoItem().AlignRight().Column(c =>
+                        {
+                            c.Item().AlignRight().Text($"Exercice {r.Annee}").FontSize(20).Bold().FontColor(primary);
+                            c.Item().AlignRight().PaddingTop(2).Text($"Généré le {DateTime.Now:dd/MM/yyyy}").FontSize(9).FontColor(muted);
+                        });
+                    });
+
+                    col.Item().Height(12);
+
+                    // Summary KPIs
+                    col.Item().Background(bg).Padding(12).Row(kpis =>
+                    {
+                        void Kpi(string label, decimal val, string color)
+                        {
+                            kpis.RelativeItem().Column(c =>
+                            {
+                                c.Item().Text(label).FontSize(8).FontColor(muted);
+                                c.Item().PaddingTop(3).Text($"{val:N2} MAD").FontSize(13).Bold().FontColor(color);
+                            });
+                        }
+                        Kpi("TVA Collectée",  r.TotalTVACollectee,  primary);
+                        Kpi("TVA Déductible", r.TotalTVADeductible, success);
+                        Kpi("TVA Nette",      r.TotalTVANette,      r.TotalTVANette >= 0 ? danger : success);
+                    });
+
+                    col.Item().Height(12);
+
+                    // Table
+                    col.Item().Table(table =>
+                    {
+                        table.ColumnsDefinition(cols =>
+                        {
+                            cols.ConstantColumn(90);    // Mois
+                            cols.RelativeColumn();       // TVA Collectée
+                            cols.RelativeColumn();       // TVA Déductible
+                            cols.RelativeColumn();       // TVA Nette
+                            cols.ConstantColumn(100);   // Situation
+                        });
+
+                        table.Header(h =>
+                        {
+                            IContainer Hdr(IContainer c) => c.Background(primary).Padding(9).AlignMiddle();
+                            foreach (var lbl in new[] { "Mois", "TVA Collectée", "TVA Déductible", "TVA Nette", "Situation" })
+                                Hdr(h.Cell()).AlignCenter().Text(lbl).FontSize(9).Bold().FontColor("#fff");
+                        });
+
+                        int idx = 0;
+                        foreach (var m in r.Mois)
+                        {
+                            var rowBg = idx++ % 2 == 0 ? "#ffffff" : "#f9fafb";
+                            var isEmpty = m.TVACollectee == 0 && m.TVADeductible == 0;
+                            IContainer Cell(IContainer c) => c.Background(rowBg).BorderBottom(1).BorderColor(border).Padding(8).AlignMiddle();
+                            var situation = isEmpty ? "—" : m.TVANette > 0 ? "À reverser" : m.TVANette < 0 ? "Crédit TVA" : "Nul";
+                            var sitColor = isEmpty ? muted : m.TVANette > 0 ? danger : m.TVANette < 0 ? success : muted;
+
+                            Cell(table.Cell()).Text(m.NomMois).Bold().FontColor(isEmpty ? "#9ca3af" : "#1a1d2e");
+                            Cell(table.Cell()).AlignRight().Text(isEmpty ? "—" : $"{m.TVACollectee:N2}").FontColor(primary);
+                            Cell(table.Cell()).AlignRight().Text(isEmpty ? "—" : $"{m.TVADeductible:N2}").FontColor(success);
+                            Cell(table.Cell()).AlignRight().Text(isEmpty ? "—" : $"{m.TVANette:N2}").Bold().FontColor(isEmpty ? muted : m.TVANette >= 0 ? danger : success);
+                            Cell(table.Cell()).AlignCenter().Text(situation).Bold().FontColor(sitColor);
+                        }
+
+                        IContainer Tot(IContainer c) => c.Background("#1a1d2e").Padding(9).AlignMiddle();
+                        Tot(table.Cell()).Text("TOTAL").FontSize(10).Bold().FontColor("#fff");
+                        Tot(table.Cell()).AlignRight().Text($"{r.TotalTVACollectee:N2}").Bold().FontColor("#c7d2fe");
+                        Tot(table.Cell()).AlignRight().Text($"{r.TotalTVADeductible:N2}").Bold().FontColor("#86efac");
+                        Tot(table.Cell()).AlignRight().Text($"{r.TotalTVANette:N2}").Bold().FontColor(r.TotalTVANette >= 0 ? "#fca5a5" : "#86efac");
+                        Tot(table.Cell()).AlignCenter().Text(r.TotalTVANette > 0 ? "À reverser" : r.TotalTVANette < 0 ? "Crédit TVA" : "Équilibre").Bold().FontColor(r.TotalTVANette >= 0 ? "#fca5a5" : "#86efac");
+                    });
+
+                    col.Item().Height(16);
+                    col.Item().Background("#eef0ff").BorderLeft(3).BorderColor(primary).Padding(10).Column(c =>
+                    {
+                        c.Item().Text("Note légale").FontSize(8).Bold().FontColor(primary);
+                        c.Item().Height(3);
+                        c.Item().Text("TVA déductible estimée sur la base du taux TVA de chaque produit acheté. Document à valider avec votre comptable avant dépôt officiel.").FontSize(8).FontColor(muted);
+                    });
+                });
+
+                page.Footer().BorderTop(1).BorderColor(border).PaddingTop(6)
+                    .AlignCenter().Text($"{entreprise} · Déclaration TVA {r.Annee} · Document interne")
+                    .FontSize(8).FontColor(muted);
             });
         }).GeneratePdf();
     }

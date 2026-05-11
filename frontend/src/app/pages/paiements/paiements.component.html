@@ -1,45 +1,62 @@
-<app-topbar title="Paiements" [subtitle]="paiements.length + ' paiement' + (paiements.length > 1 ? 's' : '') + ' — Encaissements clients'" icon="💰">
+<app-topbar
+  title="Paiements"
+  [subtitle]="activeTab === 'ventes' ? 'Encaissements clients' : 'Décaissements fournisseurs'"
+  icon="💰">
 </app-topbar>
 
+<div class="page-tabs-bar">
+  <button [class]="'page-tab' + (activeTab === 'ventes' ? ' active' : '')" (click)="setTab('ventes')">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+    Ventes
+  </button>
+  <button [class]="'page-tab' + (activeTab === 'achats' ? ' active' : '')" (click)="setTab('achats')">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+    Achats
+  </button>
+</div>
+
 <div class="content">
-  <div class="stats-row">
-    <div class="stat-card"><div class="stat-icon green">💰</div><div><div class="stat-label">Total encaissé</div><div class="stat-value">{{ formatNum(stats.total) }} <small>MAD</small></div><div class="stat-trend">Cumul</div></div></div>
-    <div class="stat-card"><div class="stat-icon blue">✅</div><div><div class="stat-label">Payés</div><div class="stat-value">{{ formatNum(stats.payes) }} <small>MAD</small></div><div class="stat-trend neutral">Validés</div></div></div>
-    <div class="stat-card"><div class="stat-icon orange">⏳</div><div><div class="stat-label">En attente</div><div class="stat-value">{{ formatNum(stats.enAttente) }}</div><div class="stat-trend down">À confirmer</div></div></div>
-    <div class="stat-card"><div class="stat-icon red">📋</div><div><div class="stat-label">Ventes impayées</div><div class="stat-value">{{ ventesEnAttente.length }}</div><div class="stat-trend down">{{ ventesEnAttente.length > 0 ? 'À encaisser' : 'Aucune' }}</div></div></div>
-  </div>
 
-  <div class="toolbar">
-    <div class="search-wrapper">
-      <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-      <input class="search-input" placeholder="Rechercher par client, vente..." [(ngModel)]="search" />
+  <!-- ═══════════════ VENTES TAB ═══════════════ -->
+  @if (activeTab === 'ventes') {
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-icon green">💰</div><div><div class="stat-label">Total encaissé</div><div class="stat-value">{{ formatNum(stats.total) }} <small>MAD</small></div><div class="stat-trend">Cumul</div></div></div>
+      <div class="stat-card"><div class="stat-icon blue">✅</div><div><div class="stat-label">Payés</div><div class="stat-value">{{ formatNum(stats.payes) }} <small>MAD</small></div><div class="stat-trend neutral">Validés</div></div></div>
+      <div class="stat-card"><div class="stat-icon orange">⏳</div><div><div class="stat-label">En attente</div><div class="stat-value">{{ stats.enAttente }}</div><div class="stat-trend down">{{ stats.enAttente > 0 ? 'À encaisser' : 'Aucune' }}</div></div></div>
+      <div class="stat-card"><div class="stat-icon red">📋</div><div><div class="stat-label">Ventes impayées</div><div class="stat-value">{{ ventesEnAttente.length }}</div><div class="stat-trend down">{{ ventesEnAttente.length > 0 ? 'À encaisser' : 'Aucune' }}</div></div></div>
     </div>
-    <select class="filter-select" [(ngModel)]="methodeFilter">
-      <option value="">Toutes méthodes</option>
-      <option value="Especes">Espèces</option>
-      <option value="Virement">Virement</option>
-      <option value="Cheque">Chèque</option>
-      <option value="CarteBancaire">Carte bancaire</option>
-    </select>
-    <select class="filter-select" [(ngModel)]="statutFilter">
-      <option value="">Tous statuts</option>
-      <option value="Confirme">Payé</option>
-      <option value="EnAttente">En attente</option>
-      <option value="Annule">Annulé</option>
-    </select>
-    <div class="toolbar-divider"></div>
-    <button class="btn btn-ghost btn-sm" (click)="resetFilters()">🔄 Réinitialiser</button>
-  </div>
 
-  <div class="table-card">
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead><tr><th>Client</th><th>Référence</th><th>Date</th><th>Méthode</th><th style="text-align:right">Montant payé</th><th style="text-align:right">Reste dû</th><th>Statut</th></tr></thead>
-        <tbody>
-          @if (loading) { <tr><td colspan="7" class="loading-row">Chargement…</td></tr> }
-          @if (!loading && mergedRows.length === 0) {
-            <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">💰</div><div class="empty-title">Aucune donnée</div><div class="empty-sub">Les paiements et ventes apparaîtront ici</div></div></td></tr>
-          }
+    <div class="toolbar">
+      <div class="search-wrapper">
+        <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+        <input class="search-input" placeholder="Rechercher par client, vente..." [(ngModel)]="search" />
+      </div>
+      <select class="filter-select" [(ngModel)]="methodeFilter">
+        <option value="">Toutes méthodes</option>
+        <option value="Especes">Espèces</option>
+        <option value="Virement">Virement</option>
+        <option value="Cheque">Chèque</option>
+        <option value="CarteBancaire">Carte bancaire</option>
+      </select>
+      <select class="filter-select" [(ngModel)]="statutFilter">
+        <option value="">Tous statuts</option>
+        <option value="Confirme">Payé</option>
+        <option value="EnAttente">En attente</option>
+        <option value="Annule">Annulé</option>
+      </select>
+      <div class="toolbar-divider"></div>
+      <button class="btn btn-ghost btn-sm" (click)="resetFilters()">🔄 Réinitialiser</button>
+    </div>
+
+    <div class="table-card">
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead><tr><th>Client</th><th>Référence</th><th>Date</th><th>Méthode</th><th style="text-align:right">Montant payé</th><th style="text-align:right">Reste dû</th><th>Statut</th></tr></thead>
+          <tbody>
+            @if (loading) { <tr><td colspan="7" class="loading-row">Chargement…</td></tr> }
+            @if (!loading && mergedRows.length === 0) {
+              <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">💰</div><div class="empty-title">Aucune donnée</div><div class="empty-sub">Les paiements et ventes apparaîtront ici</div></div></td></tr>
+            }
             @for (row of mergedRows; track $index) {
               @if (isPaiement(row)) {
                 @let d = formatDate(row.p.datePaiement);
@@ -83,8 +100,99 @@
                 </tr>
               }
             }
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>
+  }
+
+  <!-- ═══════════════ ACHATS TAB ═══════════════ -->
+  @if (activeTab === 'achats') {
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-icon red">🛒</div><div><div class="stat-label">Total décaissé</div><div class="stat-value">{{ formatNum(statsAchats.total) }} <small>MAD</small></div><div class="stat-trend down">Cumul</div></div></div>
+      <div class="stat-card"><div class="stat-icon blue">✅</div><div><div class="stat-label">Totalement payés</div><div class="stat-value">{{ formatNum(statsAchats.payes) }} <small>MAD</small></div><div class="stat-trend neutral">Soldés</div></div></div>
+      <div class="stat-card"><div class="stat-icon orange">⏳</div><div><div class="stat-label">Non commencés</div><div class="stat-value">{{ statsAchats.enAttente }}</div><div class="stat-trend down">{{ statsAchats.enAttente > 0 ? 'En attente' : 'Aucun' }}</div></div></div>
+      <div class="stat-card"><div class="stat-icon red">📋</div><div><div class="stat-label">Reste à payer</div><div class="stat-value">{{ statsAchats.nonSoldes }}</div><div class="stat-trend down">{{ statsAchats.nonSoldes > 0 ? 'Achats non soldés' : 'Aucun' }}</div></div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-wrapper">
+        <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+        <input class="search-input" placeholder="Rechercher par fournisseur, achat..." [(ngModel)]="search" />
+      </div>
+      <select class="filter-select" [(ngModel)]="methodeFilter">
+        <option value="">Toutes méthodes</option>
+        <option value="Especes">Espèces</option>
+        <option value="Virement">Virement</option>
+        <option value="Cheque">Chèque</option>
+        <option value="CarteBancaire">Carte bancaire</option>
+      </select>
+      <select class="filter-select" [(ngModel)]="statutFilter">
+        <option value="">Tous statuts</option>
+        <option value="Confirme">Payé</option>
+        <option value="EnAttente">En attente</option>
+        <option value="Annule">Annulé</option>
+      </select>
+      <div class="toolbar-divider"></div>
+      <button class="btn btn-ghost btn-sm" (click)="resetFilters()">🔄 Réinitialiser</button>
+    </div>
+
+    <div class="table-card">
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead><tr><th>Fournisseur</th><th>Référence</th><th>Date</th><th>Méthode</th><th style="text-align:right">Montant payé</th><th style="text-align:right">Reste dû</th><th>Statut</th></tr></thead>
+          <tbody>
+            @if (loading) { <tr><td colspan="7" class="loading-row">Chargement…</td></tr> }
+            @if (!loading && mergedAchatRows.length === 0) {
+              <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🛒</div><div class="empty-title">Aucune donnée</div><div class="empty-sub">Les paiements et achats apparaîtront ici</div></div></td></tr>
+            }
+            @for (row of mergedAchatRows; track $index) {
+              @if (isPaiementAchat(row)) {
+                @let d = formatDate(row.p.datePaiement);
+                @let reste = getPaiementAchatReste(row.p);
+                <tr [style.background]="reste > 0 ? 'color-mix(in srgb, var(--warning-light) 30%, transparent)' : 'transparent'">
+                  <td>
+                    <div class="client-cell">
+                      <div [class]="'client-avatar ' + getAvatarClass(row.p.nomFournisseur)">{{ getInitials(row.p.nomFournisseur) }}</div>
+                      <div><div class="client-name">{{ row.p.nomFournisseur }}</div></div>
+                    </div>
+                  </td>
+                  <td><span class="mono">{{ row.p.achatReference }}</span></td>
+                  <td class="date-cell"><div class="date-main">{{ d.main }}</div><div class="date-sub">{{ d.time }}</div></td>
+                  <td><span class="items-badge">{{ methodIcon(row.p.methode) }} {{ row.p.methodeLibelle }}</span></td>
+                  <td style="text-align:right"><div class="price-val" [style.color]="reste > 0 ? 'var(--warning)' : '#dc2626'">{{ reste > 0 ? '' : '-' }}{{ formatNum(row.p.montant) }} <small>MAD</small></div></td>
+                  <td style="text-align:right"><div [style.color]="reste > 0 ? '#dc2626' : 'var(--text-muted)'">{{ reste > 0 ? formatNum(reste) + ' MAD' : '—' }}</div></td>
+                  <td><span [class]="'status-badge ' + (reste > 0 ? 'partial' : statutCls(row.p.statut))">{{ reste > 0 ? 'Partiel' : statutLabel(row.p.statut) }}</span></td>
+                </tr>
+              } @else {
+                @let d = formatDate(row.a.dateAchat);
+                @let pay = getPayStatus(row.a.montantPaye, row.a.montantTotal);
+                @let st = achatStatut(row.a);
+                <tr style="background:color-mix(in srgb, var(--warning-light) 30%, transparent)">
+                  <td>
+                    <div class="client-cell">
+                      <div [class]="'client-avatar ' + getAvatarClass(row.a.nomFournisseur)">{{ getInitials(row.a.nomFournisseur) }}</div>
+                      <div><div class="client-name">{{ row.a.nomFournisseur }}</div></div>
+                    </div>
+                  </td>
+                  <td><span class="mono">{{ row.a.reference }}</span></td>
+                  <td class="date-cell"><div class="date-main">{{ d.main }}</div><div class="date-sub">{{ d.time }}</div></td>
+                  <td>
+                    <div class="payment-wrap" style="min-width:120px">
+                      <div class="payment-val" style="font-size:11.5px"><strong>{{ formatNum(row.a.montantPaye) }}</strong> / {{ formatNum(row.a.montantTotal) }} MAD</div>
+                      <div class="payment-bar"><div [class]="'payment-bar-fill ' + pay.cls" [style.width]="pay.pct + '%'"></div></div>
+                    </div>
+                  </td>
+                  <td style="text-align:right"><div class="price-val">{{ formatNum(row.a.montantPaye) }} <small>MAD</small></div></td>
+                  <td style="text-align:right"><div style="font-weight:700;color:#dc2626">{{ formatNum(row.a.reste) }} MAD</div></td>
+                  <td><span [class]="'status-badge ' + st.cls">{{ st.label }}</span></td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
 </div>

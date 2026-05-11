@@ -2,10 +2,12 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom, map } from 'rxjs';
 import {
-  User, LoginResponse, DashboardStats, Vente, Achat, Produit, Client,
-  Fournisseur, Categorie, Paiement, MouvementStock, Facture, AuditLog,
+  User, LoginResponse, DashboardStats, FullDashboard, Vente, Achat, Produit, Client,
+  Fournisseur, Categorie, Paiement, PaiementAchat, MouvementStock, Facture, AuditLog,
   UtilisateurDto, CreateUtilisateurPayload, UpdateUtilisateurPayload,
-  PagedList, VenteSansFacture
+  PagedList, VenteSansFacture, Charge, CategorieCharge, PaiementCharge,
+  AppNotification, NotificationSummary, Devis, ConversionDevisResult,
+  PLReport, TVAReport
 } from '../models';
 import { environment } from '../../../environments/environment';
 
@@ -41,6 +43,9 @@ export class ApiService {
   dashboardStats(): Promise<DashboardStats> {
     return firstValueFrom(this.http.get<DashboardStats>(`${this.base}/dashboard/stats`));
   }
+  dashboardFull(): Promise<FullDashboard> {
+    return firstValueFrom(this.http.get<FullDashboard>(`${this.base}/dashboard/full`));
+  }
 
   // ── VENTES ──
   ventesList(): Promise<Vente[]> {
@@ -63,6 +68,9 @@ export class ApiService {
   }
   venteCancel(id: number): Promise<Vente> {
     return firstValueFrom(this.http.post<Vente>(`${this.base}/ventes/${id}/cancel`, {}));
+  }
+  venteAddPaiement(id: number, data: any): Promise<Vente> {
+    return firstValueFrom(this.http.post<Vente>(`${this.base}/ventes/${id}/paiements`, data));
   }
 
   // ── ACHATS ──
@@ -161,12 +169,23 @@ export class ApiService {
     );
   }
 
+  paiementsAchatList(): Promise<PaiementAchat[]> {
+    return firstValueFrom(
+      this.http.get<PaiementAchat[] | PagedList<PaiementAchat>>(`${this.base}/achats/paiements`, { params: LIST_PARAMS })
+        .pipe(map(normalizeList))
+    );
+  }
+
   // ── MOUVEMENTS STOCK ──
   mouvementsList(): Promise<MouvementStock[]> {
     return firstValueFrom(
       this.http.get<MouvementStock[] | PagedList<MouvementStock>>(`${this.base}/mouvements-stock`, { params: LIST_PARAMS })
         .pipe(map(normalizeList))
     );
+  }
+
+  ajustementStock(data: { produitId: number; type: string; quantite: number; raison: string; commentaire?: string }): Promise<MouvementStock> {
+    return firstValueFrom(this.http.post<MouvementStock>(`${this.base}/mouvements-stock/ajustement`, data));
   }
 
   // ── FACTURES ──
@@ -188,12 +207,101 @@ export class ApiService {
     return firstValueFrom(this.http.get<VenteSansFacture[]>(`${this.base}/factures/ventes-sans-facture`));
   }
 
+  // ── CHARGES ──
+  chargesList(): Promise<Charge[]> {
+    return firstValueFrom(
+      this.http.get<Charge[] | PagedList<Charge>>(`${this.base}/charges`, { params: LIST_PARAMS })
+        .pipe(map(normalizeList))
+    );
+  }
+  chargeGet(id: number): Promise<Charge> {
+    return firstValueFrom(this.http.get<Charge>(`${this.base}/charges/${id}`));
+  }
+  chargeCreate(data: any): Promise<Charge> {
+    return firstValueFrom(this.http.post<Charge>(`${this.base}/charges`, data));
+  }
+  chargeAddPaiement(id: number, data: any): Promise<Charge> {
+    return firstValueFrom(this.http.post<Charge>(`${this.base}/charges/${id}/paiements`, data));
+  }
+  paiementsChargeList(): Promise<PaiementCharge[]> {
+    return firstValueFrom(
+      this.http.get<PaiementCharge[] | PagedList<PaiementCharge>>(`${this.base}/charges/paiements`, { params: LIST_PARAMS })
+        .pipe(map(normalizeList))
+    );
+  }
+
+  // ── CATEGORIES CHARGE ──
+  categoriesChargeList(): Promise<CategorieCharge[]> {
+    return firstValueFrom(this.http.get<CategorieCharge[]>(`${this.base}/categories-charge`));
+  }
+  categorieChargeCreate(data: { nom: string; icone?: string }): Promise<CategorieCharge> {
+    return firstValueFrom(this.http.post<CategorieCharge>(`${this.base}/categories-charge`, data));
+  }
+  categorieChargeDelete(id: number): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.base}/categories-charge/${id}`));
+  }
+
+  // ── NOTIFICATIONS ──
+  notificationsSummary(limit = 30): Promise<NotificationSummary> {
+    return firstValueFrom(this.http.get<NotificationSummary>(`${this.base}/notifications?limit=${limit}`));
+  }
+  notificationMarkRead(id: number): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.base}/notifications/${id}/read`, {}));
+  }
+  notificationMarkAllRead(): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.base}/notifications/read-all`, {}));
+  }
+  notificationDelete(id: number): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.base}/notifications/${id}`));
+  }
+  notificationDeleteAllRead(): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.base}/notifications/read`));
+  }
+
+  // ── DEVIS ──
+  devisList(): Promise<Devis[]> {
+    return firstValueFrom(
+      this.http.get<Devis[] | PagedList<Devis>>(`${this.base}/devis`, { params: LIST_PARAMS })
+        .pipe(map(normalizeList))
+    );
+  }
+  devisGet(id: number): Promise<Devis> {
+    return firstValueFrom(this.http.get<Devis>(`${this.base}/devis/${id}`));
+  }
+  devisCreate(data: any): Promise<Devis> {
+    return firstValueFrom(this.http.post<Devis>(`${this.base}/devis`, data));
+  }
+  devisUpdate(id: number, data: any): Promise<Devis> {
+    return firstValueFrom(this.http.put<Devis>(`${this.base}/devis/${id}`, data));
+  }
+  devisUpdateStatut(id: number, statut: string): Promise<Devis> {
+    return firstValueFrom(this.http.put<Devis>(`${this.base}/devis/${id}/statut`, { statut }));
+  }
+  devisConvertir(id: number): Promise<ConversionDevisResult> {
+    return firstValueFrom(this.http.post<ConversionDevisResult>(`${this.base}/devis/${id}/convertir`, {}));
+  }
+  devisDelete(id: number): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.base}/devis/${id}`));
+  }
+
   // ── AUDIT ──
   auditList(): Promise<AuditLog[]> {
     return firstValueFrom(
       this.http.get<AuditLog[] | PagedList<AuditLog>>(`${this.base}/logs`, { params: LIST_PARAMS })
         .pipe(map(normalizeList))
     );
+  }
+
+  // ── UTILISATEURS ──
+  // ── RAPPORTS ──
+  rapportPL(annee: number): Promise<PLReport> {
+    return firstValueFrom(this.http.get<PLReport>(`${this.base}/reports/pl/${annee}`));
+  }
+  rapportTVA(annee: number): Promise<TVAReport> {
+    return firstValueFrom(this.http.get<TVAReport>(`${this.base}/reports/tva/${annee}`));
+  }
+  rapportPdf(type: 'pl' | 'tva', annee: number): Promise<ArrayBuffer> {
+    return firstValueFrom(this.http.get(`${this.base}/reports/${type}/${annee}/pdf`, { responseType: 'arraybuffer' }));
   }
 
   // ── UTILISATEURS ──

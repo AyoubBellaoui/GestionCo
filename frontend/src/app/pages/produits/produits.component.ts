@@ -5,6 +5,7 @@ import { NgClass } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
+import { ExportService } from '../../core/services/export.service';
 import { Produit } from '../../core/models';
 import { formatNum } from '../../core/utils/format';
 
@@ -21,9 +22,17 @@ export class ProduitsComponent implements OnInit {
   categorieFilter = '';
   stockFilter = '';
 
+  // Ajustement modal
+  ajustModal = false;
+  ajustProduit: Produit | null = null;
+  ajustForm = { type: 'Entree', quantite: 1, raison: '', commentaire: '' };
+  ajustSaving = false;
+
   formatNum = formatNum;
 
-  constructor(private api: ApiService, private toast: ToastService, public router: Router) {}
+  constructor(private api: ApiService, private toast: ToastService, private exportSvc: ExportService, public router: Router) {}
+
+  exportExcel(): void { this.exportSvc.exportProduits(this.produits); }
 
   async ngOnInit(): Promise<void> { await this.load(); }
 
@@ -67,6 +76,48 @@ export class ProduitsComponent implements OnInit {
     if (!confirm('Supprimer ce produit ?')) return;
     try { await this.api.produitDelete(id); this.toast.notify('Produit supprimé', 'success'); this.load(); }
     catch { this.toast.notify('Erreur de suppression', 'error'); }
+  }
+
+  openAjust(p: Produit): void {
+    this.ajustProduit = p;
+    this.ajustForm = { type: 'Entree', quantite: 1, raison: '', commentaire: '' };
+    this.ajustModal = true;
+  }
+
+  closeAjust(): void {
+    this.ajustModal = false;
+    this.ajustProduit = null;
+  }
+
+  get ajustNewStock(): number {
+    if (!this.ajustProduit) return 0;
+    const q = this.ajustForm.quantite || 0;
+    return this.ajustForm.type === 'Entree'
+      ? this.ajustProduit.quantiteStock + q
+      : Math.max(0, this.ajustProduit.quantiteStock - q);
+  }
+
+  async saveAjust(): Promise<void> {
+    if (!this.ajustProduit) return;
+    if ((this.ajustForm.quantite ?? 0) <= 0) { this.toast.notify('La quantité doit être > 0', 'warning'); return; }
+    if (!this.ajustForm.raison.trim()) { this.toast.notify('La raison est obligatoire', 'warning'); return; }
+    if (this.ajustForm.type === 'Sortie' && this.ajustForm.quantite > this.ajustProduit.quantiteStock) {
+      this.toast.notify(`Stock insuffisant (stock actuel : ${this.ajustProduit.quantiteStock})`, 'warning'); return;
+    }
+    this.ajustSaving = true;
+    try {
+      await this.api.ajustementStock({
+        produitId: this.ajustProduit.id,
+        type: this.ajustForm.type,
+        quantite: this.ajustForm.quantite,
+        raison: this.ajustForm.raison,
+        commentaire: this.ajustForm.commentaire || undefined,
+      });
+      this.toast.notify(`Stock ajusté : ${this.ajustForm.type === 'Entree' ? '+' : '-'}${this.ajustForm.quantite} unités`, 'success');
+      this.closeAjust();
+      await this.load();
+    } catch { this.toast.notify("Erreur lors de l'ajustement", 'error'); }
+    finally { this.ajustSaving = false; }
   }
 
   resetFilters(): void { this.search = ''; this.categorieFilter = ''; this.stockFilter = ''; }

@@ -94,11 +94,12 @@ public class CreateAchatHandler : IRequestHandler<CreateAchatCommand, AchatDto>
     private readonly IReferenceGenerator _refGen;
     private readonly ICurrentUserService _current;
     private readonly IAuditLogger _audit;
+    private readonly INotificationService _notif;
 
     public CreateAchatHandler(IAppDbContext db, IReferenceGenerator refGen,
-        ICurrentUserService current, IAuditLogger audit)
+        ICurrentUserService current, IAuditLogger audit, INotificationService notif)
     {
-        _db = db; _refGen = refGen; _current = current; _audit = audit;
+        _db = db; _refGen = refGen; _current = current; _audit = audit; _notif = notif;
     }
 
     public async Task<AchatDto> Handle(CreateAchatCommand req, CancellationToken ct)
@@ -184,6 +185,14 @@ public class CreateAchatHandler : IRequestHandler<CreateAchatCommand, AchatDto>
             $"Achat créé : {achat.Reference} chez {fournisseur.Nom} ({achat.MontantTotal:N2} MAD)",
             achat.Id, achat.Reference, ct: ct);
 
+        await _notif.CreateAsync(
+            titre: $"Nouvel achat — {achat.Reference}",
+            message: $"Achat de {achat.MontantTotal:N2} MAD passé chez {fournisseur.Nom}.",
+            type: TypeNotification.Info,
+            categorie: CategorieNotification.Achat,
+            entiteId: achat.Id, entiteReference: achat.Reference,
+            lienUrl: "/achats", ct: ct);
+
         return await GetAchatDetails(achat.Id, ct);
     }
 
@@ -203,10 +212,11 @@ public class AddPaiementAchatHandler : IRequestHandler<AddPaiementAchatCommand, 
     private readonly IAppDbContext _db;
     private readonly ICurrentUserService _current;
     private readonly IAuditLogger _audit;
+    private readonly INotificationService _notif;
 
-    public AddPaiementAchatHandler(IAppDbContext db, ICurrentUserService current, IAuditLogger audit)
+    public AddPaiementAchatHandler(IAppDbContext db, ICurrentUserService current, IAuditLogger audit, INotificationService notif)
     {
-        _db = db; _current = current; _audit = audit;
+        _db = db; _current = current; _audit = audit; _notif = notif;
     }
 
     public async Task<AchatDto> Handle(AddPaiementAchatCommand req, CancellationToken ct)
@@ -241,6 +251,14 @@ public class AddPaiementAchatHandler : IRequestHandler<AddPaiementAchatCommand, 
         await _audit.LogAsync(ActionLog.Update, "achats",
             $"Paiement de {montant:N2} MAD ajouté à {achat.Reference}",
             achat.Id, achat.Reference, ct: ct);
+
+        await _notif.CreateAsync(
+            titre: $"Paiement fournisseur — {achat.Reference}",
+            message: $"Paiement de {montant:N2} MAD envoyé à {achat.Fournisseur?.Nom ?? "fournisseur"} pour {achat.Reference}.",
+            type: TypeNotification.Info,
+            categorie: CategorieNotification.Paiement,
+            entiteId: achat.Id, entiteReference: achat.Reference,
+            lienUrl: "/achats", ct: ct);
 
         return await GetAchatDetails(achat.Id, ct);
     }
@@ -318,6 +336,80 @@ public class GetAchatByIdHandler : IRequestHandler<GetAchatByIdQuery, AchatDto>
             .FirstOrDefaultAsync(a => a.Id == q.Id, ct)
             ?? throw new NotFoundException("Achat", q.Id);
         return AchatMapper.ToDto(a);
+    }
+}
+
+// ============ PAIEMENTS ACHAT DTO + QUERY ============
+public class PaiementAchatDto
+{
+    public int Id { get; set; }
+    public int AchatId { get; set; }
+    public string AchatReference { get; set; } = string.Empty;
+    public int FournisseurId { get; set; }
+    public string NomFournisseur { get; set; } = string.Empty;
+    public string? IconeFournisseur { get; set; }
+    public decimal Montant { get; set; }
+    public MethodePaiement Methode { get; set; }
+    public string MethodeLibelle => Methode.ToString();
+    public StatutPaiement Statut { get; set; }
+    public string StatutLibelle => Statut.ToString();
+    public DateTime DatePaiement { get; set; }
+    public string? Reference { get; set; }
+    public string? Notes { get; set; }
+}
+
+public record GetPaiementsAchatQuery(
+    int Page = 1, int PageSize = 200,
+    string? Search = null,
+    StatutPaiement? Statut = null,
+    MethodePaiement? Methode = null
+) : IRequest<PagedList<PaiementAchatDto>>;
+
+public class GetPaiementsAchatHandler : IRequestHandler<GetPaiementsAchatQuery, PagedList<PaiementAchatDto>>
+{
+    private readonly IAppDbContext _db;
+    public GetPaiementsAchatHandler(IAppDbContext db) => _db = db;
+
+    public async Task<PagedList<PaiementAchatDto>> Handle(GetPaiementsAchatQuery q, CancellationToken ct)
+    {
+        var query = _db.PaiementsAchat
+            .Include(p => p.Achat).ThenInclude(a => a.Fournisseur)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(q.Search))
+        {
+            var s = q.Search.ToLower();
+            query = query.Where(p =>
+                p.Achat.Reference.ToLower().Contains(s) ||
+                p.Achat.Fournisseur.Nom.ToLower().Contains(s));
+        }
+
+        if (q.Statut.HasValue) query = query.Where(p => p.Statut == q.Statut);
+        if (q.Methode.HasValue) query = query.Where(p => p.Methode == q.Methode);
+
+        query = query.OrderByDescending(p => p.DatePaiement);
+
+        var paged = await PagedList<PaiementAchat>.CreateAsync(query, q.Page, q.PageSize, ct);
+        return new PagedList<PaiementAchatDto>
+        {
+            Items = paged.Items.Select(p => new PaiementAchatDto
+            {
+                Id = p.Id,
+                AchatId = p.AchatId,
+                AchatReference = p.Achat?.Reference ?? "",
+                FournisseurId = p.Achat?.FournisseurId ?? 0,
+                NomFournisseur = p.Achat?.Fournisseur?.Nom ?? "",
+                IconeFournisseur = p.Achat?.Fournisseur?.Icone,
+                Montant = p.Montant,
+                Methode = p.Methode,
+                Statut = p.Statut,
+                DatePaiement = p.DatePaiement,
+                Reference = p.Reference,
+                Notes = p.Notes
+            }).ToList(),
+            TotalCount = paged.TotalCount,
+            Page = paged.Page, PageSize = paged.PageSize
+        };
     }
 }
 

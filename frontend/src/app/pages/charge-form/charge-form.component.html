@@ -1,0 +1,211 @@
+<div class="topbar">
+  <div class="topbar-left" style="display:flex;align-items:center;gap:14px">
+    <button class="back-btn" (click)="router.navigate(['/charges'])">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    </button>
+    <div>
+      <h1>💸 Nouvelle charge</h1>
+      <div class="breadcrumb"><span class="breadcrumb-link" (click)="router.navigate(['/charges'])">Charges</span><span class="breadcrumb-sep">/</span><span>Nouveau</span></div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-ghost" (click)="router.navigate(['/charges'])">Annuler</button>
+    <button class="btn btn-primary" (click)="save()" [disabled]="saving">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      {{ saving ? 'Enregistrement…' : 'Enregistrer la charge' }}
+    </button>
+  </div>
+</div>
+
+<div class="content">
+  @if (loadingData) {
+    <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Chargement…</div></div>
+  } @else {
+    <div class="form-layout-2col">
+      <div class="form-main">
+
+        <!-- Informations générales -->
+        <div class="form-card">
+          <div class="form-card-header"><h3>📋 Informations de la charge</h3></div>
+          <div class="form-card-body">
+            <div class="form-field">
+              <label class="label">Titre *</label>
+              <input type="text" class="form-input" placeholder="Ex: Loyer mensuel, Facture électricité..." [(ngModel)]="titre" />
+            </div>
+            <div class="form-field">
+              <label class="label">Description</label>
+              <textarea class="form-textarea" rows="3" placeholder="Détails optionnels sur cette charge..." [(ngModel)]="description"></textarea>
+            </div>
+            <div class="form-row-2">
+              <div class="form-field">
+                <label class="label">Date de la charge</label>
+                <input type="date" class="form-input" [(ngModel)]="dateCharge" />
+              </div>
+              <div class="form-field">
+                <label class="label">Montant *</label>
+                <div class="input-group">
+                  <input type="number" class="form-input with-suffix" min="0.01" step="0.01" [(ngModel)]="montant" placeholder="0.00" />
+                  <span class="input-suffix">MAD</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Catégorie -->
+        <div class="form-card">
+          <div class="form-card-header"><h3>📂 Catégorie *</h3></div>
+          <div class="form-card-body">
+            <div class="form-field">
+              <div style="display:flex;gap:8px;align-items:center">
+                <select class="form-select" style="flex:1" [(ngModel)]="categorieId">
+                  <option value="">— Sélectionner une catégorie —</option>
+                  @for (cat of categories; track cat.id) {
+                    <option [value]="cat.id">{{ cat.icone || '📋' }} {{ cat.nom }}</option>
+                  }
+                </select>
+                <button type="button" class="btn btn-ghost btn-sm" style="white-space:nowrap;flex-shrink:0" (click)="newCatOpen=!newCatOpen">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Nouvelle catégorie
+                </button>
+              </div>
+            </div>
+
+            @if (newCatOpen) {
+              <div class="info-box" style="margin-top:12px;padding:14px;display:flex;flex-direction:column;gap:10px">
+                <div style="font-size:12px;font-weight:700">Créer une nouvelle catégorie</div>
+                <div>
+                  <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px">Icône</label>
+                  <div class="emoji-grid">
+                    @for (e of emojiOptions; track e) {
+                      <button type="button" class="emoji-btn" [class.selected]="newCatIcone === e" (click)="newCatIcone = e">{{ e }}</button>
+                    }
+                  </div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:flex-end">
+                  <div style="flex:1">
+                    <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Nom *</label>
+                    <input type="text" class="form-input" placeholder="Ex: Loyer, Électricité..." [(ngModel)]="newCatNom" (keyup.enter)="saveNewCat()" />
+                  </div>
+                  <button class="btn btn-primary btn-sm" (click)="saveNewCat()" [disabled]="newCatSaving || !newCatNom.trim()">
+                    {{ newCatSaving ? '…' : '+ Créer' }}
+                  </button>
+                </div>
+              </div>
+            }
+
+            @if (selectedCategorie) {
+              <div class="info-box" style="margin-top:12px;display:flex;align-items:center;gap:10px">
+                <span style="font-size:28px">{{ selectedCategorie.icone || '📋' }}</span>
+                <div>
+                  <div style="font-weight:700">{{ selectedCategorie.nom }}</div>
+                  <div style="font-size:12px;color:var(--text-muted)">{{ selectedCategorie.nombreCharges }} charge{{ selectedCategorie.nombreCharges > 1 ? 's' : '' }} enregistrée{{ selectedCategorie.nombreCharges > 1 ? 's' : '' }}</div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Fournisseur (optionnel) -->
+        <div class="form-card">
+          <div class="form-card-header"><h3>🏢 Fournisseur <span style="font-size:11px;font-weight:400;color:var(--text-muted)">(optionnel)</span></h3></div>
+          <div class="form-card-body">
+            <div class="form-field">
+              <select class="form-select" [(ngModel)]="fournisseurId">
+                <option value="">— Aucun fournisseur —</option>
+                @for (f of fournisseurs; track f.id) {
+                  <option [value]="f.id">{{ f.icone || '🏢' }} {{ f.nom }}</option>
+                }
+              </select>
+            </div>
+            @if (selectedFournisseur) {
+              <div class="info-box" style="margin-top:12px;display:flex;align-items:center;gap:12px">
+                <div style="font-size:28px">{{ selectedFournisseur.icone || '🏢' }}</div>
+                <div>
+                  <div style="font-weight:700;font-size:14px">{{ selectedFournisseur.nom }}</div>
+                  @if (selectedFournisseur.email) { <div style="font-size:12px;color:var(--text-muted)">📧 {{ selectedFournisseur.email }}</div> }
+                  @if (selectedFournisseur.telephone) { <div style="font-size:12px;color:var(--text-muted)">📞 {{ selectedFournisseur.telephone }}</div> }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Sidebar droite -->
+      <div class="form-side">
+
+        <!-- Justificatif -->
+        <div class="form-card">
+          <div class="form-card-header"><h3>📎 Justificatif</h3></div>
+          <div class="form-card-body">
+            <div class="form-field">
+              <label class="label">Référence / Numéro de facture</label>
+              <input type="text" class="form-input" placeholder="Ex: FAC-2026-001, ticket-caisse..." [(ngModel)]="justificatif" />
+              <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px">Indiquez la référence du document justificatif</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Paiement initial -->
+        <div class="form-card">
+          <div class="form-card-header"><h3>💳 Paiement initial</h3></div>
+          <div class="form-card-body">
+            <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:12px">
+              Enregistrez un paiement immédiat lors de la création.
+            </div>
+            <div class="form-field">
+              <label class="label">Montant payé maintenant</label>
+              <div class="input-group">
+                <input type="number" class="form-input with-suffix" min="0" [max]="montant" step="0.01"
+                       [(ngModel)]="paiementInitial" (change)="capPaiement()" placeholder="0.00" />
+                <span class="input-suffix">MAD</span>
+              </div>
+            </div>
+            @if (paiementInitial > 0) {
+              <div class="form-field">
+                <label class="label">Méthode de paiement</label>
+                <select class="form-select" [(ngModel)]="methodePaiement">
+                  <option value="Espece">Espèces</option>
+                  <option value="Carte">Carte bancaire</option>
+                  <option value="Virement">Virement</option>
+                  <option value="Cheque">Chèque</option>
+                </select>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Récapitulatif -->
+        @if (montant > 0) {
+          <div class="form-card">
+            <div class="form-card-header"><h3>📊 Récapitulatif</h3></div>
+            <div class="form-card-body" style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;justify-content:space-between;font-size:14px">
+                <span style="color:var(--text-muted)">Montant total</span>
+                <span style="font-weight:700">{{ formatNum(montant) }} MAD</span>
+              </div>
+              @if (paiementInitial > 0) {
+                <div style="display:flex;justify-content:space-between;font-size:14px">
+                  <span style="color:var(--text-muted)">Paiement initial</span>
+                  <span style="font-weight:700;color:var(--success)">− {{ formatNum(paiementInitial) }} MAD</span>
+                </div>
+                <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between">
+                  <span style="font-weight:600">Reste dû</span>
+                  <span style="font-size:18px;font-weight:700;color:{{ reste > 0 ? '#dc2626' : 'var(--success)' }}">{{ formatNum(reste) }} MAD</span>
+                </div>
+              }
+              <div style="margin-top:4px">
+                <span [class]="'status-badge ' + (paiementInitial >= montant && montant > 0 ? 'paid' : paiementInitial > 0 ? 'partial' : 'pending')">
+                  {{ paiementInitial >= montant && montant > 0 ? '✓ Payée' : paiementInitial > 0 ? 'Partiel' : 'En attente' }}
+                </span>
+              </div>
+            </div>
+          </div>
+        }
+
+      </div>
+    </div>
+  }
+</div>

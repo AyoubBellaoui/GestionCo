@@ -6,6 +6,7 @@ import { TopbarComponent } from '../../shared/topbar/topbar.component';
 import { ModalComponent } from '../../shared/modal/modal.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
+import { ExportService } from '../../core/services/export.service';
 import { Vente, Client } from '../../core/models';
 import { formatNum, formatDate, getInitials, getAvatarClass, getPayStatus, statusInfo } from '../../core/utils/format';
 
@@ -31,6 +32,10 @@ export class VentesComponent implements OnInit {
   viewVente: Vente | null = null;
   selectedDate = '';
 
+  paiementMontant = 0;
+  paiementMethode = 'Espece';
+  paiementSaving = false;
+
   formatNum = formatNum;
   formatDate = formatDate;
   getInitials = getInitials;
@@ -40,9 +45,11 @@ export class VentesComponent implements OnInit {
 
   Math = Math;
 
-  constructor(private api: ApiService, private toast: ToastService, public router: Router) {}
+  constructor(private api: ApiService, private toast: ToastService, private exportSvc: ExportService, public router: Router) {}
 
   async ngOnInit(): Promise<void> { await this.load(); }
+
+  exportExcel(): void { this.exportSvc.exportVentes(this.ventes); }
 
   async load(): Promise<void> {
     this.loading = true;
@@ -118,7 +125,32 @@ export class VentesComponent implements OnInit {
   }
 
 
-  openDetail(v: Vente): void { this.viewVente = v; this.modalOpen = true; }
+  openDetail(v: Vente): void {
+    this.viewVente = v;
+    this.paiementMontant = 0;
+    this.paiementMethode = 'Espece';
+    this.modalOpen = true;
+  }
+
+  async addPaiement(): Promise<void> {
+    if (!this.viewVente || this.paiementMontant <= 0) return;
+    this.paiementSaving = true;
+    try {
+      const updated = await this.api.venteAddPaiement(this.viewVente.id, {
+        montant: this.paiementMontant,
+        methode: this.paiementMethode,
+      });
+      this.ventes = this.ventes.map(v => v.id === updated.id ? updated : v);
+      this.paiementMontant = 0;
+      this.toast.notify('Paiement enregistré', 'success');
+      this.modalOpen = false;
+      this.viewVente = null;
+    } catch {
+      this.toast.notify('Erreur lors du paiement', 'error');
+    } finally {
+      this.paiementSaving = false;
+    }
+  }
 
   async handleCancel(id: number): Promise<void> {
     if (!confirm('Annuler cette vente ?')) return;

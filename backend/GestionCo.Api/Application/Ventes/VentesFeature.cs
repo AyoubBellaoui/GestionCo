@@ -67,8 +67,17 @@ public class CreateLigneVenteDto
     public decimal TVA { get; set; } = 20;
 }
 
+public class AddPaiementVenteDto
+{
+    public int VenteId { get; set; }
+    public decimal Montant { get; set; }
+    public MethodePaiement Methode { get; set; } = MethodePaiement.Espece;
+    public string? Notes { get; set; }
+}
+
 // ============ COMMANDS ============
 public record CreateVenteCommand(CreateVenteDto Dto) : IRequest<VenteDto>;
+public record AddPaiementVenteCommand(AddPaiementVenteDto Dto) : IRequest<VenteDto>;
 
 public class CreateVenteValidator : AbstractValidator<CreateVenteCommand>
 {
@@ -91,11 +100,12 @@ public class CreateVenteHandler : IRequestHandler<CreateVenteCommand, VenteDto>
     private readonly IReferenceGenerator _refGen;
     private readonly ICurrentUserService _current;
     private readonly IAuditLogger _audit;
+    private readonly INotificationService _notif;
 
     public CreateVenteHandler(IAppDbContext db, IReferenceGenerator refGen,
-        ICurrentUserService current, IAuditLogger audit)
+        ICurrentUserService current, IAuditLogger audit, INotificationService notif)
     {
-        _db = db; _refGen = refGen; _current = current; _audit = audit;
+        _db = db; _refGen = refGen; _current = current; _audit = audit; _notif = notif;
     }
 
     public async Task<VenteDto> Handle(CreateVenteCommand req, CancellationToken ct)
@@ -208,6 +218,21 @@ public class CreateVenteHandler : IRequestHandler<CreateVenteCommand, VenteDto>
             $"Vente créée : {vente.Reference} pour {client.NomClient} ({vente.MontantTotal:N2} MAD)",
             vente.Id, vente.Reference, ct: ct);
 
+        await _notif.CreateAsync(
+            titre: $"Nouvelle vente — {vente.Reference}",
+            message: $"Vente de {vente.MontantTotal:N2} MAD créée pour {client.NomClient}.",
+            type: TypeNotification.Success,
+            categorie: CategorieNotification.Vente,
+            entiteId: vente.Id, entiteReference: vente.Reference,
+            lienUrl: "/ventes", ct: ct);
+
+        foreach (var ligne in vente.Lignes)
+        {
+            var produit = produits.First(p => p.Id == ligne.ProduitId);
+            if (produit.QuantiteStock <= produit.SeuilAlerte)
+                await _notif.CreateStockAlertAsync(produit.Id, produit.Nom, produit.QuantiteStock, produit.SeuilAlerte, ct);
+        }
+
         return await GetVenteDetailsAsync(vente.Id, ct);
     }
 
@@ -284,6 +309,84 @@ public class CancelVenteHandler : IRequestHandler<CancelVenteCommand, Unit>
             vente.Id, vente.Reference, estSensible: true, ct: ct);
 
         return Unit.Value;
+    }
+}
+
+// ============ ADD PAIEMENT VENTE ============
+public class AddPaiementVenteHandler : IRequestHandler<AddPaiementVenteCommand, VenteDto>
+{
+    private readonly IAppDbContext _db;
+    private readonly ICurrentUserService _current;
+    private readonly IAuditLogger _audit;
+    private readonly INotificationService _notif;
+
+    public AddPaiementVenteHandler(IAppDbContext db, ICurrentUserService current, IAuditLogger audit, INotificationService notif)
+    {
+        _db = db; _current = current; _audit = audit; _notif = notif;
+    }
+
+    public async Task<VenteDto> Handle(AddPaiementVenteCommand req, CancellationToken ct)
+    {
+        var dto = req.Dto;
+        var userId = _current.UserId ?? throw new UnauthorizedException();
+
+        var vente = await _db.Ventes
+            .Include(v => v.Paiements)
+            .Include(v => v.Client)
+            .Include(v => v.Facture)
+            .FirstOrDefaultAsync(v => v.Id == dto.VenteId, ct)
+            ?? throw new NotFoundException("Vente", dto.VenteId);
+
+        if (vente.Statut == StatutVente.Annule)
+            throw new BusinessException("Cette vente est annulée");
+
+        var montant = Math.Min(dto.Montant, vente.Reste);
+        if (montant <= 0) throw new BusinessException("Montant invalide ou vente déjà soldée");
+
+        vente.Paiements.Add(new Paiement
+        {
+            VenteId = vente.Id,
+            Montant = montant,
+            Methode = dto.Methode,
+            Statut = StatutPaiement.Confirme,
+            DatePaiement = DateTime.UtcNow,
+            Notes = dto.Notes
+        });
+
+        vente.MontantPaye += montant;
+        if (vente.MontantPaye >= vente.MontantTotal)
+            vente.Statut = StatutVente.Paye;
+
+        if (vente.Facture != null)
+            vente.Facture.Statut = vente.Statut == StatutVente.Paye
+                ? StatutFacture.Payee
+                : StatutFacture.PartiellementPayee;
+
+        await _db.SaveChangesAsync(ct);
+
+        await _audit.LogAsync(ActionLog.Update, "ventes",
+            $"Paiement de {montant:N2} MAD ajouté à {vente.Reference}",
+            vente.Id, vente.Reference, ct: ct);
+
+        await _notif.CreateAsync(
+            titre: $"Paiement client — {vente.Reference}",
+            message: $"Paiement de {montant:N2} MAD reçu de {vente.Client?.NomClient ?? "client"} pour {vente.Reference}.",
+            type: TypeNotification.Success,
+            categorie: CategorieNotification.Paiement,
+            entiteId: vente.Id, entiteReference: vente.Reference,
+            lienUrl: "/ventes", ct: ct);
+
+        return await GetVenteDetailsAsync(vente.Id, ct);
+    }
+
+    private async Task<VenteDto> GetVenteDetailsAsync(int id, CancellationToken ct)
+    {
+        var v = await _db.Ventes
+            .Include(v => v.Client).Include(v => v.Utilisateur)
+            .Include(v => v.Lignes).ThenInclude(l => l.Produit)
+            .Include(v => v.Facture)
+            .FirstAsync(v => v.Id == id, ct);
+        return VenteMapper.ToDto(v);
     }
 }
 

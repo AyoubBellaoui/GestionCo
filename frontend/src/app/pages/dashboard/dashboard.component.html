@@ -1,73 +1,332 @@
 <app-topbar title="Tableau de bord" subtitle="Vue d'ensemble de votre activité" icon="📊"></app-topbar>
 
 <div class="content">
-  <div class="stats-row">
-    <div class="stat-card"><div class="stat-icon blue">💰</div><div><div class="stat-label">CA du mois</div><div class="stat-value">{{ formatNum(stats?.caDuMois) }} <small>MAD</small></div><div class="stat-trend neutral">Ce mois</div></div></div>
-    <div class="stat-card"><div class="stat-icon green">🧾</div><div><div class="stat-label">Ventes du mois</div><div class="stat-value">{{ formatNum(stats?.ventesDuMois) }}</div><div class="stat-trend neutral">Transactions</div></div></div>
-    <div class="stat-card"><div class="stat-icon cyan">👥</div><div><div class="stat-label">Total clients</div><div class="stat-value">{{ formatNum(stats?.totalClients) }}</div><div class="stat-trend neutral">+{{ stats?.nouveauxClientsDuMois || 0 }} ce mois</div></div></div>
-    <div class="stat-card"><div class="stat-icon red">⏳</div><div><div class="stat-label">Montant impayé</div><div class="stat-value">{{ formatNum(stats?.montantImpaye) }} <small>MAD</small></div><div class="stat-trend down">{{ stats?.nombreFacturesImpayees || 0 }} factures</div></div></div>
-  </div>
 
-  <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
-    <div class="stat-card"><div class="stat-icon blue">📦</div><div><div class="stat-label">Total produits</div><div class="stat-value">{{ formatNum(stats?.totalProduits) }}</div><div class="stat-trend neutral">Catalogue</div></div></div>
-    <div class="stat-card"><div class="stat-icon orange">⚠️</div><div><div class="stat-label">Stock faible</div><div class="stat-value">{{ formatNum(stats?.produitsStockFaible) }}</div><div class="stat-trend down">À réapprovisionner</div></div></div>
-    <div class="stat-card"><div class="stat-icon red">🚫</div><div><div class="stat-label">Ruptures de stock</div><div class="stat-value">{{ formatNum(stats?.produitsRupture) }}</div><div class="stat-trend down">Indisponibles</div></div></div>
-  </div>
-
-  <div class="table-card">
-    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+  <!-- ① ÉQUATION FINANCIÈRE -->
+  <div class="db-eq-card">
+    <div class="db-eq-header">
       <div>
-        <div style="font-size:15px;font-weight:700">Ventes récentes</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">5 dernières transactions</div>
+        <div class="db-eq-title">Résumé financier · {{ currentMonth }}</div>
+        <div class="db-eq-subtitle">Revenus − Dépenses = Résultat net du mois</div>
+      </div>
+      <div class="db-eq-status" [ngClass]="resultatNet >= 0 ? 'pos' : 'neg'">
+        {{ resultatNet >= 0 ? '✅ Bénéficiaire' : '⚠️ Déficitaire' }}
       </div>
     </div>
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Référence</th><th>Date</th><th>Client</th>
-            <th style="text-align:right">Montant</th><th>Paiement</th><th>Statut</th>
-          </tr>
-        </thead>
-        <tbody>
-          @if (loading) { <tr><td colspan="6" class="loading-row">Chargement…</td></tr> }
-          @if (!loading && recent.length === 0) {
-            <tr><td colspan="6">
-              <div class="empty-state">
-                <div class="empty-icon">📭</div>
-                <div class="empty-title">Aucune vente encore</div>
-                <div class="empty-sub">Créez votre première vente pour la voir apparaître ici</div>
-              </div>
-            </td></tr>
-          }
-          @for (v of recent; track v.id) {
-            @let d = formatDate(v.dateVente);
-            @let pay = getPayStatus(v.montantPaye, v.montantTotal);
-            @let st = venteStatus(v.statut, v.montantPaye);
-            <tr>
-              <td><span class="mono">{{ v.reference }}</span></td>
-              <td class="date-cell"><div class="date-main">{{ d.main }}</div><div class="date-sub">{{ d.time }}</div></td>
-              <td>
-                <div class="client-cell">
-                  <div [class]="'client-avatar ' + getAvatarClass(v.nomClient || '')">{{ v.clientInitiales || getInitials(v.nomClient || '') }}</div>
-                  <div>
-                    <div class="client-name">{{ v.nomClient }}</div>
-                    <div class="client-sub">{{ v.nombreArticles }} article{{ v.nombreArticles > 1 ? 's' : '' }}</div>
-                  </div>
-                </div>
-              </td>
-              <td style="text-align:right"><div class="price-val">{{ formatNum(v.montantTotal) }} <small>MAD</small></div></td>
-              <td>
-                <div class="payment-wrap">
-                  <div class="payment-val"><strong>{{ formatNum(v.montantPaye) }}</strong> / {{ formatNum(v.montantTotal) }} MAD</div>
-                  <div class="payment-bar"><div [class]="'payment-bar-fill ' + pay.cls" [style.width]="pay.pct + '%'"></div></div>
-                </div>
-              </td>
-              <td><span [class]="'status-badge ' + st.cls">{{ st.label }}</span></td>
-            </tr>
-          }
-        </tbody>
-      </table>
+
+    <div class="db-eq-body">
+
+      <!-- Revenus -->
+      <div class="db-eq-section">
+        <div class="db-eq-sec-label">💰 Revenus</div>
+        <div class="db-eq-sec-amount" style="color:var(--primary)">
+          {{ formatNum(revenus) }}<span> MAD</span>
+        </div>
+        <div class="stat-trend" [ngClass]="revenuTrendCls">{{ revenuTrendText }}</div>
+        <div class="db-eq-sec-details">
+          <span>🧾 {{ stats?.ventesDuMois || 0 }} vente(s) ce mois</span>
+          <span>📅 {{ formatNum(stats?.caDuJour) }} MAD aujourd'hui</span>
+        </div>
+      </div>
+
+      <div class="db-eq-op">−</div>
+
+      <!-- Dépenses -->
+      <div class="db-eq-section">
+        <div class="db-eq-sec-label">📉 Dépenses</div>
+        <div class="db-eq-sec-amount" style="color:var(--danger)">
+          {{ formatNum(depenses) }}<span> MAD</span>
+        </div>
+        <div class="stat-trend" [ngClass]="depensesTrendCls">{{ depensesTrendText }}</div>
+        <div class="db-eq-sec-details">
+          <span>📥 Achats : {{ formatNum(achatsDuMois) }} MAD</span>
+          <span>💸 Charges : {{ formatNum(chargesDuMois) }} MAD</span>
+        </div>
+      </div>
+
+      <div class="db-eq-op">=</div>
+
+      <!-- Résultat net -->
+      <div class="db-eq-result" [ngClass]="resultatNet >= 0 ? 'pos' : 'neg'">
+        <div class="db-eq-sec-label">📈 Résultat net</div>
+        <div class="db-eq-result-amount">
+          {{ resultatNet >= 0 ? '+' : '' }}{{ formatNum(resultatNet) }}<span> MAD</span>
+        </div>
+        <div class="db-eq-marge">Marge brute {{ margeRate }}%</div>
+        <div class="db-eq-bar">
+          <div class="db-eq-bar-fill"
+            [style.width.%]="margeBarPct"
+            [style.background]="resultatNet >= 0 ? 'var(--success)' : 'var(--danger)'">
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
+
+  <!-- ② KPI SECONDAIRES -->
+  <div class="stats-row">
+
+    <div class="stat-card">
+      <div class="stat-icon green">🧾</div>
+      <div>
+        <div class="stat-label">Ventes du mois</div>
+        <div class="stat-value">{{ stats?.ventesDuMois || 0 }}</div>
+        <div class="stat-trend neutral">{{ stats?.ventesDuJour || 0 }} aujourd'hui</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon cyan">👥</div>
+      <div>
+        <div class="stat-label">Total clients</div>
+        <div class="stat-value">{{ formatNum(stats?.totalClients) }}</div>
+        <div class="stat-trend neutral">+{{ stats?.nouveauxClientsDuMois || 0 }} ce mois</div>
+      </div>
+    </div>
+
+    <!-- Encaissement avec mini ring -->
+    <div class="stat-card">
+      <div class="db-ring-mini">
+        <svg viewBox="0 0 52 52" width="46" height="46" style="flex-shrink:0">
+          <circle cx="26" cy="26" r="20" fill="none" stroke="var(--border)" stroke-width="7"/>
+          <circle cx="26" cy="26" r="20" fill="none"
+            [attr.stroke]="ringColor"
+            stroke-width="7"
+            stroke-linecap="round"
+            [attr.stroke-dasharray]="miniRingDash"
+            transform="rotate(-90 26 26)"/>
+        </svg>
+        <div>
+          <div class="stat-label">Encaissement</div>
+          <div class="stat-value" [ngClass]="tauxEncaissement < 50 ? 'db-val-warn' : ''">{{ tauxEncaissement }}%</div>
+          <div class="stat-trend neutral">des ventes réglées</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon red">⏳</div>
+      <div>
+        <div class="stat-label">Montant impayé</div>
+        <div class="stat-value">{{ formatNum(stats?.montantImpaye) }} <small>MAD</small></div>
+        <div class="stat-trend down">{{ stats?.nombreFacturesImpayees || 0 }} facture(s)</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ③ GRAPHIQUES -->
+  <div class="db-charts-row">
+
+    <!-- Évolution 6 mois -->
+    <div class="db-chart-card">
+      <div class="db-chart-head">
+        <div>
+          <div class="db-chart-title">Évolution sur 6 mois</div>
+          <div class="db-chart-sub">Revenus vs Dépenses (achats + charges)</div>
+        </div>
+        <div class="db-legend">
+          <span class="db-legend-item">
+            <span class="db-legend-dot" style="background:var(--primary)"></span>Revenus
+          </span>
+          <span class="db-legend-item">
+            <span class="db-legend-dot" style="background:var(--danger)"></span>Dépenses
+          </span>
+        </div>
+      </div>
+      <div class="db-bar-chart">
+        @for (m of months; track m.label) {
+          <div class="db-bar-col">
+            <div class="db-bars-wrap">
+              <div class="db-bar" [style.height.%]="m.caH" style="background:var(--primary)"></div>
+              <div class="db-bar" [style.height.%]="m.depH" style="background:var(--danger);opacity:.65"></div>
+            </div>
+            <div class="db-bar-lbl">{{ m.label }}</div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Donut répartition -->
+    <div class="db-chart-card">
+      <div class="db-chart-title" style="margin-bottom:16px">Répartition du mois</div>
+      @if (donutSegs.length === 0) {
+        <div class="db-no-data">
+          <div style="font-size:32px;margin-bottom:8px">📊</div>
+          <div>Aucune donnée ce mois</div>
+        </div>
+      } @else {
+        <div class="db-donut-wrap">
+          <svg viewBox="0 0 112 112" width="110" height="110" style="flex-shrink:0">
+            <circle cx="56" cy="56" r="42" fill="none" stroke="var(--border)" stroke-width="16"/>
+            @for (seg of donutSegs; track seg.label) {
+              <circle cx="56" cy="56" r="42" fill="none"
+                [attr.stroke]="seg.color"
+                stroke-width="16"
+                [attr.stroke-dasharray]="seg.dasharray"
+                [attr.stroke-dashoffset]="seg.dashoffset"
+                transform="rotate(-90 56 56)"
+                stroke-linecap="butt"/>
+            }
+          </svg>
+          <div class="db-donut-legs">
+            @for (seg of donutSegs; track seg.label) {
+              <div class="db-donut-leg">
+                <span class="db-donut-dot" [style.background]="seg.color"></span>
+                <span class="db-donut-lbl">{{ seg.label }}</span>
+                <div class="db-donut-right">
+                  <div class="db-donut-pct">{{ seg.pct }}%</div>
+                  <div class="db-donut-amt">{{ formatNum(seg.amount) }} MAD</div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+  </div>
+
+  <!-- ④ BOTTOM : TOP CLIENTS + TOP PRODUITS / ALERTES + AUJOURD'HUI + MÉTRIQUES -->
+  <div class="db-bottom-row">
+
+    <!-- LEFT column: top clients then top produits stacked -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+
+      <!-- Top clients -->
+      <div class="db-section-card">
+        <div class="db-section-head">
+          <span class="db-section-title">🏆 Top clients</span>
+          <span class="db-section-sub">Par chiffre d'affaires total</span>
+        </div>
+        @if (topClients.length === 0) {
+          <div class="db-no-data" style="padding:20px 0">
+            <div style="font-size:28px;margin-bottom:6px">👥</div>
+            <div>Aucun client trouvé</div>
+          </div>
+        }
+        @for (c of topClients; track c.nom; let i = $index) {
+          <div class="db-client-row">
+            <div class="db-client-rank">#{{ i + 1 }}</div>
+            <div [class]="'client-avatar ' + c.cls" style="width:30px;height:30px;font-size:11px;flex-shrink:0">{{ c.initiales }}</div>
+            <div class="db-client-mid">
+              <div class="db-client-name">{{ c.nom }}</div>
+              <div class="db-client-bar"><div class="db-client-fill" [style.width.%]="c.pct"></div></div>
+            </div>
+            <div class="db-client-amt">{{ formatNum(c.total) }} <small>MAD</small></div>
+          </div>
+        }
+      </div>
+
+      <!-- Top produits -->
+      <div class="db-section-card">
+        <div class="db-section-head">
+          <span class="db-section-title">📦 Top produits vendus</span>
+          <span class="db-section-sub">Par chiffre d'affaires cumulé</span>
+        </div>
+        @if (topProduits.length === 0) {
+          <div class="db-no-data" style="padding:20px 0">
+            <div style="font-size:28px;margin-bottom:6px">📦</div>
+            <div>Aucune vente enregistrée</div>
+          </div>
+        }
+        @for (p of topProduits; track p.ref; let i = $index) {
+          <div class="db-client-row">
+            <div class="db-client-rank">#{{ i + 1 }}</div>
+            <div class="db-client-mid">
+              <div class="db-client-name">{{ p.nom }}</div>
+              <div class="db-client-bar"><div class="db-client-fill" [style.width.%]="p.pct"></div></div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div class="db-client-amt">{{ formatNum(p.ca) }} <small>MAD</small></div>
+              <div style="font-size:11px;color:var(--text-secondary)">{{ p.qte }} unité(s)</div>
+            </div>
+          </div>
+        }
+      </div>
+
+    </div>
+
+    <!-- RIGHT column: alertes + aujourd'hui + métriques -->
+    <div class="db-side-col">
+
+      <!-- Alertes -->
+      <div class="db-section-card">
+        <div class="db-section-head">
+          <span class="db-section-title">⚠️ Alertes</span>
+        </div>
+        <div class="db-alert-row">
+          <div class="db-alert-icon" style="background:var(--warning-light)">⚠️</div>
+          <div class="db-alert-info">
+            <div class="db-alert-name">Stock faible</div>
+            <div class="db-alert-hint">À réapprovisionner</div>
+          </div>
+          <div class="db-alert-badge warn">{{ stats?.produitsStockFaible || 0 }}</div>
+        </div>
+        <div class="db-alert-row">
+          <div class="db-alert-icon" style="background:var(--danger-light)">🚫</div>
+          <div class="db-alert-info">
+            <div class="db-alert-name">Rupture de stock</div>
+            <div class="db-alert-hint">Produits indisponibles</div>
+          </div>
+          <div class="db-alert-badge bad">{{ stats?.produitsRupture || 0 }}</div>
+        </div>
+        <div class="db-alert-row" style="border-bottom:none;padding-bottom:0">
+          <div class="db-alert-icon" style="background:var(--danger-light)">📄</div>
+          <div class="db-alert-info">
+            <div class="db-alert-name">Factures impayées</div>
+            <div class="db-alert-hint">{{ formatNum(stats?.montantImpaye) }} MAD en attente</div>
+          </div>
+          <div class="db-alert-badge bad">{{ stats?.nombreFacturesImpayees || 0 }}</div>
+        </div>
+      </div>
+
+      <!-- Aujourd'hui -->
+      <div class="db-section-card">
+        <div class="db-section-head">
+          <span class="db-section-title">📅 Aujourd'hui</span>
+        </div>
+        <div class="db-today-row">
+          <div class="db-today-icon" style="background:var(--primary-light)">💰</div>
+          <div class="db-today-lbl">CA du jour</div>
+          <div class="db-today-val">{{ formatNum(stats?.caDuJour) }} <small>MAD</small></div>
+        </div>
+        <div class="db-today-row">
+          <div class="db-today-icon" style="background:var(--success-light)">🧾</div>
+          <div class="db-today-lbl">Ventes du jour</div>
+          <div class="db-today-val">{{ stats?.ventesDuJour || 0 }}</div>
+        </div>
+        <div class="db-today-row" style="border-bottom:none;padding-bottom:0">
+          <div class="db-today-icon" style="background:var(--info-light)">📦</div>
+          <div class="db-today-lbl">Produits catalogue</div>
+          <div class="db-today-val">{{ stats?.totalProduits || 0 }}</div>
+        </div>
+      </div>
+
+      <!-- Métriques ventes -->
+      <div class="db-section-card">
+        <div class="db-section-head">
+          <span class="db-section-title">🛒 Métriques ventes</span>
+        </div>
+        <div class="db-today-row">
+          <div class="db-today-icon" style="background:var(--primary-light)">🛒</div>
+          <div class="db-today-lbl">Panier moyen du mois</div>
+          <div class="db-today-val">{{ formatNum(panierMoyen) }} <small>MAD</small></div>
+        </div>
+        <div class="db-today-row">
+          <div class="db-today-icon" style="background:var(--success-light)">📦</div>
+          <div class="db-today-lbl">Unités vendues (total)</div>
+          <div class="db-today-val">{{ totalQteVendue }}</div>
+        </div>
+        <div class="db-today-row" style="border-bottom:none;padding-bottom:0">
+          <div class="db-today-icon" style="background:var(--warning-light)">🔁</div>
+          <div class="db-today-lbl">Taux fidélité clients</div>
+          <div class="db-today-val">{{ tauxFidelite }}<small>%</small></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
 </div>

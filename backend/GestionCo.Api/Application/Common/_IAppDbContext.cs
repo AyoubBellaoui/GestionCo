@@ -1,5 +1,7 @@
 using GestionCo.Api.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using DevisEntity = GestionCo.Api.Domain.Entities.Devis;
+using LigneDevisEntity = GestionCo.Api.Domain.Entities.LigneDevis;
 
 namespace GestionCo.Api.Application.Common.Interfaces;
 
@@ -19,6 +21,12 @@ public interface IAppDbContext
     DbSet<Facture> Factures { get; }
     DbSet<MouvementStock> MouvementsStock { get; }
     DbSet<Log> Logs { get; }
+    DbSet<CategorieCharge> CategoriesCharge { get; }
+    DbSet<Charge> Charges { get; }
+    DbSet<PaiementCharge> PaiementsCharge { get; }
+    DbSet<Notification> Notifications { get; }
+    DbSet<DevisEntity> Devis { get; }
+    DbSet<LigneDevisEntity> LignesDevis { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -33,6 +33,23 @@ public interface IReferenceGenerator
     Task<string> GenerateSaleReferenceAsync(CancellationToken ct = default);
     Task<string> GeneratePurchaseReferenceAsync(CancellationToken ct = default);
     Task<string> GenerateInvoiceReferenceAsync(CancellationToken ct = default);
+    Task<string> GenerateChargeReferenceAsync(CancellationToken ct = default);
+    Task<string> GenerateDevisReferenceAsync(CancellationToken ct = default);
+}
+
+public interface INotificationService
+{
+    Task CreateAsync(
+        string titre,
+        string message,
+        TypeNotification type = TypeNotification.Info,
+        CategorieNotification categorie = CategorieNotification.Systeme,
+        int? entiteId = null,
+        string? entiteReference = null,
+        string? lienUrl = null,
+        CancellationToken ct = default);
+
+    Task CreateStockAlertAsync(int produitId, string nomProduit, int quantiteStock, int seuilAlerte, CancellationToken ct = default);
 }
 
 public interface IAuditLogger
@@ -52,4 +69,6 @@ public interface IAuditLogger
 public interface IPdfService
 {
     Task<byte[]> GenerateInvoicePdfAsync(int factureId, CancellationToken ct = default);
+    byte[] GeneratePLReportPdf(GestionCo.Api.Application.Reports.PLReportDto report, string entreprise);
+    byte[] GenerateTVAReportPdf(GestionCo.Api.Application.Reports.TVAReportDto report, string entreprise);
 }

@@ -5,11 +5,45 @@
   </div>
 
   <nav class="sidebar-nav">
-    @for (item of navItems; track item.to) {
-      <a [routerLink]="item.to" routerLinkActive="active" [routerLinkActiveOptions]="{exact: item.end}" class="nav-item">
-        <span class="nav-icon">{{ item.icon }}</span> {{ item.label }}
-      </a>
-    }
+    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" class="nav-item">
+      <span class="nav-icon">📊</span> Tableau de bord
+    </a>
+    <a routerLink="/devis" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">📝</span> Devis
+    </a>
+    <a routerLink="/ventes" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">🛒</span> Ventes
+    </a>
+    <a routerLink="/achats" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">📥</span> Achats
+    </a>
+    <a routerLink="/produits" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">📦</span> Produits
+    </a>
+    <a routerLink="/categories" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">📂</span> Catégories
+    </a>
+    <a routerLink="/mouvements-stock" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">📈</span> Mouvements stock
+    </a>
+    <a routerLink="/clients" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">👥</span> Clients
+    </a>
+    <a routerLink="/fournisseurs" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">🚚</span> Fournisseurs
+    </a>
+    <a routerLink="/charges" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">💸</span> Charges
+    </a>
+    <a routerLink="/paiements" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">💰</span> Paiements
+    </a>
+    <a routerLink="/factures" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">🧾</span> Factures
+    </a>
+    <a routerLink="/rapports" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">📊</span> Rapports
+    </a>
 
     <div class="sidebar-divider"></div>
 
@@ -28,7 +62,7 @@
       <div class="user-role">{{ auth.user?.role || 'Admin' }}</div>
     </div>
     <button class="user-logout" title="Déconnexion" (click)="logout()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
         <polyline points="16 17 21 12 16 7"/>
         <line x1="21" y1="12" x2="9" y2="12"/>

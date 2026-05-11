@@ -47,6 +47,7 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IReferenceGenerator, ReferenceGenerator>();
 builder.Services.AddScoped<IAuditLogger, AuditLogger>();
 builder.Services.AddScoped<IPdfService, PdfService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // ============ JWT AUTH ============
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()
@@ -170,6 +171,9 @@ using (var scope = app.Services.CreateScope())
         else
             logger.LogInformation("✅ Base de données 'StockVenteDb' déjà existante");
 
+        // Tables ajoutées après la création initiale (CREATE TABLE manuel)
+        await ApplyManualTablesAsync(db, logger);
+
         // Colonnes ajoutées après la création initiale (ALTER TABLE manuel)
         await ApplyManualColumnsAsync(db, logger);
 
@@ -235,6 +239,136 @@ app.MapControllers();
 app.MapGet("/", () => Results.Redirect("/swagger"));
 
 app.Run();
+
+// Crée les tables ajoutées après la création initiale de la DB
+static async Task ApplyManualTablesAsync(AppDbContext db, ILogger logger)
+{
+    var tables = new (string Name, string Sql)[]
+    {
+        ("categories_charge", """
+            CREATE TABLE [categories_charge] (
+                [Id]    INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                [Nom]   NVARCHAR(100) NOT NULL,
+                [Icone] NVARCHAR(10)  NULL,
+                CONSTRAINT [UQ_categories_charge_Nom] UNIQUE ([Nom])
+            )
+            """),
+
+        ("charges", """
+            CREATE TABLE [charges] (
+                [Id]               INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                [Reference]        NVARCHAR(30)   NOT NULL,
+                [Titre]            NVARCHAR(200)  NOT NULL,
+                [Description]      NVARCHAR(1000) NULL,
+                [Montant]          DECIMAL(18,2)  NOT NULL,
+                [MontantPaye]      DECIMAL(18,2)  NOT NULL DEFAULT 0,
+                [Justificatif]     NVARCHAR(500)  NULL,
+                [Statut]           INT            NOT NULL DEFAULT 1,
+                [DateCharge]       DATETIME2      NOT NULL,
+                [CategorieChargeId] INT           NOT NULL,
+                [UtilisateurId]    INT            NOT NULL,
+                [FournisseurId]    INT            NULL,
+                [CreatedAt]        DATETIME2      NOT NULL DEFAULT GETUTCDATE(),
+                [UpdatedAt]        DATETIME2      NULL,
+                [CreatedBy]        INT            NULL,
+                [UpdatedBy]        INT            NULL,
+                CONSTRAINT [UQ_charges_Reference] UNIQUE ([Reference]),
+                CONSTRAINT [FK_charges_categories_charge] FOREIGN KEY ([CategorieChargeId]) REFERENCES [categories_charge]([Id]),
+                CONSTRAINT [FK_charges_utilisateurs]      FOREIGN KEY ([UtilisateurId])     REFERENCES [utilisateurs]([Id]),
+                CONSTRAINT [FK_charges_fournisseurs]      FOREIGN KEY ([FournisseurId])     REFERENCES [fournisseurs]([Id])
+            )
+            """),
+
+        ("paiements_charge", """
+            CREATE TABLE [paiements_charge] (
+                [Id]           INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                [ChargeId]     INT           NOT NULL,
+                [Montant]      DECIMAL(18,2) NOT NULL,
+                [Methode]      INT           NOT NULL,
+                [Statut]       INT           NOT NULL DEFAULT 2,
+                [DatePaiement] DATETIME2     NOT NULL,
+                [Reference]    NVARCHAR(100) NULL,
+                [Notes]        NVARCHAR(500) NULL,
+                [CreatedAt]    DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
+                [UpdatedAt]    DATETIME2     NULL,
+                [CreatedBy]    INT           NULL,
+                [UpdatedBy]    INT           NULL,
+                CONSTRAINT [FK_paiements_charge_charges] FOREIGN KEY ([ChargeId]) REFERENCES [charges]([Id]) ON DELETE CASCADE
+            )
+            """),
+
+        ("notifications", """
+            CREATE TABLE [notifications] (
+                [Id]              INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                [Titre]           NVARCHAR(200) NOT NULL,
+                [Message]         NVARCHAR(500) NOT NULL,
+                [Type]            INT           NOT NULL DEFAULT 1,
+                [Categorie]       INT           NOT NULL DEFAULT 7,
+                [IsRead]          BIT           NOT NULL DEFAULT 0,
+                [EntiteId]        INT           NULL,
+                [EntiteReference] NVARCHAR(30)  NULL,
+                [LienUrl]         NVARCHAR(200) NULL,
+                [CreatedAt]       DATETIME2     NOT NULL DEFAULT GETUTCDATE()
+            )
+            """),
+
+        ("devis", """
+            CREATE TABLE [devis] (
+                [Id]             INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                [Reference]      NVARCHAR(30)   NOT NULL,
+                [ClientId]       INT            NOT NULL,
+                [UtilisateurId]  INT            NOT NULL,
+                [DateDevis]      DATETIME2      NOT NULL,
+                [DateValidite]   DATETIME2      NULL,
+                [MontantTotalHT] DECIMAL(18,2)  NOT NULL DEFAULT 0,
+                [MontantTVA]     DECIMAL(18,2)  NOT NULL DEFAULT 0,
+                [MontantTotal]   DECIMAL(18,2)  NOT NULL DEFAULT 0,
+                [Statut]         INT            NOT NULL DEFAULT 1,
+                [Notes]          NVARCHAR(1000) NULL,
+                [VenteId]        INT            NULL,
+                [CreatedAt]      DATETIME2      NOT NULL DEFAULT GETUTCDATE(),
+                [UpdatedAt]      DATETIME2      NULL,
+                [CreatedBy]      INT            NULL,
+                [UpdatedBy]      INT            NULL,
+                CONSTRAINT [UQ_devis_Reference] UNIQUE ([Reference]),
+                CONSTRAINT [FK_devis_clients]      FOREIGN KEY ([ClientId])     REFERENCES [clients]([Id]),
+                CONSTRAINT [FK_devis_utilisateurs] FOREIGN KEY ([UtilisateurId]) REFERENCES [utilisateurs]([Id]),
+                CONSTRAINT [FK_devis_ventes]       FOREIGN KEY ([VenteId])      REFERENCES [ventes]([Id])
+            )
+            """),
+
+        ("lignes_devis", """
+            CREATE TABLE [lignes_devis] (
+                [Id]           INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                [DevisId]      INT           NOT NULL,
+                [ProduitId]    INT           NOT NULL,
+                [Quantite]     INT           NOT NULL,
+                [PrixUnitaire] DECIMAL(18,2) NOT NULL,
+                [Tva]          DECIMAL(5,2)  NOT NULL DEFAULT 20,
+                CONSTRAINT [FK_lignes_devis_devis]    FOREIGN KEY ([DevisId])   REFERENCES [devis]([Id]) ON DELETE CASCADE,
+                CONSTRAINT [FK_lignes_devis_produits] FOREIGN KEY ([ProduitId]) REFERENCES [produits]([Id])
+            )
+            """),
+    };
+
+    foreach (var (name, sql) in tables)
+    {
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync($"""
+                IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{name}')
+                BEGIN
+                    {sql}
+                END
+                """);
+            logger.LogInformation("✅ Table '{Table}' vérifiée/créée", name);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("⚠️  Impossible de créer la table '{Table}' : {Msg}", name, ex.Message);
+        }
+    }
+}
 
 // Ajoute les colonnes manquantes sans migrations EF formelles
 static async Task ApplyManualColumnsAsync(AppDbContext db, ILogger logger)

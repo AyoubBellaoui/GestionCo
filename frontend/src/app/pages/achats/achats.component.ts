@@ -6,6 +6,7 @@ import { TopbarComponent } from '../../shared/topbar/topbar.component';
 import { ModalComponent } from '../../shared/modal/modal.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
+import { ExportService } from '../../core/services/export.service';
 import { Achat, Fournisseur } from '../../core/models';
 import { formatNum, formatDate, getInitials, getAvatarClass, getPayStatus } from '../../core/utils/format';
 
@@ -40,9 +41,11 @@ export class AchatsComponent implements OnInit {
   getPayStatus = getPayStatus;
   Math = Math;
 
-  constructor(private api: ApiService, private toast: ToastService, public router: Router) {}
+  constructor(private api: ApiService, private toast: ToastService, private exportSvc: ExportService, public router: Router) {}
 
   async ngOnInit(): Promise<void> { await this.load(); }
+
+  exportExcel(): void { this.exportSvc.exportAchats(this.achats); }
 
   async load(): Promise<void> {
     this.loading = true;
@@ -120,9 +123,10 @@ export class AchatsComponent implements OnInit {
         methode: this.paiementMethode,
       });
       this.achats = this.achats.map(a => a.id === updated.id ? updated : a);
-      this.viewAchat = updated;
       this.paiementMontant = 0;
       this.toast.notify('Paiement enregistré', 'success');
+      this.modalOpen = false;
+      this.viewAchat = null;
     } catch {
       this.toast.notify('Erreur lors du paiement', 'error');
     } finally {

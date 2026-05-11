@@ -34,6 +34,29 @@ export interface DashboardStats {
   nombreFacturesImpayees: number;
 }
 
+export interface MonthBar  { label: string; ca: number; dep: number; }
+export interface DonutItem  { label: string; amount: number; color: string; }
+export interface TopClientDash { clientId: number; nomClient: string; initiales: string; totalDepense: number; }
+export interface TopProduitDash { produitId: number; nomProduit: string; image?: string; quantiteVendue: number; montantTotal: number; }
+export interface StockAlerte { produitId: number; nomProduit: string; reference: string; image?: string; quantiteStock: number; seuilAlerte: number; estRupture: boolean; }
+
+export interface FullDashboard {
+  caDuMois: number; caDuJour: number; ventesDuMois: number; ventesDuJour: number;
+  totalClients: number; nouveauxClientsDuMois: number;
+  totalProduits: number; produitsStockFaible: number; produitsRupture: number;
+  montantImpaye: number; nombreFacturesImpayees: number;
+  achatsDuMois: number; chargesDuMois: number; depensesDuMois: number;
+  resultatNet: number; margeRate: number;
+  trendRevenu: number; trendDepenses: number;
+  tauxEncaissement: number; tauxFidelite: number;
+  panierMoyen: number; totalQteVendue: number;
+  last6Months: MonthBar[];
+  donutItems: DonutItem[];
+  topClients: TopClientDash[];
+  topProduits: TopProduitDash[];
+  stockAlertes: StockAlerte[];
+}
+
 // ============ PRODUITS ============
 export interface Produit {
   id: number;
@@ -194,6 +217,23 @@ export interface Paiement {
   notes?: string;
 }
 
+export interface PaiementAchat {
+  id: number;
+  achatId: number;
+  achatReference: string;
+  fournisseurId: number;
+  nomFournisseur: string;
+  iconeFournisseur?: string;
+  montant: number;
+  methode: string;
+  methodeLibelle: string;
+  statut: string;
+  statutLibelle: string;
+  datePaiement: string;
+  reference?: string;
+  notes?: string;
+}
+
 // ============ FACTURES ============
 export interface Facture {
   id: number;
@@ -335,6 +375,156 @@ export interface VenteSansFacture {
   dateVente: string;
   nomClient: string;
   montantTotal: number;
+}
+
+// ============ NOTIFICATIONS ============
+export interface AppNotification {
+  id: number;
+  titre: string;
+  message: string;
+  type: 'Info' | 'Success' | 'Warning' | 'Danger';
+  typeLibelle: string;
+  categorie: 'Vente' | 'Achat' | 'Charge' | 'Paiement' | 'Stock' | 'Facture' | 'Systeme';
+  categorieLibelle: string;
+  isRead: boolean;
+  entiteId?: number;
+  entiteReference?: string;
+  lienUrl?: string;
+  createdAt: string;
+  tempsEcoule: string;
+}
+
+export interface NotificationSummary {
+  unreadCount: number;
+  recent: AppNotification[];
+}
+
+// ============ CHARGES ============
+export interface CategorieCharge {
+  id: number;
+  nom: string;
+  icone?: string;
+  nombreCharges: number;
+}
+
+export interface PaiementCharge {
+  id: number;
+  chargeId: number;
+  chargeReference: string;
+  montant: number;
+  methode: string;
+  methodeLibelle: string;
+  statut: string;
+  statutLibelle: string;
+  datePaiement: string;
+  reference?: string;
+  notes?: string;
+}
+
+export interface Charge {
+  id: number;
+  reference: string;
+  titre: string;
+  description?: string;
+  montant: number;
+  montantPaye: number;
+  reste: number;
+  progressionPaiement: number;
+  justificatif?: string;
+  statut: string;
+  statutLibelle: string;
+  dateCharge: string;
+  categorieChargeId: number;
+  nomCategorie: string;
+  iconeCategorie?: string;
+  utilisateurId: number;
+  nomUtilisateur: string;
+  fournisseurId?: number;
+  nomFournisseur?: string;
+  iconeFournisseur?: string;
+  paiements: PaiementCharge[];
+}
+
+// ============ DEVIS ============
+export interface LigneDevis {
+  id?: number;
+  produitId: number;
+  nomProduit?: string;
+  referenceProduit?: string;
+  quantite: number;
+  prixUnitaire: number;
+  tva: number;
+  total: number;
+}
+
+export interface Devis {
+  id: number;
+  reference: string;
+  clientId: number;
+  nomClient: string;
+  clientInitiales?: string;
+  utilisateurId: number;
+  nomUtilisateur: string;
+  dateDevis: string;
+  dateValidite?: string;
+  montantTotalHT: number;
+  montantTVA: number;
+  montantTotal: number;
+  statut: string;
+  statutLibelle: string;
+  notes?: string;
+  venteId?: number;
+  venteReference?: string;
+  nombreArticles: number;
+  estExpire: boolean;
+  lignes: LigneDevis[];
+}
+
+export interface ConversionDevisResult {
+  venteId: number;
+  venteReference: string;
+  devisReference: string;
+}
+
+// ============ RAPPORTS ============
+export interface PLMois {
+  mois: number;
+  nomMois: string;
+  revenuHT: number;
+  revenuTVA: number;
+  revenuTTC: number;
+  coutAchat: number;
+  chargesOp: number;
+  resultatBrut: number;
+  resultatNet: number;
+}
+
+export interface PLReport {
+  annee: number;
+  mois: PLMois[];
+  totalRevenuHT: number;
+  totalRevenuTVA: number;
+  totalRevenuTTC: number;
+  totalCoutAchat: number;
+  totalChargesOp: number;
+  totalResultatBrut: number;
+  totalResultatNet: number;
+}
+
+export interface TVAMois {
+  mois: number;
+  nomMois: string;
+  tvaCollectee: number;
+  tvaDeductible: number;
+  tvaNette: number;
+}
+
+export interface TVAReport {
+  annee: number;
+  mois: TVAMois[];
+  totalTVACollectee: number;
+  totalTVADeductible: number;
+  totalTVANette: number;
 }
 
 // ============ PAGED LIST ============

@@ -66,6 +66,43 @@ public enum TypeClient
     Particulier = 2
 }
 
+public enum TypeNotification
+{
+    Info = 1,
+    Success = 2,
+    Warning = 3,
+    Danger = 4
+}
+
+public enum CategorieNotification
+{
+    Vente = 1,
+    Achat = 2,
+    Charge = 3,
+    Paiement = 4,
+    Stock = 5,
+    Facture = 6,
+    Systeme = 7
+}
+
+public enum StatutCharge
+{
+    EnAttente = 1,
+    Partiel = 2,
+    Paye = 3,
+    Annule = 4
+}
+
+public enum StatutDevis
+{
+    Brouillon = 1,
+    Envoye = 2,
+    Accepte = 3,
+    Refuse = 4,
+    Expire = 5,
+    Converti = 6
+}
+
 public enum ActionLog
 {
     Create = 1,

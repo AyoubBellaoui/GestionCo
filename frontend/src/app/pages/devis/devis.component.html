@@ -1,0 +1,198 @@
+<app-topbar title="Devis" subtitle="Propositions commerciales & bons de commande" icon="📝">
+  <button class="btn btn-primary" (click)="router.navigate(['/devis/nouveau'])">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Nouveau devis
+  </button>
+</app-topbar>
+
+<div class="content">
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-icon blue">📝</div>
+      <div>
+        <div class="stat-label">Devis ce mois</div>
+        <div class="stat-value">{{ stats.total }}</div>
+        <div class="stat-trend neutral">{{ devisList.length }} au total</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green">✅</div>
+      <div>
+        <div class="stat-label">Acceptés ce mois</div>
+        <div class="stat-value">{{ stats.acceptes }}</div>
+        <div class="stat-trend neutral">Taux : {{ stats.tauxAcceptation }}%</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon orange">💰</div>
+      <div>
+        <div class="stat-label">Montant potentiel</div>
+        <div class="stat-value">{{ formatNum(stats.montantPotentiel) }} <small>MAD</small></div>
+        <div class="stat-trend neutral">En attente de réponse</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon purple">🔄</div>
+      <div>
+        <div class="stat-label">Convertis en vente</div>
+        <div class="stat-value">{{ stats.convertis }}</div>
+        <div class="stat-trend neutral">Ventes confirmées</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search-wrapper">
+      <span class="search-icon">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </span>
+      <input class="search-input" placeholder="Référence, client…" [(ngModel)]="search" (ngModelChange)="page=1" />
+    </div>
+    <select class="filter-select" [(ngModel)]="statusFilter" (ngModelChange)="page=1">
+      <option value="">Tous les statuts</option>
+      <option value="Brouillon">Brouillon</option>
+      <option value="Envoye">Envoyé</option>
+      <option value="Accepte">Accepté</option>
+      <option value="Refuse">Refusé</option>
+      <option value="Expire">Expiré</option>
+      <option value="Converti">Converti</option>
+    </select>
+    <select class="filter-select" [(ngModel)]="clientFilter" (ngModelChange)="page=1">
+      <option value="">Tous les clients</option>
+      @for (c of clients; track c.id) { <option [value]="c.id">{{ c.nomClient }}</option> }
+    </select>
+    <div class="toolbar-divider"></div>
+    @for (r of dateRangeOptions; track r.value) {
+      <button [class]="'btn btn-ghost btn-sm' + (dateRange === r.value ? ' active' : '')" (click)="setDateRange(r.value)">{{ r.label }}</button>
+    }
+    <div class="toolbar-divider"></div>
+    <button class="btn btn-ghost btn-sm" (click)="resetFilters()">🔄 Réinitialiser</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:130px">Référence</th>
+            <th>Client</th>
+            <th style="width:110px">Date</th>
+            <th style="width:115px">Validité</th>
+            <th style="width:70px;text-align:center">Articles</th>
+            <th style="width:160px;text-align:right">Montant TTC</th>
+            <th style="width:110px;text-align:center">Statut</th>
+            <th style="text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading) {
+            <tr><td colspan="8" class="loading-row"><div class="spinner"></div> Chargement…</td></tr>
+          }
+          @if (!loading && paged.length === 0) {
+            <tr>
+              <td colspan="8">
+                <div class="empty-state">
+                  <div class="empty-icon">📝</div>
+                  <div class="empty-title">Aucun devis trouvé</div>
+                  <div class="empty-sub">
+                    @if (search || statusFilter || clientFilter) {
+                      Aucun résultat pour ces filtres — <span class="link" (click)="resetFilters()">effacer les filtres</span>
+                    } @else {
+                      Créez votre premier devis pour commencer
+                    }
+                  </div>
+                  @if (!search && !statusFilter && !clientFilter) {
+                    <button class="btn btn-primary" style="margin-top:14px" (click)="router.navigate(['/devis/nouveau'])">
+                      + Nouveau devis
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+          @for (d of paged; track d.id) {
+            @let si = statutInfo(d);
+            <tr>
+              <td><span class="mono">{{ d.reference }}</span></td>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div [class]="'client-avatar ' + getAvatarClass(d.clientId)" style="width:28px;height:28px;font-size:10px;flex-shrink:0">
+                    {{ (d.clientInitiales || d.nomClient.substring(0,2)).toUpperCase() }}
+                  </div>
+                  <span style="font-weight:500">{{ d.nomClient }}</span>
+                </div>
+              </td>
+              <td style="color:var(--text-secondary);font-size:13px">{{ formatDate(d.dateDevis) }}</td>
+              <td>
+                @if (d.dateValidite) {
+                  <span [style.color]="d.estExpire ? 'var(--danger)' : 'var(--text-secondary)'" style="font-size:13px">
+                    {{ d.estExpire ? '⚠ ' : '' }}{{ formatDate(d.dateValidite) }}
+                  </span>
+                } @else {
+                  <span style="color:var(--text-muted);font-size:12px">—</span>
+                }
+              </td>
+              <td style="text-align:center;color:var(--text-secondary)">{{ d.nombreArticles }}</td>
+              <td style="text-align:right;font-weight:700">{{ formatNum(d.montantTotal) }} <small style="font-weight:400;color:var(--text-muted)">MAD</small></td>
+              <td style="text-align:center">
+                <span [class]="'status-badge ' + si.cls">{{ si.label }}</span>
+              </td>
+              <td style="text-align:right">
+                <div style="display:flex;justify-content:flex-end;gap:5px;flex-wrap:wrap">
+                  @if (d.statut === 'Brouillon') {
+                    <button class="btn btn-ghost btn-sm" (click)="router.navigate(['/devis', d.id, 'modifier'])" title="Modifier">✏️ Modifier</button>
+                    <button class="btn btn-ghost btn-sm" style="color:var(--primary)" (click)="marquerEnvoye(d)" title="Envoyer au client">📤 Envoyer</button>
+                    <button class="btn btn-ghost btn-sm" style="color:var(--danger)" (click)="supprimer(d)" title="Supprimer">🗑️</button>
+                  }
+                  @if (d.statut === 'Envoye' && !d.estExpire) {
+                    <button class="btn btn-ghost btn-sm" style="color:var(--success)" (click)="accepter(d)">✅ Accepter</button>
+                    <button class="btn btn-ghost btn-sm" style="color:var(--danger)" (click)="refuser(d)">❌ Refuser</button>
+                  }
+                  @if (d.statut === 'Accepte') {
+                    <button class="btn btn-primary btn-sm" (click)="convertir(d)">🔄 Convertir en vente</button>
+                  }
+                  @if (d.statut === 'Converti' && d.venteReference) {
+                    <button class="btn btn-ghost btn-sm" style="color:var(--primary)" (click)="router.navigate(['/ventes'])">
+                      → {{ d.venteReference }}
+                    </button>
+                  }
+                  @if (d.statut === 'Refuse' || d.estExpire) {
+                    <span style="color:var(--text-muted);font-size:12px">—</span>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    @if (pageCount > 1) {
+      <div class="pagination">
+        <div class="pagination-info">{{ totalFiltered }} devis · page {{ page }}/{{ pageCount }}</div>
+        <div class="pagination-btns">
+          <button class="btn btn-ghost btn-sm" [disabled]="page === 1" (click)="page = page - 1">‹</button>
+          @for (p of buildPageList(); track $index) {
+            @if (isPageNum(p)) {
+              <button [class]="'btn btn-sm' + (p === page ? ' btn-primary' : ' btn-ghost')" (click)="page = p">{{ p }}</button>
+            } @else {
+              <span class="pagination-ellipsis">…</span>
+            }
+          }
+          <button class="btn btn-ghost btn-sm" [disabled]="page === pageCount" (click)="page = page + 1">›</button>
+        </div>
+        <select class="filter-select" style="width:auto" [(ngModel)]="pageSize" (ngModelChange)="page=1">
+          <option [value]="10">10 / page</option>
+          <option [value]="25">25 / page</option>
+          <option [value]="50">50 / page</option>
+        </select>
+      </div>
+    }
+  </div>
+
+</div>

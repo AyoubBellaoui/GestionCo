@@ -70,6 +70,10 @@ public class DashboardController : ControllerBase
     [HttpGet("dernieres-ventes")]
     public async Task<IActionResult> GetDernieresVentes([FromQuery] int take = 10, CancellationToken ct = default)
         => Ok(await _mediator.Send(new GetDernieresVentesQuery(take), ct));
+
+    [HttpGet("full")]
+    public async Task<IActionResult> GetFull(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetFullDashboardQuery(), ct));
 }
 
 [ApiController]

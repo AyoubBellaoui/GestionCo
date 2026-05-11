@@ -69,6 +69,36 @@ public class ReferenceGenerator : IReferenceGenerator
         return $"{prefix}{nextNum:D3}";
     }
 
+    public async Task<string> GenerateChargeReferenceAsync(CancellationToken ct = default)
+    {
+        var year = DateTime.UtcNow.Year;
+        var prefix = $"CHG-{year}-";
+
+        var lastRef = await _db.Charges
+            .Where(c => c.Reference.StartsWith(prefix))
+            .OrderByDescending(c => c.Reference)
+            .Select(c => c.Reference)
+            .FirstOrDefaultAsync(ct);
+
+        var nextNum = ExtractNextNumber(lastRef, prefix, padding: 4);
+        return $"{prefix}{nextNum:D4}";
+    }
+
+    public async Task<string> GenerateDevisReferenceAsync(CancellationToken ct = default)
+    {
+        var year = DateTime.UtcNow.Year;
+        var prefix = $"DVS-{year}-";
+
+        var lastRef = await _db.Devis
+            .Where(d => d.Reference.StartsWith(prefix))
+            .OrderByDescending(d => d.Reference)
+            .Select(d => d.Reference)
+            .FirstOrDefaultAsync(ct);
+
+        var nextNum = ExtractNextNumber(lastRef, prefix, padding: 4);
+        return $"{prefix}{nextNum:D4}";
+    }
+
     private static int ExtractNextNumber(string? lastRef, string prefix, int padding)
     {
         if (string.IsNullOrEmpty(lastRef)) return 1;
