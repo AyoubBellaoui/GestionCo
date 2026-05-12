@@ -6,6 +6,7 @@ import { TopbarComponent } from '../../shared/topbar/topbar.component';
 import { ModalComponent } from '../../shared/modal/modal.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
+import { SettingsService } from '../../core/services/settings.service';
 import { Facture, VenteSansFacture } from '../../core/models';
 import { formatNum, formatDate, getInitials, getAvatarClass, getPayStatus } from '../../core/utils/format';
 
@@ -36,7 +37,7 @@ export class FacturesComponent implements OnInit {
   getAvatarClass = getAvatarClass;
   getPayStatus = getPayStatus;
 
-  constructor(private api: ApiService, private toast: ToastService, public router: Router) {}
+  constructor(private api: ApiService, private toast: ToastService, public router: Router, private settings: SettingsService) {}
 
   async ngOnInit(): Promise<void> { await this.load(); }
 
@@ -121,7 +122,7 @@ export class FacturesComponent implements OnInit {
 
   async openInvoice(id: number): Promise<void> {
     try {
-      const blob = await this.api.factureDownloadPdf(id);
+      const blob = await this.api.factureDownloadPdf(id, this.settings.settings.entreprise as any);
       const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
       window.open(url, '_blank');
       setTimeout(() => URL.revokeObjectURL(url), 60000);
@@ -130,7 +131,7 @@ export class FacturesComponent implements OnInit {
 
   async downloadPdf(id: number, ref: string): Promise<void> {
     try {
-      const blob = await this.api.factureDownloadPdf(id);
+      const blob = await this.api.factureDownloadPdf(id, this.settings.settings.entreprise as any);
       const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
       const a = document.createElement('a');
       a.href = url; a.download = `Facture-${ref}.pdf`; a.click();

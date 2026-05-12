@@ -105,12 +105,23 @@
       </div>
     </div>
 
-    <div class="stat-card">
-      <div class="stat-icon red">⏳</div>
-      <div>
-        <div class="stat-label">Montant impayé</div>
-        <div class="stat-value">{{ formatNum(stats?.montantImpaye) }} <small>MAD</small></div>
-        <div class="stat-trend down">{{ stats?.nombreFacturesImpayees || 0 }} facture(s)</div>
+    <div class="stat-card" style="flex-direction:column;align-items:stretch;gap:9px">
+      <div style="font-size:11.5px;font-weight:700;color:var(--text-muted);letter-spacing:.4px;text-transform:uppercase">⚠️ Impayés</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--danger-light);border-radius:8px;border-left:3px solid var(--danger)">
+        <span style="font-size:17px;flex-shrink:0">📉</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:700;color:var(--danger)">Débit impayé</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text)">{{ formatNum(montantImpayeDebit) }} <small style="font-size:10px;font-weight:400">MAD</small></div>
+          <div style="font-size:10.5px;color:var(--text-muted)">{{ nombreAchatsImpayes }} achat(s) · {{ nombreChargesImpayees }} charge(s)</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--success-light);border-radius:8px;border-left:3px solid var(--success)">
+        <span style="font-size:17px;flex-shrink:0">💰</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:700;color:var(--success)">Crédit impayé</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text)">{{ formatNum(montantImpayeCredit) }} <small style="font-size:10px;font-weight:400">MAD</small></div>
+          <div style="font-size:10.5px;color:var(--text-muted)">{{ nombreFacturesImpayees }} facture(s) clients</div>
+        </div>
       </div>
     </div>
 

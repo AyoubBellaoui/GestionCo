@@ -20,7 +20,24 @@ public class PdfService : IPdfService
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
-    public async Task<byte[]> GenerateInvoicePdfAsync(int factureId, CancellationToken ct = default)
+    private EntrepriseInfoDto InfoFromConfig() => new()
+    {
+        RaisonSociale = _config["EntrepriseInfo:RaisonSociale"] ?? "GestionCo. SARL",
+        Adresse       = _config["EntrepriseInfo:Adresse"]       ?? "",
+        Telephone     = _config["EntrepriseInfo:Telephone"]     ?? "",
+        Email         = _config["EntrepriseInfo:Email"]         ?? "",
+        Ice           = _config["EntrepriseInfo:ICE"]           ?? "",
+        Rc            = _config["EntrepriseInfo:RC"]            ?? "",
+        If            = _config["EntrepriseInfo:IF"]            ?? "",
+        Patente       = _config["EntrepriseInfo:Patente"]       ?? "",
+        Cnss          = _config["EntrepriseInfo:CNSS"]          ?? "",
+        Capital       = _config["EntrepriseInfo:CapitalSocial"] ?? "",
+        Rib           = _config["EntrepriseInfo:RIB"]           ?? "",
+        Banque        = _config["EntrepriseInfo:Banque"]        ?? "",
+        Swift         = _config["EntrepriseInfo:Swift"]         ?? "",
+    };
+
+    public async Task<byte[]> GenerateInvoicePdfAsync(int factureId, EntrepriseInfoDto? info = null, CancellationToken ct = default)
     {
         var facture = await _db.Factures
             .Include(f => f.Vente).ThenInclude(v => v.Client)
@@ -28,7 +45,7 @@ public class PdfService : IPdfService
             .FirstOrDefaultAsync(f => f.Id == factureId, ct)
             ?? throw new InvalidOperationException($"Facture {factureId} non trouvée");
 
-        var e = _config.GetSection("EntrepriseInfo");
+        var e = info ?? InfoFromConfig();
         var vente = facture.Vente;
         var client = vente.Client;
 
@@ -73,13 +90,29 @@ public class PdfService : IPdfService
                        {
                            row.RelativeItem().Column(left =>
                            {
-                               left.Item().Text(e["RaisonSociale"] ?? "GestionCo.")
-                                   .FontSize(20).Bold().FontColor(primary);
+                               left.Item().Row(logoRow =>
+                               {
+                                   if (!string.IsNullOrEmpty(e.Logo))
+                                   {
+                                       try
+                                       {
+                                           var b64 = e.Logo.Contains(',') ? e.Logo.Split(',')[1] : e.Logo;
+                                           var logoBytes = Convert.FromBase64String(b64);
+                                           logoRow.AutoItem().Width(36).Height(36)
+                                               .Image(logoBytes).FitArea();
+                                           logoRow.AutoItem().Width(10);
+                                       }
+                                       catch { /* ignore bad base64 */ }
+                                   }
+                                   logoRow.RelativeItem().AlignMiddle()
+                                       .Text(e.RaisonSociale ?? "GestionCo.")
+                                       .FontSize(20).Bold().FontColor(primary);
+                               });
                                left.Item().PaddingTop(2)
-                                   .Text(e["Adresse"] ?? "")
+                                   .Text(e.Adresse ?? "")
                                    .FontSize(9).FontColor(muted);
                                left.Item()
-                                   .Text($"{e["Telephone"]} · {e["Email"]}")
+                                   .Text($"{e.Telephone} · {e.Email}")
                                    .FontSize(9).FontColor(muted);
                            });
 
@@ -113,11 +146,11 @@ public class PdfService : IPdfService
                            {
                                c.Item().Text("ÉMETTEUR").FontSize(8).Bold().FontColor(muted);
                                c.Item().Height(5);
-                               c.Item().Text(e["RaisonSociale"] ?? "").Bold().FontSize(11);
-                               c.Item().PaddingTop(2).Text(e["Adresse"] ?? "").FontColor("#374151");
-                               c.Item().Text($"ICE : {e["ICE"]}").FontColor("#374151");
-                               c.Item().Text($"RC : {e["RC"]}  ·  IF : {e["IF"]}").FontColor("#374151");
-                               c.Item().Text($"Patente : {e["Patente"]}  ·  CNSS : {e["CNSS"]}").FontColor("#374151");
+                               c.Item().Text(e.RaisonSociale ?? "").Bold().FontSize(11);
+                               c.Item().PaddingTop(2).Text(e.Adresse ?? "").FontColor("#374151");
+                               c.Item().Text($"ICE : {e.Ice}").FontColor("#374151");
+                               c.Item().Text($"RC : {e.Rc}  ·  IF : {e.If}").FontColor("#374151");
+                               c.Item().Text($"Patente : {e.Patente}  ·  CNSS : {e.Cnss}").FontColor("#374151");
                            });
 
                         row.ConstantItem(12);
@@ -286,7 +319,7 @@ public class PdfService : IPdfService
                            c.Item().Text("COORDONNÉES BANCAIRES").FontSize(8).Bold().FontColor(muted);
                            c.Item().Height(4);
                            c.Item().Text(
-                               $"Banque : {e["Banque"]}  ·  RIB : {e["RIB"]}  ·  SWIFT : {e["Swift"]}");
+                               $"Banque : {e.Banque}  ·  RIB : {e.Rib}  ·  SWIFT : {e.Swift}");
                        });
                 });
 
@@ -302,7 +335,7 @@ public class PdfService : IPdfService
                             .Text("Paiement sous 30 jours. Toute facture impayée fera l'objet de pénalités de retard (loi 69-00).")
                             .FontSize(8).FontColor(muted);
                         footer.Item().AlignCenter().PaddingTop(2)
-                            .Text($"{e["RaisonSociale"]} · Capital : {e["CapitalSocial"]} · RC {e["RC"]} · ICE {e["ICE"]}")
+                            .Text($"{e.RaisonSociale} · Capital : {e.Capital} · RC {e.Rc} · ICE {e.Ice}")
                             .FontSize(8).FontColor(muted);
                         footer.Item().AlignCenter().PaddingTop(2)
                             .Text("Ce document est conforme à l'article 145 du Code Général des Impôts (CGI) du Maroc.")

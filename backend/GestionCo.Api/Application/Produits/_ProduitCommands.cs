@@ -52,6 +52,9 @@ public class CreateProduitHandler : IRequestHandler<CreateProduitCommand, Produi
             PrixHT = dto.PrixHT,
             TVA = dto.TVA,
             PrixTTC = Math.Round(dto.PrixHT * (1 + dto.TVA / 100), 2),
+            PrixVenteHT = dto.PrixVenteHT,
+            TVAVente = dto.TVAVente,
+            PrixVenteTTC = Math.Round(dto.PrixVenteHT * (1 + dto.TVAVente / 100), 2),
             QuantiteStock = dto.QuantiteStock,
             SeuilAlerte = dto.SeuilAlerte,
             CategorieId = dto.CategorieId,
@@ -145,6 +148,9 @@ public class UpdateProduitHandler : IRequestHandler<UpdateProduitCommand, Produi
         produit.PrixHT = dto.PrixHT;
         produit.TVA = dto.TVA;
         produit.PrixTTC = Math.Round(dto.PrixHT * (1 + dto.TVA / 100), 2);
+        produit.PrixVenteHT = dto.PrixVenteHT;
+        produit.TVAVente = dto.TVAVente;
+        produit.PrixVenteTTC = Math.Round(dto.PrixVenteHT * (1 + dto.TVAVente / 100), 2);
         produit.SeuilAlerte = dto.SeuilAlerte;
         produit.CategorieId = dto.CategorieId;
         produit.FournisseurId = dto.FournisseurId;
@@ -221,6 +227,9 @@ public static class ProduitMapper
         PrixHT = p.PrixHT,
         TVA = p.TVA,
         PrixTTC = p.PrixTTC,
+        PrixVenteHT = p.PrixVenteHT,
+        TVAVente = p.TVAVente,
+        PrixVenteTTC = p.PrixVenteTTC,
         QuantiteStock = p.QuantiteStock,
         SeuilAlerte = p.SeuilAlerte,
         IsStockFaible = p.IsStockFaible,

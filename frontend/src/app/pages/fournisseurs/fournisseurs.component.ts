@@ -5,6 +5,7 @@ import { NgClass } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
+import { AuthService } from '../../core/services/auth.service';
 import { Fournisseur } from '../../core/models';
 import { formatNum, getInitials, getAvatarClass } from '../../core/utils/format';
 
@@ -23,7 +24,7 @@ export class FournisseursComponent implements OnInit {
   getInitials = getInitials;
   getAvatarClass = getAvatarClass;
 
-  constructor(private api: ApiService, private toast: ToastService, public router: Router) {}
+  constructor(private api: ApiService, private toast: ToastService, public router: Router, public auth: AuthService) {}
 
   async ngOnInit(): Promise<void> { await this.load(); }
 

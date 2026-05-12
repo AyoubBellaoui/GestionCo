@@ -15,38 +15,15 @@ public static class SeedData
         // ============ UTILISATEURS ============
         var admin = new Utilisateur
         {
-            Nom = "Benali", Prenom = "Youssef",
+            Nom = "Bellaoui", Prenom = "Ayoub",
             Email = "admin@gestionco.ma",
             PasswordHash = hasher.Hash("Admin123!"),
-            Telephone = "+212 6 61 23 45 67",
             Role = RoleUtilisateur.Admin,
             IsActive = true,
-            CreatedAt = DateTime.UtcNow.AddMonths(-18)
+            CreatedAt = DateTime.UtcNow
         };
 
-        var admin2 = new Utilisateur
-        {
-            Nom = "Berrada", Prenom = "Mohamed",
-            Email = "m.berrada@gestionco.ma",
-            PasswordHash = hasher.Hash("Admin123!"),
-            Telephone = "+212 6 62 34 56 78",
-            Role = RoleUtilisateur.Admin,
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow.AddMonths(-12)
-        };
-
-        var manager = new Utilisateur
-        {
-            Nom = "Fassi", Prenom = "Salma",
-            Email = "s.fassi@gestionco.ma",
-            PasswordHash = hasher.Hash("Manager123!"),
-            Telephone = "+212 6 63 45 67 89",
-            Role = RoleUtilisateur.Gestionnaire,
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow.AddMonths(-6)
-        };
-
-        db.Utilisateurs.AddRange(admin, admin2, manager);
+        db.Utilisateurs.Add(admin);
         await db.SaveChangesAsync(ct);
 
         // ============ CATÉGORIES CHARGES ============

@@ -23,6 +23,7 @@ export class ProduitFormComponent implements OnInit {
 
   form: Partial<Produit> = {
     nom: '', description: '', prixHT: 0, tva: 20, prixTTC: 0,
+    prixVenteHT: 0, tvaVente: 20, prixVenteTTC: 0,
     quantiteStock: 0, seuilAlerte: 5, isActive: true,
   };
 
@@ -55,11 +56,20 @@ export class ProduitFormComponent implements OnInit {
   }
 
   get prixTTC(): number { return (this.form.prixHT ?? 0) * (1 + (this.form.tva ?? 20) / 100); }
+  get prixVenteTTC(): number { return (this.form.prixVenteHT ?? 0) * (1 + (this.form.tvaVente ?? 20) / 100); }
+  get margeHT(): number { return (this.form.prixVenteHT ?? 0) - (this.form.prixHT ?? 0); }
+  get margePct(): number {
+    const achat = this.form.prixHT ?? 0;
+    return achat > 0 ? Math.round((this.margeHT / achat) * 100) : 0;
+  }
 
   setField(k: keyof Produit, v: any): void {
     (this.form as any)[k] = v;
     if (k === 'prixHT' || k === 'tva') {
       this.form.prixTTC = this.prixTTC;
+    }
+    if (k === 'prixVenteHT' || k === 'tvaVente') {
+      this.form.prixVenteTTC = this.prixVenteTTC;
     }
   }
 
@@ -89,7 +99,7 @@ export class ProduitFormComponent implements OnInit {
       } else {
         await this.api.produitCreate(this.form);
         this.toast.notify('Produit créé', 'success');
-        if (andNew) this.form = { nom: '', description: '', prixHT: 0, tva: 20, prixTTC: 0, quantiteStock: 0, seuilAlerte: 5, isActive: true };
+        if (andNew) this.form = { nom: '', description: '', prixHT: 0, tva: 20, prixTTC: 0, prixVenteHT: 0, tvaVente: 20, prixVenteTTC: 0, quantiteStock: 0, seuilAlerte: 5, isActive: true };
         else this.router.navigate(['/produits']);
       }
     } catch { this.toast.notify("Erreur d'enregistrement", 'error'); }

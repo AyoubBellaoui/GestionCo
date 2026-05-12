@@ -45,6 +45,7 @@ export interface FullDashboard {
   totalClients: number; nouveauxClientsDuMois: number;
   totalProduits: number; produitsStockFaible: number; produitsRupture: number;
   montantImpaye: number; nombreFacturesImpayees: number;
+  montantImpayeDebit: number; nombreAchatsImpayes: number; nombreChargesImpayees: number;
   achatsDuMois: number; chargesDuMois: number; depensesDuMois: number;
   resultatNet: number; margeRate: number;
   trendRevenu: number; trendDepenses: number;
@@ -68,6 +69,9 @@ export interface Produit {
   prixHT: number;
   tva: number;
   prixTTC: number;
+  prixVenteHT: number;
+  tvaVente: number;
+  prixVenteTTC: number;
   quantiteStock: number;
   seuilAlerte: number;
   isStockFaible: boolean;
@@ -349,6 +353,8 @@ export interface AppSettings {
     capital: string;
     rib: string;
     banque: string;
+    swift?: string;
+    logo?: string;
   };
   notifs: {
     nouvelleVente: boolean;

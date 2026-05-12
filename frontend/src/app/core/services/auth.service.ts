@@ -12,6 +12,8 @@ export class AuthService {
 
   get user(): User | null { return this.userSubject.value; }
   get loading(): boolean { return this.loadingSubject.value; }
+  get isAdmin(): boolean { return this.userSubject.value?.role === 'Admin'; }
+  get isGestionnaire(): boolean { return this.userSubject.value?.role === 'Gestionnaire'; }
 
   constructor() { this.init(); }
 

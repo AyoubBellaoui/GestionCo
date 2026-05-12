@@ -195,9 +195,9 @@ export class ApiService {
         .pipe(map(normalizeList))
     );
   }
-  factureDownloadPdf(id: number): Promise<Blob> {
+  factureDownloadPdf(id: number, entreprise?: Record<string, string>): Promise<Blob> {
     return firstValueFrom(
-      this.http.get(`${this.base}/factures/${id}/pdf`, { responseType: 'blob' })
+      this.http.post(`${this.base}/factures/${id}/pdf`, entreprise ?? {}, { responseType: 'blob' })
     );
   }
   factureCreate(data: { venteId: number; dateEmission?: string; dateEcheance?: string }): Promise<Facture> {

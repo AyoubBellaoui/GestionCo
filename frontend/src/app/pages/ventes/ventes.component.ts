@@ -7,6 +7,7 @@ import { ModalComponent } from '../../shared/modal/modal.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ExportService } from '../../core/services/export.service';
+import { AuthService } from '../../core/services/auth.service';
 import { Vente, Client } from '../../core/models';
 import { formatNum, formatDate, getInitials, getAvatarClass, getPayStatus, statusInfo } from '../../core/utils/format';
 
@@ -45,7 +46,7 @@ export class VentesComponent implements OnInit {
 
   Math = Math;
 
-  constructor(private api: ApiService, private toast: ToastService, private exportSvc: ExportService, public router: Router) {}
+  constructor(private api: ApiService, private toast: ToastService, private exportSvc: ExportService, public router: Router, public auth: AuthService) {}
 
   async ngOnInit(): Promise<void> { await this.load(); }
 

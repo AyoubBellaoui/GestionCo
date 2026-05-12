@@ -57,10 +57,15 @@ export class DashboardComponent implements OnInit {
   get margeRate()        { return this.d?.margeRate        ?? 0; }
   get achatsDuMois()     { return this.d?.achatsDuMois     ?? 0; }
   get chargesDuMois()    { return this.d?.chargesDuMois    ?? 0; }
-  get tauxEncaissement() { return this.d?.tauxEncaissement ?? 0; }
-  get panierMoyen()      { return this.d?.panierMoyen      ?? 0; }
-  get totalQteVendue()   { return this.d?.totalQteVendue   ?? 0; }
-  get tauxFidelite()     { return this.d?.tauxFidelite     ?? 0; }
+  get tauxEncaissement()    { return this.d?.tauxEncaissement    ?? 0; }
+  get panierMoyen()         { return this.d?.panierMoyen         ?? 0; }
+  get totalQteVendue()      { return this.d?.totalQteVendue      ?? 0; }
+  get tauxFidelite()        { return this.d?.tauxFidelite        ?? 0; }
+  get montantImpayeDebit()  { return this.d?.montantImpayeDebit  ?? 0; }
+  get montantImpayeCredit() { return this.d?.montantImpaye       ?? 0; }
+  get nombreAchatsImpayes()   { return this.d?.nombreAchatsImpayes   ?? 0; }
+  get nombreChargesImpayees() { return this.d?.nombreChargesImpayees ?? 0; }
+  get nombreFacturesImpayees(){ return this.d?.nombreFacturesImpayees ?? 0; }
 
   // Remapped for HTML template compatibility
   private readonly _avCls = ['avatar-1','avatar-2','avatar-3','avatar-4','avatar-5'];

@@ -61,14 +61,18 @@
         <div class="form-grid-2">
           <div class="form-group">
             <label class="form-label">Catégorie</label>
-            <select class="form-select" [value]="form.categorieId || ''" (change)="onCategorieChange($any($event.target).value)">
+            <select class="form-select" name="categorieId"
+                    [ngModel]="form.categorieId?.toString() ?? ''"
+                    (ngModelChange)="onCategorieChange($event)">
               <option value="">— Sélectionner une catégorie —</option>
               @for (c of categories; track c.id) { <option [value]="c.id">{{ c.icone || '📂' }} {{ c.nom }}</option> }
             </select>
           </div>
           <div class="form-group">
             <label class="form-label">Fournisseur principal</label>
-            <select class="form-select" [value]="form.fournisseurId || ''" (change)="onFournisseurChange($any($event.target).value)">
+            <select class="form-select" name="fournisseurId"
+                    [ngModel]="form.fournisseurId?.toString() ?? ''"
+                    (ngModelChange)="onFournisseurChange($event)">
               <option value="">— Sélectionner un fournisseur —</option>
               @for (f of fournisseurs; track f.id) { <option [value]="f.id">{{ f.icone || '🏢' }} {{ f.nom }}</option> }
             </select>
@@ -76,10 +80,10 @@
         </div>
       </div>
 
-      <!-- Tarification -->
+      <!-- Prix d'achat -->
       <div class="form-section">
-        <div class="form-section-title">💰 Tarification</div>
-        <div class="form-section-sub">Prix et taxe sur la valeur ajoutée</div>
+        <div class="form-section-title">🛒 Prix d'achat</div>
+        <div class="form-section-sub">Ce que vous payez au fournisseur</div>
         <div class="form-grid-3">
           <div class="form-group">
             <label class="form-label">Prix HT <span class="required">*</span></label>
@@ -104,6 +108,45 @@
             <label class="form-label">Prix TTC <span class="form-hint-inline">(calculé)</span></label>
             <div class="input-group">
               <input class="form-input with-suffix computed-field" [value]="formatNum(prixTTC)" readonly />
+              <span class="input-suffix">MAD</span>
+            </div>
+            <div class="form-help success">= HT × (1 + TVA / 100)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prix de vente -->
+      <div class="form-section">
+        <div class="form-section-title">💰 Prix de vente</div>
+        <div class="form-section-sub">Ce que vous facturez à vos clients</div>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label class="form-label">Prix de vente HT <span class="required">*</span></label>
+            <div class="input-group">
+              <input type="number" step="0.01" min="0" class="form-input with-suffix" [value]="form.prixVenteHT ?? 0" (input)="setField('prixVenteHT', +$any($event.target).value)" />
+              <span class="input-suffix">MAD</span>
+            </div>
+            @if (margeHT !== 0) {
+              <div [class]="'form-help ' + (margeHT >= 0 ? 'success' : 'danger')">
+                Marge : {{ margeHT >= 0 ? '+' : '' }}{{ formatNum(margeHT) }} MAD ({{ margePct }}%)
+              </div>
+            }
+          </div>
+          <div class="form-group">
+            <label class="form-label">TVA vente <span class="required">*</span></label>
+            <div class="radio-group">
+              @for (t of tvaOptions; track t) {
+                <label [class]="'radio-option ' + (form.tvaVente === t ? 'active' : '')">
+                  <input type="radio" name="tvaVente" [value]="t" [checked]="form.tvaVente === t" (change)="setField('tvaVente', t)" />
+                  {{ t }}%
+                </label>
+              }
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Prix vente TTC <span class="form-hint-inline">(calculé)</span></label>
+            <div class="input-group">
+              <input class="form-input with-suffix computed-field" style="color:var(--primary);font-weight:700" [value]="formatNum(prixVenteTTC)" readonly />
               <span class="input-suffix">MAD</span>
             </div>
             <div class="form-help success">= HT × (1 + TVA / 100)</div>
@@ -173,9 +216,13 @@
             <div class="preview-row"><span class="preview-label">Référence</span><span class="preview-value mono">{{ form.reference || '—' }}</span></div>
           }
           <div class="preview-row"><span class="preview-label">Catégorie</span><span [class]="'preview-value' + (!form.categorieNom ? ' empty' : '')">{{ form.categorieNom || '—' }}</span></div>
-          <div class="preview-row"><span class="preview-label">Prix HT</span><span [class]="'preview-value' + (!form.prixHT ? ' empty' : '')">{{ form.prixHT ? formatNum(form.prixHT) + ' MAD' : '—' }}</span></div>
-          <div class="preview-row"><span class="preview-label">TVA</span><span class="preview-value">{{ form.tva ?? 20 }}%</span></div>
-          <div class="preview-row"><span class="preview-label">Prix TTC</span><span class="preview-value price">{{ formatNum(prixTTC) }} MAD</span></div>
+          <div class="preview-row"><span class="preview-label">Achat HT</span><span [class]="'preview-value' + (!form.prixHT ? ' empty' : '')">{{ form.prixHT ? formatNum(form.prixHT) + ' MAD' : '—' }}</span></div>
+          <div class="preview-row"><span class="preview-label">Achat TTC</span><span class="preview-value">{{ formatNum(prixTTC) }} MAD</span></div>
+          <div class="preview-row"><span class="preview-label">Vente HT</span><span [class]="'preview-value' + (!form.prixVenteHT ? ' empty' : '')">{{ form.prixVenteHT ? formatNum(form.prixVenteHT) + ' MAD' : '—' }}</span></div>
+          <div class="preview-row"><span class="preview-label">Vente TTC</span><span class="preview-value price">{{ formatNum(prixVenteTTC) }} MAD</span></div>
+          @if (margePct !== 0) {
+            <div class="preview-row"><span class="preview-label">Marge</span><span [style.color]="margeHT >= 0 ? 'var(--success)' : 'var(--danger)'" style="font-size:12px;font-weight:700">{{ margeHT >= 0 ? '+' : '' }}{{ margePct }}%</span></div>
+          }
           <div class="preview-row"><span class="preview-label">Stock</span><span [class]="'preview-value' + (!form.quantiteStock ? ' empty' : '')">{{ form.quantiteStock != null ? form.quantiteStock + ' unités' : '—' }}</span></div>
           <div class="preview-row"><span class="preview-label">Seuil alerte</span><span class="preview-value">{{ form.seuilAlerte ?? 5 }} unités</span></div>
         </div>

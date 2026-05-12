@@ -117,11 +117,11 @@ public class FacturesController : ControllerBase
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
         => Ok(await _mediator.Send(new GetFactureByIdQuery(id), ct));
 
-    [HttpGet("{id}/pdf")]
-    public async Task<IActionResult> DownloadPdf(int id, CancellationToken ct)
+    [HttpPost("{id}/pdf")]
+    public async Task<IActionResult> DownloadPdf(int id, [FromBody] EntrepriseInfoDto? info, CancellationToken ct)
     {
         var facture = await _mediator.Send(new GetFactureByIdQuery(id), ct);
-        var bytes = await _mediator.Send(new DownloadFacturePdfQuery(id), ct);
+        var bytes = await _mediator.Send(new DownloadFacturePdfQuery(id, info), ct);
         var fileName = $"Facture-{facture.NumeroFacture}.pdf";
         return File(bytes, "application/pdf", fileName);
     }

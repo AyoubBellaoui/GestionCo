@@ -35,6 +35,29 @@
             <h2>🏢 Informations entreprise</h2>
             <p>Ces informations apparaîtront sur vos factures et documents officiels.</p>
           </div>
+          <div class="panel-section-title">🖼️ Logo &amp; identité</div>
+          <div class="logo-upload-area">
+            @if (settings.settings.entreprise.logo) {
+              <div class="logo-upload-preview">
+                <img [src]="settings.settings.entreprise.logo" alt="Logo entreprise" class="logo-upload-img" />
+              </div>
+            } @else {
+              <div class="logo-upload-placeholder">
+                <span class="logo-upload-initial">{{ (settings.settings.entreprise.raisonSociale || 'G')[0].toUpperCase() }}</span>
+                <span class="logo-upload-hint">Lettre initiale utilisée par défaut</span>
+              </div>
+            }
+            <div class="logo-upload-actions">
+              <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+                📤 {{ settings.settings.entreprise.logo ? 'Changer le logo' : 'Uploader un logo' }}
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display:none" (change)="handleLogoUpload($event)" />
+              </label>
+              @if (settings.settings.entreprise.logo) {
+                <button type="button" class="btn btn-ghost btn-sm" (click)="removeLogo()">↩ Logo par défaut</button>
+              }
+              <span class="logo-upload-note">PNG, JPG ou SVG · max 2 Mo · recommandé 200×200 px</span>
+            </div>
+          </div>
           <div class="form-grid">
             <div class="form-field">
               <label class="label">Raison sociale *</label>
@@ -90,9 +113,13 @@
               <label class="label">RIB (24 chiffres)</label>
               <input class="form-input" [value]="settings.settings.entreprise.rib" (input)="settings.setDraftEntreprise({rib: $any($event.target).value})" />
             </div>
+            <div class="form-field">
+              <label class="label">SWIFT / BIC</label>
+              <input class="form-input" [value]="settings.settings.entreprise.swift || ''" (input)="settings.setDraftEntreprise({swift: $any($event.target).value})" />
+            </div>
           </div>
           <div class="panel-actions">
-            <button class="btn btn-primary" (click)="handleApply()" [disabled]="!settings.hasUnsavedChanges">💾 Appliquer les changements</button>
+            <button class="btn btn-primary" (click)="handleApply()">💾 Appliquer les changements</button>
           </div>
         </div>
       }

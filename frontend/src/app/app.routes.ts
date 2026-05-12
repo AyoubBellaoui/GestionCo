@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { adminGuard } from './core/guards/admin.guard';
 import { LayoutComponent } from './layout/layout.component';
 
 export const routes: Routes = [
@@ -33,8 +34,8 @@ export const routes: Routes = [
       { path: 'mouvements-stock', loadComponent: () => import('./pages/mouvements-stock/mouvements-stock.component').then(m => m.MouvementsStockComponent) },
       { path: 'factures', loadComponent: () => import('./pages/factures/factures.component').then(m => m.FacturesComponent) },
       { path: 'rapports', loadComponent: () => import('./pages/rapports/rapports.component').then(m => m.RapportsComponent) },
-      { path: 'journal-audit', loadComponent: () => import('./pages/journal-audit/journal-audit.component').then(m => m.JournalAuditComponent) },
-      { path: 'parametres', loadComponent: () => import('./pages/settings/settings.component').then(m => m.SettingsComponent) },
+      { path: 'journal-audit', canActivate: [adminGuard], loadComponent: () => import('./pages/journal-audit/journal-audit.component').then(m => m.JournalAuditComponent) },
+      { path: 'parametres', canActivate: [adminGuard], loadComponent: () => import('./pages/settings/settings.component').then(m => m.SettingsComponent) },
     ]
   },
   { path: '**', redirectTo: '' }

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, NgZone, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgClass } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
@@ -51,6 +51,7 @@ export class SettingsComponent implements OnInit {
     public settings: SettingsService,
     private api: ApiService,
     private toast: ToastService,
+    private ngZone: NgZone,
   ) {}
 
   ngOnInit(): void {
@@ -122,6 +123,33 @@ export class SettingsComponent implements OnInit {
     }
     this.toast.notify('Mot de passe modifié avec succès', 'success');
     this.securite = { ancienMdp: '', nouveauMdp: '', confirmMdp: '' };
+  }
+
+  handleLogoUpload(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      this.toast.notify('Veuillez sélectionner une image valide', 'warning'); return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      this.toast.notify('L\'image ne doit pas dépasser 2 Mo', 'warning'); return;
+    }
+    this.settings.setDraftEntreprise({ logo: '' });
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this.ngZone.run(() => {
+        this.settings.setDraftEntreprise({ logo: e.target?.result as string });
+        this.toast.notify('Logo mis à jour', 'success');
+      });
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+
+  removeLogo(): void {
+    this.settings.setDraftEntreprise({ logo: '' });
+    this.toast.notify('Logo supprimé', 'success');
   }
 
   handleReset(): void {

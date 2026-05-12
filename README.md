@@ -1,202 +1,164 @@
-# GestionCo — Application de Gestion Commerciale
+# GestionCo — ERP de Gestion Commerciale
 
-Application ERP complète pour le marché marocain : **backend .NET 9** + **frontend Angular 18** + **SQL Server**.
+Application web de gestion commerciale complète : ventes, achats, stock, clients, fournisseurs, charges, factures, rapports financiers et tableau de bord en temps réel.
 
----
-
-## Stack technique
-
-| Couche | Technologie |
-|--------|------------|
-| Backend | .NET 9, ASP.NET Core Web API, Entity Framework Core 9 |
-| Frontend | Angular 18 (standalone components, lazy loading) |
-| Base de données | SQL Server (LocalDB / Express / Standard) |
-| Auth | JWT Bearer tokens |
-| CSS | Design system custom (DM Sans + JetBrains Mono) |
-| PDF | Génération HTML côté serveur, impression via `window.print()` |
-
----
-
-## Prérequis
-
-- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
-- [Node.js 20+](https://nodejs.org/)
-- [Angular CLI 18](https://angular.dev/tools/cli) : `npm install -g @angular/cli`
-- **SQL Server** sur `localhost` (LocalDB, Express, Developer ou Standard)
+**Stack :** Angular 18 (frontend) · .NET 9 / ASP.NET Core (backend) · SQL Server · JWT Auth
 
 ---
 
 ## Démarrage rapide
 
-### Terminal 1 — Backend
-
+### Backend
 ```bash
-cd backend/GestionCo.Api 
+cd backend/GestionCo.Api
 dotnet run
+# API disponible sur http://localhost:5000
 ```
 
-Au démarrage, le backend :
-- Crée automatiquement la base de données **`GestionCoDb`**
-- Insère les données de démonstration
-- Expose l'API REST sur **http://localhost:5000**
-- Expose Swagger UI sur **http://localhost:5000/swagger**
-
-### Terminal 2 — Frontend Angular
-
+### Frontend
 ```bash
 cd frontend
-npm install        # première fois seulement 
-npm start          # équivalent à : ng serve 
+npm install
+ng serve
+# Application disponible sur http://localhost:4200
 ```
 
-Lance l'application sur **http://localhost:4200**
+> La base de données est créée automatiquement au premier démarrage via `EnsureCreatedAsync()` avec les données de démo pré-chargées.
 
 ---
 
-## Configuration de la base de données
+## Comptes par défaut (créés automatiquement à l'initialisation de la BD)
 
-Fichier : `backend/GestionCo.Api/appsettings.json`
+> Ces comptes sont insérés automatiquement par `SeedData.cs` lors de la première création de la base de données.
+> **Changez les mots de passe avant toute mise en production.**
 
-```json
-"ConnectionStrings": {
-  "Default": "Server=localhost;Database=StockVenteDb;Trusted_Connection=True;TrustServerCertificate=True;"
-}
-```
+### Compte par défaut
 
-| Environnement | Connection String |
-|---------------|------------------|
-| SQL Server local (Windows Auth) | `Server=localhost;Database=StockVenteDb;Trusted_Connection=True;TrustServerCertificate=True;` |
-| SQL Server Express | `Server=.\SQLEXPRESS;Database=StockVenteDb;Trusted_Connection=True;TrustServerCertificate=True;` |
-| SQL Server LocalDB | `Server=(localdb)\MSSQLLocalDB;Database=StockVenteDb;Trusted_Connection=True;TrustServerCertificate=True;` |
-| Authentification SQL (login/mdp) | `Server=localhost;Database=StockVenteDb;User Id=sa;Password=VotreMotDePasse;TrustServerCertificate=True;` |
-| Docker | `Server=localhost,1433;Database=StockVenteDb;User Id=sa;Password=YourStrong@Pwd;TrustServerCertificate=True;` |
+| Nom | Email | Mot de passe | Rôle |
+|-----|-------|--------------|------|
+| Ayoub Bellaoui | `admin@gestionco.ma` | `Admin123!` | Admin |
+
+> Les comptes Gestionnaire sont créés depuis l'interface **Paramètres → Utilisateurs** par l'administrateur.
 
 ---
 
-## Comptes de démonstration
+## Rôles et permissions
 
-| Rôle | Email | Mot de passe |
-|------|-------|--------------|
-| Admin | admin@gestionco.ma | Admin123! |
-| Admin |  admin10@gestionco.ma | Admin1234  |
+L'application distingue deux rôles principaux : **Admin** et **Gestionnaire**.
 
+### Admin — Accès complet
+
+L'administrateur a un contrôle total sur l'ensemble de l'application.
+
+| Module | Permissions |
+|--------|-------------|
+| Tableau de bord | Lecture complète |
+| Devis | Créer, modifier, supprimer (brouillons), convertir en vente |
+| Ventes | Créer, consulter, **annuler** |
+| Achats | Créer, consulter, enregistrer paiements |
+| Produits | Créer, modifier, **supprimer**, ajuster le stock |
+| Catégories | Créer, modifier, **supprimer** |
+| Clients | Créer, modifier, **supprimer** |
+| Fournisseurs | Créer, modifier, **supprimer** |
+| Charges | Créer, modifier, enregistrer paiements |
+| Paiements | Créer, consulter |
+| Factures | Créer, consulter, envoyer |
+| Rapports (P&L, TVA) | Accès complet |
+| Mouvements stock | Consulter, **ajuster manuellement** |
+| **Journal d'audit** | **Accès complet** |
+| **Paramètres** | **Accès complet** (entreprise, facturation, notifications) |
+| **Utilisateurs** | **Créer, modifier, désactiver, supprimer** |
 
 ---
 
-## Fonctionnalités
+### Gestionnaire — Accès opérationnel
 
-- **Authentification** — JWT, rôles Admin / Gestionnaire, sessions
-- **Dashboard** — KPIs temps réel, graphiques, alertes stock
-- **Ventes** — création, lignes produits, calcul TVA automatique
-- **Achats** — fournisseurs, réception stock automatique
-- **Produits** — stock, alertes seuil bas, catégories, TVA
-- **Clients** — Entreprise (ICE 15 chiffres) & Particuliers
-- **Fournisseurs** — historique achats, stats
-- **Factures** — génération automatique, PDF imprimable, suivi paiement
-- **Paiements** — espèces, carte bancaire, virement, chèque
-- **Mouvements de stock** — historique complet entrées/sorties
-- **Journal d'audit** — traçabilité de toutes les actions utilisateurs
-- **Paramètres** — infos entreprise, profil, apparence, notifications, sécurité, facturation, comptes utilisateurs
+Le gestionnaire gère les opérations quotidiennes mais n'a pas accès à la configuration ni à l'administration des comptes.
+
+| Module | Permissions |
+|--------|-------------|
+| Tableau de bord | Lecture complète |
+| Devis | Créer, modifier, supprimer (brouillons), convertir en vente |
+| Ventes | Créer, consulter *(annulation impossible)* |
+| Achats | Créer, consulter, enregistrer paiements |
+| Produits | Créer, modifier *(suppression impossible)*, ajuster le stock |
+| Catégories | Créer, modifier *(suppression impossible)* |
+| Clients | Créer, modifier *(suppression impossible)* |
+| Fournisseurs | Créer, modifier *(suppression impossible)* |
+| Charges | Créer, modifier, enregistrer paiements |
+| Paiements | Créer, consulter |
+| Factures | Créer, consulter, envoyer |
+| Rapports (P&L, TVA) | Accès complet |
+| Mouvements stock | Consulter, ajuster manuellement |
+| **Journal d'audit** | **Accès refusé** |
+| **Paramètres** | **Accès refusé** |
+| **Utilisateurs** | **Accès refusé** (ne peut pas créer ni gérer des comptes) |
 
 ---
 
-## Structure du projet
+### Différences résumées Admin vs Gestionnaire
+
+| Action | Admin | Gestionnaire |
+|--------|:-----:|:------------:|
+| Accéder aux Paramètres | ✅ | ❌ |
+| Accéder au Journal d'audit | ✅ | ❌ |
+| Créer / gérer des comptes utilisateurs | ✅ | ❌ |
+| Supprimer un produit | ✅ | ❌ |
+| Supprimer un client | ✅ | ❌ |
+| Supprimer un fournisseur | ✅ | ❌ |
+| Supprimer une catégorie | ✅ | ❌ |
+| Annuler une vente | ✅ | ❌ |
+| Ajuster le stock manuellement | ✅ | ✅ |
+| Créer des ventes / achats / devis | ✅ | ✅ |
+| Enregistrer des paiements | ✅ | ✅ |
+| Consulter les rapports financiers | ✅ | ✅ |
+| Créer / modifier des produits | ✅ | ✅ |
+| Créer / modifier des clients | ✅ | ✅ |
+
+---
+
+## Architecture
 
 ```
 GestionCo/
 ├── backend/
-│   └── GestionCo.Api/              .NET 9 — Clean Architecture
-│       ├── Domain/                  Entités, enums, interfaces
-│       ├── Application/             CQRS — MediatR + FluentValidation
-│       ├── Infrastructure/          EF Core, services, audit
-│       └── Api/                     Controllers REST, middleware JWT
-│
-├── frontend-angular/               Angular 18 — frontend principal
-│   └── src/
-│       ├── app/
-│       │   ├── core/
-│       │   │   ├── models/          Interfaces TypeScript (DTOs)
-│       │   │   ├── services/        ApiService, AuthService, ToastService, SettingsService
-│       │   │   ├── guards/          AuthGuard (CanActivateFn)
-│       │   │   └── interceptors/    JWT Bearer interceptor
-│       │   ├── pages/               18 pages standalone
-│       │   │   ├── login/
-│       │   │   ├── dashboard/
-│       │   │   ├── ventes/
-│       │   │   ├── vente-form/
-│       │   │   ├── achats/
-│       │   │   ├── achat-form/
-│       │   │   ├── produits/
-│       │   │   ├── produit-form/
-│       │   │   ├── clients/
-│       │   │   ├── client-form/
-│       │   │   ├── fournisseurs/
-│       │   │   ├── fournisseur-form/
-│       │   │   ├── categories/
-│       │   │   ├── paiements/
-│       │   │   ├── mouvements-stock/
-│       │   │   ├── factures/
-│       │   │   ├── journal-audit/
-│       │   │   └── settings/
-│       │   └── shared/              Composants réutilisables
-│       │       ├── sidebar/
-│       │       ├── topbar/
-│       │       └── modal/
-│       └── styles.css               Design system global (CSS variables, thème clair/sombre)
-│
-└── frontend/                       React 19 + Vite — version originale (optionnel)
-    └── src/
-        ├── pages/
-        ├── components/
-        ├── services/
-        └── styles/
+│   └── GestionCo.Api/
+│       ├── Api/Controllers/          # Endpoints REST
+│       ├── Application/              # CQRS — Commands, Queries, DTOs
+│       ├── Domain/                   # Entités, Enums
+│       └── Infrastructure/           # EF Core, Services, Seeds
+└── frontend/
+    └── src/app/
+        ├── core/
+        │   ├── guards/               # authGuard, adminGuard
+        │   ├── services/             # ApiService, AuthService, SettingsService…
+        │   └── models/               # Interfaces TypeScript
+        ├── pages/                    # Composants par module
+        └── shared/                   # Topbar, Sidebar, Modal…
 ```
+
+### Sécurité
+
+- **JWT** — tokens d'accès (60 min) + refresh tokens (7 jours)
+- **Policies backend** — `AdminOnly` et `AdminOrManager` appliquées sur chaque endpoint sensible
+- **Guards frontend** — `authGuard` (toutes les pages protégées) + `adminGuard` (Paramètres, Journal d'audit)
+- **UI conditionnelle** — les boutons de suppression et d'annulation sont masqués pour les Gestionnaires
 
 ---
 
-## Dépannage
+## Configuration
 
-### SQL Server ne démarre pas
+Fichier : `backend/GestionCo.Api/appsettings.json`
 
-```powershell
-# Vérifier l'état des services SQL
-Get-Service | Where-Object {$_.Name -like "*SQL*"}
-
-# Démarrer le service si arrêté
-Start-Service MSSQLSERVER   # ou MSSQL$SQLEXPRESS selon votre édition
+```json
+{
+  "ConnectionStrings": {
+    "Default": "Server=localhost;Database=GestionCoDb;Trusted_Connection=True;TrustServerCertificate=True;"
+  },
+  "JwtSettings": {
+    "SecretKey": "...",
+    "AccessTokenExpirationMinutes": 60,
+    "RefreshTokenExpirationDays": 7
+  }
+}
 ```
-
-### Activer TCP/IP (si connexion refusée)
-
-1. Ouvrir **SQL Server Configuration Manager**
-2. SQL Server Network Configuration → Protocols for MSSQLSERVER
-3. Activer **TCP/IP**
-4. Redémarrer le service SQL Server
-
-### Tester la connexion
-
-```powershell
-sqlcmd -S localhost -E -Q "SELECT @@VERSION"
-```
-
-### Réinitialiser la base de données
-
-```sql
-DROP DATABASE StockVenteDb;
-```
-
-Puis relancer `dotnet run` — la base est recréée avec les données de démo.
-
----
-
-## Frontend React (original)
-
-L'application existe aussi en version React 19 + Vite (interface identique) :
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Lance sur **http://localhost:5173**

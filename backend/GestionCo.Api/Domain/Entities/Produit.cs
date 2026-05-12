@@ -11,10 +11,15 @@ public class Produit : AuditableEntity
     public string? Image { get; set; } // emoji ou URL
     public string? CodeBarre { get; set; }
 
-    // Tarification
+    // Prix d'achat
     public decimal PrixHT { get; set; }
     public decimal TVA { get; set; } = 20; // 0, 7, 14, 20
     public decimal PrixTTC { get; set; }
+
+    // Prix de vente
+    public decimal PrixVenteHT { get; set; }
+    public decimal TVAVente { get; set; } = 20;
+    public decimal PrixVenteTTC { get; set; }
 
     // Stock
     public int QuantiteStock { get; set; }

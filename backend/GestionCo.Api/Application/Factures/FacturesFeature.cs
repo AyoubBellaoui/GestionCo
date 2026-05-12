@@ -106,7 +106,7 @@ public class GetFactureByIdHandler : IRequestHandler<GetFactureByIdQuery, Factur
 }
 
 // Download PDF
-public record DownloadFacturePdfQuery(int Id) : IRequest<byte[]>;
+public record DownloadFacturePdfQuery(int Id, EntrepriseInfoDto? Info = null) : IRequest<byte[]>;
 
 public class DownloadFacturePdfHandler : IRequestHandler<DownloadFacturePdfQuery, byte[]>
 {
@@ -114,7 +114,7 @@ public class DownloadFacturePdfHandler : IRequestHandler<DownloadFacturePdfQuery
     public DownloadFacturePdfHandler(IPdfService pdf) => _pdf = pdf;
 
     public async Task<byte[]> Handle(DownloadFacturePdfQuery q, CancellationToken ct)
-        => await _pdf.GenerateInvoicePdfAsync(q.Id, ct);
+        => await _pdf.GenerateInvoicePdfAsync(q.Id, q.Info, ct);
 }
 
 // ============ CREATE FACTURE (manuelle pour vente existante sans facture) ============

@@ -37,7 +37,7 @@
     <div class="table-wrapper">
       <table class="data-table">
         <thead>
-          <tr><th>Référence</th><th>Nom</th><th>Catégorie</th><th style="text-align:right">Prix HT</th><th style="text-align:right">Prix TTC</th><th style="text-align:right">Stock</th><th>État</th><th style="text-align:right">Actions</th></tr>
+          <tr><th>Référence</th><th>Nom</th><th>Catégorie</th><th style="text-align:right">Achat HT</th><th style="text-align:right">Vente TTC</th><th style="text-align:right">Stock</th><th>État</th><th style="text-align:right">Actions</th></tr>
         </thead>
         <tbody>
           @if (loading) { <tr><td colspan="8" class="loading-row">Chargement…</td></tr> }
@@ -54,22 +54,33 @@
               </td>
               <td><span class="items-badge">{{ p.categorieNom || '—' }}</span></td>
               <td style="text-align:right"><div class="price-val">{{ formatNum(p.prixHT) }} <small>MAD</small></div></td>
-              <td style="text-align:right"><div class="price-val" style="color:var(--primary)">{{ formatNum(p.prixTTC) }} <small>MAD</small></div></td>
+              <td style="text-align:right">
+                @if (p.prixVenteHT > 0) {
+                  <div class="price-val" style="color:var(--primary)">{{ formatNum(p.prixVenteTTC) }} <small>MAD</small></div>
+                } @else {
+                  <div style="font-size:12px;color:var(--text-muted);font-style:italic">—</div>
+                }
+              </td>
               <td style="text-align:right">
                 <div style="font-weight:700">{{ formatNum(p.quantiteStock) }} <small style="font-size:11px;color:var(--text-muted);font-weight:400">unités</small></div>
                 <div style="font-size:11px;color:var(--text-muted)">seuil : {{ p.seuilAlerte }}</div>
               </td>
               <td><span [class]="'status-badge ' + ss.cls">{{ ss.label }}</span></td>
               <td class="actions-cell">
+                <button class="btn-icon" title="Voir les détails" (click)="openDetail(p)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
                 <button class="btn-icon" title="Ajuster le stock" (click)="openAjust(p)" style="color:var(--primary)">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 </button>
                 <button class="btn-icon primary" title="Modifier" (click)="router.navigate(['/produits', p.id, 'modifier'])">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
+                @if (auth.isAdmin) {
                 <button class="btn-icon danger" title="Supprimer" (click)="handleDelete(p.id)">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
                 </button>
+                }
               </td>
             </tr>
           }
@@ -78,6 +89,154 @@
     </div>
   </div>
 </div>
+
+<!-- ══ MODAL DÉTAIL PRODUIT ══ -->
+@if (detailModal && detailProduit) {
+  <div class="modal-backdrop" (click)="closeDetail()">
+    <div class="modal" style="max-width:540px" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">📦 {{ detailProduit.nom }}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">{{ detailProduit.reference }}</div>
+        </div>
+        <button class="modal-close" (click)="closeDetail()">✕</button>
+      </div>
+
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:18px">
+
+        <!-- Info chips -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          @if (detailProduit.categorieNom) {
+            <span class="items-badge" style="font-size:12px">{{ detailProduit.categorieIcone || '🏷️' }} {{ detailProduit.categorieNom }}</span>
+          }
+          @let ss = stockStatus(detailProduit);
+          <span [class]="'status-badge ' + ss.cls">{{ ss.label }}</span>
+          @if (!detailProduit.isActive) { <span class="status-badge low">Inactif</span> }
+        </div>
+
+        @if (detailProduit.description) {
+          <div style="font-size:13px;color:var(--text-muted);background:var(--surface-2);border-radius:8px;padding:10px 14px;line-height:1.5">
+            {{ detailProduit.description }}
+          </div>
+        }
+
+        <!-- Prix d'achat -->
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:8px">🛒 Prix d'achat</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+            <div style="background:var(--surface-2);border-radius:10px;padding:12px;text-align:center">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Prix HT</div>
+              <div style="font-size:16px;font-weight:700">{{ formatNum(detailProduit.prixHT) }}</div>
+              <div style="font-size:10px;color:var(--text-muted)">MAD</div>
+            </div>
+            <div style="background:var(--surface-2);border-radius:10px;padding:12px;text-align:center">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">TVA</div>
+              <div style="font-size:16px;font-weight:700">{{ detailProduit.tva }}</div>
+              <div style="font-size:10px;color:var(--text-muted)">%</div>
+            </div>
+            <div style="background:var(--surface-2);border-radius:10px;padding:12px;text-align:center">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Prix TTC</div>
+              <div style="font-size:16px;font-weight:700">{{ formatNum(detailProduit.prixTTC) }}</div>
+              <div style="font-size:10px;color:var(--text-muted)">MAD</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Prix de vente -->
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:8px">💰 Prix de vente</div>
+          @if (detailProduit.prixVenteHT > 0) {
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+              <div style="background:var(--surface-2);border-radius:10px;padding:12px;text-align:center">
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Prix HT</div>
+                <div style="font-size:16px;font-weight:700">{{ formatNum(detailProduit.prixVenteHT) }}</div>
+                <div style="font-size:10px;color:var(--text-muted)">MAD</div>
+              </div>
+              <div style="background:var(--surface-2);border-radius:10px;padding:12px;text-align:center">
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">TVA</div>
+                <div style="font-size:16px;font-weight:700">{{ detailProduit.tvaVente }}</div>
+                <div style="font-size:10px;color:var(--text-muted)">%</div>
+              </div>
+              <div style="background:var(--primary-light, #eff6ff);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--primary)">
+                <div style="font-size:11px;color:var(--primary);margin-bottom:4px;font-weight:600">Prix TTC</div>
+                <div style="font-size:16px;font-weight:700;color:var(--primary)">{{ formatNum(detailProduit.prixVenteTTC) }}</div>
+                <div style="font-size:10px;color:var(--primary)">MAD</div>
+              </div>
+            </div>
+            @if (detailProduit.prixHT > 0) {
+              <div style="margin-top:8px;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600;text-align:center"
+                   [style.background]="detailMarge >= 0 ? 'var(--success-light)' : 'var(--danger-light)'"
+                   [style.color]="detailMarge >= 0 ? 'var(--success)' : 'var(--danger)'">
+                Marge : {{ detailMarge >= 0 ? '+' : '' }}{{ formatNum(detailMarge) }} MAD ({{ detailMarge >= 0 ? '+' : '' }}{{ detailMargePct }}%)
+              </div>
+            }
+          } @else {
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface-2);border-radius:10px;border:1px dashed var(--border)">
+              <span style="font-size:18px">💡</span>
+              <div>
+                <div style="font-size:12.5px;font-weight:600;color:var(--text-muted)">Prix de vente non défini</div>
+                <div style="font-size:11.5px;color:var(--text-muted)">Cliquez sur <strong>Modifier</strong> pour définir le prix de vente.</div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Stock -->
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:8px">Stock</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+            <div style="background:var(--surface-2);border-radius:10px;padding:12px;text-align:center">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Quantité</div>
+              <div [style.color]="detailProduit.isRupture ? 'var(--danger)' : detailProduit.isStockFaible ? 'var(--warning)' : 'var(--success)'"
+                   style="font-size:20px;font-weight:700">{{ formatNum(detailProduit.quantiteStock) }}</div>
+              <div style="font-size:10px;color:var(--text-muted)">unités</div>
+            </div>
+            <div style="background:var(--surface-2);border-radius:10px;padding:12px;text-align:center">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Seuil alerte</div>
+              <div style="font-size:20px;font-weight:700;color:var(--warning)">{{ formatNum(detailProduit.seuilAlerte) }}</div>
+              <div style="font-size:10px;color:var(--text-muted)">unités</div>
+            </div>
+            <div style="background:var(--surface-2);border-radius:10px;padding:12px;text-align:center">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Valeur stock</div>
+              <div style="font-size:16px;font-weight:700">{{ formatNum(detailProduit.quantiteStock * detailProduit.prixHT) }}</div>
+              <div style="font-size:10px;color:var(--text-muted)">MAD HT</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fournisseur & Code-barres -->
+        @if (detailProduit.fournisseurNom || detailProduit.codeBarre) {
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            @if (detailProduit.fournisseurNom) {
+              <div style="flex:1;min-width:160px;background:var(--surface-2);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+                <span style="font-size:18px">🏭</span>
+                <div>
+                  <div style="font-size:11px;color:var(--text-muted)">Fournisseur</div>
+                  <div style="font-size:13px;font-weight:600">{{ detailProduit.fournisseurNom }}</div>
+                </div>
+              </div>
+            }
+            @if (detailProduit.codeBarre) {
+              <div style="flex:1;min-width:160px;background:var(--surface-2);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+                <span style="font-size:18px">🔢</span>
+                <div>
+                  <div style="font-size:11px;color:var(--text-muted)">Code-barres</div>
+                  <div style="font-size:13px;font-weight:600;font-family:monospace">{{ detailProduit.codeBarre }}</div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="closeDetail()">Fermer</button>
+        <button class="btn btn-primary" (click)="editDetail()">✏️ Modifier</button>
+      </div>
+    </div>
+  </div>
+}
 
 <!-- ══ MODAL AJUSTEMENT STOCK ══ -->
 @if (ajustModal && ajustProduit) {

@@ -101,6 +101,9 @@ public class FullDashboardDto
     public int ProduitsRupture { get; set; }
     public decimal MontantImpaye { get; set; }
     public int NombreFacturesImpayees { get; set; }
+    public decimal MontantImpayeDebit { get; set; }
+    public int NombreAchatsImpayes { get; set; }
+    public int NombreChargesImpayees { get; set; }
 
     // Financial metrics
     public decimal AchatsDuMois { get; set; }
@@ -293,6 +296,17 @@ public class GetFullDashboardHandler : IRequestHandler<GetFullDashboardQuery, Fu
         var impaye      = await _db.Ventes.Where(v => v.Statut == StatutVente.EnAttente).SumAsync(v => (decimal?)(v.MontantTotal - v.MontantPaye) ?? 0, ct);
         var nbImpaye    = await _db.Factures.CountAsync(f => f.Statut == StatutFacture.EnAttente || f.Statut == StatutFacture.EnRetard, ct);
 
+        var impayeAchats  = await _db.Achats
+            .Where(a => a.Statut == StatutAchat.EnAttente || a.Statut == StatutAchat.Partiel)
+            .Select(a => a.MontantTotal - a.MontantPaye)
+            .SumAsync(ct);
+        var impayeCharges = await _db.Charges
+            .Where(c => c.Statut == StatutCharge.EnAttente || c.Statut == StatutCharge.Partiel)
+            .Select(c => c.Montant - c.MontantPaye)
+            .SumAsync(ct);
+        var nbAchatsImpay  = await _db.Achats.CountAsync(a => a.Statut == StatutAchat.EnAttente || a.Statut == StatutAchat.Partiel, ct);
+        var nbChargesImpay = await _db.Charges.CountAsync(c => c.Statut == StatutCharge.EnAttente || c.Statut == StatutCharge.Partiel, ct);
+
         // Taux fidélité — clients who bought more than once
         var ordersPerClient = await _db.Ventes
             .Where(v => v.Statut != StatutVente.Annule)
@@ -390,6 +404,8 @@ public class GetFullDashboardHandler : IRequestHandler<GetFullDashboardQuery, Fu
             TotalClients = nbClients, NouveauxClientsDuMois = newClients,
             TotalProduits = totalProds, ProduitsStockFaible = stockFaible, ProduitsRupture = rupture,
             MontantImpaye = impaye, NombreFacturesImpayees = nbImpaye,
+            MontantImpayeDebit = impayeAchats + impayeCharges,
+            NombreAchatsImpayes = nbAchatsImpay, NombreChargesImpayees = nbChargesImpay,
             AchatsDuMois = achM, ChargesDuMois = chgM, DepensesDuMois = depM,
             ResultatNet = res, MargeRate = marge,
             TrendRevenu = trendRev, TrendDepenses = trendDep,

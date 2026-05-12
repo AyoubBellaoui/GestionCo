@@ -21,7 +21,7 @@ public class MouvementsStockController : ControllerBase
         => Ok(await _mediator.Send(q, ct));
 
     [HttpPost("ajustement")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> CreateAjustement([FromBody] AjustementStockDto dto, CancellationToken ct)
         => Ok(await _mediator.Send(new CreateAjustementStockCommand(dto), ct));
 }

@@ -20,6 +20,8 @@ const DEFAULT_SETTINGS: AppSettings = {
     capital: '100 000 MAD',
     rib: '007 640 0001234567890123 45',
     banque: 'Attijariwafa Bank',
+    swift: 'BCMAMAMC',
+    logo: '',
   },
   notifs: {
     nouvelleVente: true, stockFaible: true, factureImpayee: true,

@@ -5,6 +5,7 @@ import { TopbarComponent } from '../../shared/topbar/topbar.component';
 import { ModalComponent } from '../../shared/modal/modal.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
+import { AuthService } from '../../core/services/auth.service';
 import { Categorie } from '../../core/models';
 import { formatNum } from '../../core/utils/format';
 
@@ -28,7 +29,7 @@ export class CategoriesComponent implements OnInit {
 
   form = { nom: '', description: '', icone: '📦' };
 
-  constructor(private api: ApiService, private toast: ToastService) {}
+  constructor(private api: ApiService, private toast: ToastService, public auth: AuthService) {}
 
   async ngOnInit(): Promise<void> { await this.load(); }
 

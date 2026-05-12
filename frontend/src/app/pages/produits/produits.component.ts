@@ -6,6 +6,7 @@ import { TopbarComponent } from '../../shared/topbar/topbar.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ExportService } from '../../core/services/export.service';
+import { AuthService } from '../../core/services/auth.service';
 import { Produit } from '../../core/models';
 import { formatNum } from '../../core/utils/format';
 
@@ -22,6 +23,10 @@ export class ProduitsComponent implements OnInit {
   categorieFilter = '';
   stockFilter = '';
 
+  // Detail modal
+  detailModal = false;
+  detailProduit: Produit | null = null;
+
   // Ajustement modal
   ajustModal = false;
   ajustProduit: Produit | null = null;
@@ -30,7 +35,7 @@ export class ProduitsComponent implements OnInit {
 
   formatNum = formatNum;
 
-  constructor(private api: ApiService, private toast: ToastService, private exportSvc: ExportService, public router: Router) {}
+  constructor(private api: ApiService, private toast: ToastService, private exportSvc: ExportService, public router: Router, public auth: AuthService) {}
 
   exportExcel(): void { this.exportSvc.exportProduits(this.produits); }
 
@@ -76,6 +81,28 @@ export class ProduitsComponent implements OnInit {
     if (!confirm('Supprimer ce produit ?')) return;
     try { await this.api.produitDelete(id); this.toast.notify('Produit supprimé', 'success'); this.load(); }
     catch { this.toast.notify('Erreur de suppression', 'error'); }
+  }
+
+  get detailMarge(): number { return (this.detailProduit?.prixVenteHT ?? 0) - (this.detailProduit?.prixHT ?? 0); }
+  get detailMargePct(): number {
+    const achat = this.detailProduit?.prixHT ?? 0;
+    return achat > 0 ? Math.round((this.detailMarge / achat) * 100) : 0;
+  }
+
+  openDetail(p: Produit): void {
+    this.detailProduit = p;
+    this.detailModal = true;
+  }
+
+  closeDetail(): void {
+    this.detailModal = false;
+    this.detailProduit = null;
+  }
+
+  editDetail(): void {
+    const id = this.detailProduit?.id;
+    this.closeDetail();
+    if (id) this.router.navigate(['/produits', id, 'modifier']);
   }
 
   openAjust(p: Produit): void {
