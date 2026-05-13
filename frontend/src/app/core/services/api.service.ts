@@ -283,6 +283,12 @@ export class ApiService {
   devisDelete(id: number): Promise<void> {
     return firstValueFrom(this.http.delete<void>(`${this.base}/devis/${id}`));
   }
+  devisPdf(id: number, entreprise?: Record<string, string>): Promise<Blob> {
+    return firstValueFrom(this.http.post(`${this.base}/devis/${id}/pdf`, entreprise ?? {}, { responseType: 'blob' }));
+  }
+  devisEmail(id: number, email: string, message?: string, entreprise?: Record<string, string>, smtp?: Record<string, any>): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.base}/devis/${id}/email`, { email, message, entrepriseInfo: entreprise ?? {}, smtpConfig: smtp ?? {} }));
+  }
 
   // ── AUDIT ──
   auditList(): Promise<AuditLog[]> {

@@ -372,6 +372,14 @@ export interface AppSettings {
     tvaParDefaut: number;
     delaiPaiement: number;
   };
+  smtp: {
+    host: string;
+    port: number;
+    username: string;
+    password: string;
+    fromName: string;
+    fromAddress: string;
+  };
 }
 
 // ============ VENTES SANS FACTURE ============

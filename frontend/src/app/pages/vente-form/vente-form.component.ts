@@ -80,9 +80,9 @@ export class VenteFormComponent implements OnInit {
     const l = { ...this.lignes[i], produitId };
     const p = this.produits.find(x => x.id === produitId);
     if (p) {
-      l.prixReference = p.prixHT;
-      l.prixUnitaire = 0;
-      l.tva = p.tva;
+      l.prixReference = p.prixTTC;
+      l.prixUnitaire = p.prixVenteHT;
+      l.tva = p.tvaVente;
       l.referenceProduit = p.reference;
       l.nomProduit = p.nom;
       l.stockDisponible = p.quantiteStock;

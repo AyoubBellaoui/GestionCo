@@ -7,6 +7,7 @@ import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Devis, Client } from '../../core/models';
 import { formatNum, formatDate, getAvatarClass } from '../../core/utils/format';
+import { SettingsService } from '../../core/services/settings.service';
 
 type DateRange = 'today' | '7d' | '30d' | '12m' | 'all';
 
@@ -39,7 +40,7 @@ export class DevisComponent implements OnInit {
     { value: 'all', label: 'Tout' },
   ];
 
-  constructor(private api: ApiService, private toast: ToastService, public router: Router) {}
+  constructor(private api: ApiService, private toast: ToastService, public router: Router, private settings: SettingsService) {}
 
   async ngOnInit(): Promise<void> { await this.load(); }
 
@@ -149,6 +150,46 @@ export class DevisComponent implements OnInit {
       this.devisList = this.devisList.filter(x => x.id !== d.id);
       this.toast.notify('Devis supprimé', 'success');
     } catch { this.toast.notify('Erreur lors de la suppression', 'error'); }
+  }
+
+  async printPdf(d: Devis): Promise<void> {
+    try {
+      const blob = await this.api.devisPdf(d.id, this.settings.settings.entreprise as any);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `Devis-${d.reference}.pdf`; a.click();
+      URL.revokeObjectURL(url);
+    } catch { this.toast.notify('Erreur lors de la génération du PDF', 'error'); }
+  }
+
+  emailModalOpen = false;
+  emailTarget: Devis | null = null;
+  emailTo = '';
+  emailMessage = '';
+  emailSending = false;
+
+  openEmailModal(d: Devis): void {
+    this.emailTarget = d;
+    this.emailTo = this.clients.find(c => c.id === d.clientId)?.email || '';
+    this.emailMessage = '';
+    this.emailModalOpen = true;
+  }
+
+  async sendEmail(): Promise<void> {
+    if (!this.emailTarget || !this.emailTo.trim()) {
+      this.toast.notify('Adresse email requise', 'warning'); return;
+    }
+    this.emailSending = true;
+    try {
+      await this.api.devisEmail(this.emailTarget.id, this.emailTo.trim(), this.emailMessage.trim() || undefined, this.settings.settings.entreprise as any, this.settings.settings.smtp as any);
+      await this.api.devisUpdateStatut(this.emailTarget.id, 'Envoye');
+      await this.load();
+      this.emailModalOpen = false;
+      this.toast.notify(`Devis envoyé à ${this.emailTo}`, 'success');
+    } catch (e: any) {
+      const msg = e?.error?.message || e?.error?.detail || e?.message || 'Erreur lors de l\'envoi email';
+      this.toast.notify(msg, 'error');
+    } finally { this.emailSending = false; }
   }
 
   buildPageList(): (number | '…')[] {

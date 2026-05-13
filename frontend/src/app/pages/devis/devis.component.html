@@ -126,11 +126,11 @@
                   <span style="font-weight:500">{{ d.nomClient }}</span>
                 </div>
               </td>
-              <td style="color:var(--text-secondary);font-size:13px">{{ formatDate(d.dateDevis) }}</td>
+              <td style="color:var(--text-secondary);font-size:13px">{{ formatDate(d.dateDevis).main }}</td>
               <td>
                 @if (d.dateValidite) {
                   <span [style.color]="d.estExpire ? 'var(--danger)' : 'var(--text-secondary)'" style="font-size:13px">
-                    {{ d.estExpire ? '⚠ ' : '' }}{{ formatDate(d.dateValidite) }}
+                    {{ d.estExpire ? '⚠ ' : '' }}{{ formatDate(d.dateValidite).main }}
                   </span>
                 } @else {
                   <span style="color:var(--text-muted);font-size:12px">—</span>
@@ -143,10 +143,11 @@
               </td>
               <td style="text-align:right">
                 <div style="display:flex;justify-content:flex-end;gap:5px;flex-wrap:wrap">
+                  <button class="btn btn-ghost btn-sm" (click)="printPdf(d)" title="Télécharger PDF">🖨️ PDF</button>
+                  <button class="btn btn-ghost btn-sm" style="color:var(--primary)" (click)="openEmailModal(d)" title="Envoyer par email">📧 Email</button>
                   @if (d.statut === 'Brouillon') {
-                    <button class="btn btn-ghost btn-sm" (click)="router.navigate(['/devis', d.id, 'modifier'])" title="Modifier">✏️ Modifier</button>
-                    <button class="btn btn-ghost btn-sm" style="color:var(--primary)" (click)="marquerEnvoye(d)" title="Envoyer au client">📤 Envoyer</button>
-                    <button class="btn btn-ghost btn-sm" style="color:var(--danger)" (click)="supprimer(d)" title="Supprimer">🗑️</button>
+                    <button class="btn-icon" (click)="router.navigate(['/devis', d.id, 'modifier'])" title="Modifier"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                    <button class="btn-icon danger" (click)="supprimer(d)" title="Supprimer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg></button>
                   }
                   @if (d.statut === 'Envoye' && !d.estExpire) {
                     <button class="btn btn-ghost btn-sm" style="color:var(--success)" (click)="accepter(d)">✅ Accepter</button>
@@ -159,9 +160,6 @@
                     <button class="btn btn-ghost btn-sm" style="color:var(--primary)" (click)="router.navigate(['/ventes'])">
                       → {{ d.venteReference }}
                     </button>
-                  }
-                  @if (d.statut === 'Refuse' || d.estExpire) {
-                    <span style="color:var(--text-muted);font-size:12px">—</span>
                   }
                 </div>
               </td>
@@ -196,3 +194,39 @@
   </div>
 
 </div>
+
+@if (emailModalOpen && emailTarget) {
+  <div class="modal-backdrop" (click)="emailModalOpen=false">
+    <div class="modal-box" style="width:100%;max-width:480px;background:var(--surface);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.18);overflow:hidden" (click)="$event.stopPropagation()">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:15px;font-weight:700;color:var(--text)">Envoyer le devis par email</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">{{ emailTarget.reference }} · {{ emailTarget.nomClient }}</div>
+        </div>
+        <button class="btn-icon" style="background:none;border:none;cursor:pointer;color:var(--text-muted)" (click)="emailModalOpen=false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Adresse email du destinataire <span class="required">*</span></label>
+          <input class="form-input" type="email" placeholder="client@exemple.ma" [(ngModel)]="emailTo" />
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Message personnalisé <span style="color:var(--text-muted);font-weight:400;font-size:11px">(optionnel)</span></label>
+          <textarea class="form-input" rows="3" placeholder="Bonjour, veuillez trouver ci-joint…" [(ngModel)]="emailMessage" style="resize:vertical"></textarea>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);background:var(--surface2);padding:10px 12px;border-radius:8px">
+          Le PDF du devis sera automatiquement joint. Le statut passera à <strong>Envoyé</strong>.
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;padding:14px 22px;border-top:1px solid var(--border);background:var(--surface2)">
+        <button class="btn btn-ghost" (click)="emailModalOpen=false" [disabled]="emailSending">Annuler</button>
+        <button class="btn btn-primary" (click)="sendEmail()" [disabled]="emailSending || !emailTo.trim()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          {{ emailSending ? 'Envoi…' : 'Envoyer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

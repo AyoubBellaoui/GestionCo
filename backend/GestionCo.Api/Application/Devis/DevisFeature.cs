@@ -509,6 +509,8 @@ public class GetDevisHandler : IRequestHandler<GetDevisQuery, PagedList<DevisDto
 }
 
 public record GetDevisByIdQuery(int Id) : IRequest<DevisDto>;
+public record GenerateDevisPdfQuery(int Id, EntrepriseInfoDto? Info = null) : IRequest<byte[]>;
+public record EnvoyerDevisEmailCommand(int Id, string ToEmail, string? Message = null, EntrepriseInfoDto? Info = null, SmtpConfigDto? Smtp = null) : IRequest;
 
 public class GetDevisByIdHandler : IRequestHandler<GetDevisByIdQuery, DevisDto>
 {
@@ -526,6 +528,24 @@ public class GetDevisByIdHandler : IRequestHandler<GetDevisByIdQuery, DevisDto>
             ?? throw new NotFoundException("Devis", q.Id);
         return DevisMapper.ToDto(d, DateTime.UtcNow);
     }
+}
+
+public class GenerateDevisPdfHandler : IRequestHandler<GenerateDevisPdfQuery, byte[]>
+{
+    private readonly IPdfService _pdf;
+    public GenerateDevisPdfHandler(IPdfService pdf) => _pdf = pdf;
+
+    public Task<byte[]> Handle(GenerateDevisPdfQuery q, CancellationToken ct)
+        => _pdf.GenerateDevisPdfAsync(q.Id, q.Info, ct);
+}
+
+public class EnvoyerDevisEmailHandler : IRequestHandler<EnvoyerDevisEmailCommand>
+{
+    private readonly IEmailService _email;
+    public EnvoyerDevisEmailHandler(IEmailService email) => _email = email;
+
+    public Task Handle(EnvoyerDevisEmailCommand cmd, CancellationToken ct)
+        => _email.SendDevisAsync(cmd.Id, cmd.ToEmail, cmd.Message, cmd.Info, cmd.Smtp, ct);
 }
 
 // ============ MAPPER ============

@@ -346,6 +346,244 @@ public class PdfService : IPdfService
     }
 
     // ═══════════════════════════════════════════════════════
+    // DEVIS PDF
+    // ═══════════════════════════════════════════════════════
+    public async Task<byte[]> GenerateDevisPdfAsync(int devisId, EntrepriseInfoDto? info = null, CancellationToken ct = default)
+    {
+        var devis = await _db.Devis
+            .Include(d => d.Client)
+            .Include(d => d.Lignes).ThenInclude(l => l.Produit)
+            .FirstOrDefaultAsync(d => d.Id == devisId, ct)
+            ?? throw new InvalidOperationException($"Devis {devisId} non trouvé");
+
+        var e = info ?? InfoFromConfig();
+        var client = devis.Client;
+
+        const string primary = "#4F46E5";
+        const string muted   = "#6b7280";
+        const string border  = "#e2e4ee";
+        const string bg      = "#f5f6fa";
+
+        return Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(1.5f, Unit.Centimetre);
+                page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
+
+                page.Content().Column(col =>
+                {
+                    // ── HEADER ──────────────────────────────
+                    col.Item()
+                       .BorderBottom(3).BorderColor(primary)
+                       .PaddingBottom(12)
+                       .Row(row =>
+                       {
+                           row.RelativeItem().Column(left =>
+                           {
+                               left.Item().Row(logoRow =>
+                               {
+                                   if (!string.IsNullOrEmpty(e.Logo))
+                                   {
+                                       try
+                                       {
+                                           var b64 = e.Logo.Contains(',') ? e.Logo.Split(',')[1] : e.Logo;
+                                           var logoBytes = Convert.FromBase64String(b64);
+                                           logoRow.AutoItem().Width(36).Height(36).Image(logoBytes).FitArea();
+                                           logoRow.AutoItem().Width(10);
+                                       }
+                                       catch { }
+                                   }
+                                   logoRow.RelativeItem().AlignMiddle()
+                                       .Text(e.RaisonSociale ?? "GestionCo.")
+                                       .FontSize(20).Bold().FontColor(primary);
+                               });
+                               left.Item().PaddingTop(2).Text(e.Adresse ?? "").FontSize(9).FontColor(muted);
+                               left.Item().Text($"{e.Telephone} · {e.Email}").FontSize(9).FontColor(muted);
+                           });
+
+                           row.RelativeItem().AlignRight().Column(right =>
+                           {
+                               right.Item().AlignRight().Text("DEVIS").FontSize(26).Bold().FontColor(primary);
+                               right.Item().AlignRight().PaddingTop(2).Text(devis.Reference).FontSize(13);
+                               right.Item().AlignRight().PaddingTop(6).Row(r =>
+                               {
+                                   r.RelativeItem();
+                                   var (sText, sColor) = devis.Statut switch
+                                   {
+                                       StatutDevis.Accepte  => ("ACCEPTÉ",  "#22c55e"),
+                                       StatutDevis.Refuse   => ("REFUSÉ",   "#ef4444"),
+                                       StatutDevis.Converti => ("CONVERTI", "#8b5cf6"),
+                                       StatutDevis.Envoye   => ("ENVOYÉ",   "#3b82f6"),
+                                       StatutDevis.Expire   => ("EXPIRÉ",   "#f59e0b"),
+                                       _                    => ("BROUILLON","#6b7280"),
+                                   };
+                                   r.AutoItem().Background(sColor).PaddingHorizontal(10).PaddingVertical(4)
+                                    .Text(sText).FontSize(9).Bold().FontColor("#ffffff");
+                               });
+                           });
+                       });
+
+                    col.Item().Height(14);
+
+                    // ── BLOCS ÉMETTEUR / CLIENT ─────────────
+                    col.Item().Row(row =>
+                    {
+                        row.RelativeItem().Border(1).BorderColor(border).Padding(12).Column(c =>
+                        {
+                            c.Item().Text("ÉMETTEUR").FontSize(8).Bold().FontColor(muted);
+                            c.Item().Height(5);
+                            c.Item().Text(e.RaisonSociale ?? "").Bold().FontSize(11);
+                            c.Item().PaddingTop(2).Text(e.Adresse ?? "").FontColor("#374151");
+                            c.Item().Text($"ICE : {e.Ice}").FontColor("#374151");
+                            c.Item().Text($"RC : {e.Rc}  ·  IF : {e.If}").FontColor("#374151");
+                        });
+
+                        row.ConstantItem(12);
+
+                        row.RelativeItem().Background("#eef0ff").Border(1).BorderColor("#c7d2fe").Padding(12).Column(c =>
+                        {
+                            c.Item().Text("DESTINATAIRE").FontSize(8).Bold().FontColor(primary);
+                            c.Item().Height(5);
+                            c.Item().Text(client.NomClient).Bold().FontSize(11);
+                            if (!string.IsNullOrEmpty(client.Adresse))
+                                c.Item().PaddingTop(2).Text(client.Adresse).FontColor("#374151");
+                            if (!string.IsNullOrEmpty(client.ICE))
+                                c.Item().Text($"ICE : {client.ICE}").FontColor("#374151");
+                            if (!string.IsNullOrEmpty(client.Telephone))
+                                c.Item().Text($"Tél : {client.Telephone}").FontColor("#374151");
+                            if (!string.IsNullOrEmpty(client.Email))
+                                c.Item().Text($"Email : {client.Email}").FontColor("#374151");
+                        });
+                    });
+
+                    col.Item().Height(12);
+
+                    // ── META ────────────────────────────────
+                    col.Item().Background(bg).Padding(10).Row(row =>
+                    {
+                        row.RelativeItem().Column(c =>
+                        {
+                            c.Item().Text("Date du devis").FontSize(8).FontColor(muted);
+                            c.Item().PaddingTop(2).Text(devis.DateDevis.ToString("dd MMM yyyy")).Bold();
+                        });
+                        row.RelativeItem().Column(c =>
+                        {
+                            c.Item().Text("Validité").FontSize(8).FontColor(muted);
+                            c.Item().PaddingTop(2).Text(
+                                devis.DateValidite.HasValue ? devis.DateValidite.Value.ToString("dd MMM yyyy") : "Illimitée"
+                            ).Bold();
+                        });
+                        row.RelativeItem().Column(c =>
+                        {
+                            c.Item().Text("Référence").FontSize(8).FontColor(muted);
+                            c.Item().PaddingTop(2).Text(devis.Reference).Bold();
+                        });
+                    });
+
+                    col.Item().Height(12);
+
+                    // ── TABLE DES LIGNES ────────────────────
+                    col.Item().Table(table =>
+                    {
+                        table.ColumnsDefinition(cols =>
+                        {
+                            cols.RelativeColumn(3);
+                            cols.ConstantColumn(40);
+                            cols.ConstantColumn(75);
+                            cols.ConstantColumn(45);
+                            cols.ConstantColumn(75);
+                        });
+
+                        table.Header(h =>
+                        {
+                            static IContainer HeaderStyle(IContainer c)
+                                => c.Background("#4F46E5").Padding(9).AlignMiddle();
+
+                            HeaderStyle(h.Cell()).AlignLeft().Text("Désignation").FontSize(10).Bold().FontColor("#ffffff");
+                            HeaderStyle(h.Cell()).AlignCenter().Text("Qté").FontSize(10).Bold().FontColor("#ffffff");
+                            HeaderStyle(h.Cell()).AlignRight().Text("P.U. HT").FontSize(10).Bold().FontColor("#ffffff");
+                            HeaderStyle(h.Cell()).AlignCenter().Text("TVA").FontSize(10).Bold().FontColor("#ffffff");
+                            HeaderStyle(h.Cell()).AlignRight().Text("Total HT").FontSize(10).Bold().FontColor("#ffffff");
+                        });
+
+                        var idx = 0;
+                        foreach (var ligne in devis.Lignes)
+                        {
+                            var rowBg = idx++ % 2 == 0 ? "#ffffff" : "#f9fafb";
+
+                            static IContainer CellStyle(IContainer c, string bg)
+                                => c.Background(bg).BorderBottom(1).BorderColor("#e2e4ee").Padding(9).AlignMiddle();
+
+                            CellStyle(table.Cell(), rowBg).AlignLeft().Column(c =>
+                            {
+                                c.Item().Text(ligne.Produit?.Nom ?? "").Bold();
+                                c.Item().Text($"Réf. {ligne.Produit?.Reference}").FontSize(8).FontColor(muted);
+                            });
+                            CellStyle(table.Cell(), rowBg).AlignCenter().Text(ligne.Quantite.ToString());
+                            CellStyle(table.Cell(), rowBg).AlignRight().Text($"{ligne.PrixUnitaire:N2}");
+                            CellStyle(table.Cell(), rowBg).AlignCenter().Text($"{ligne.Tva:0}%");
+                            CellStyle(table.Cell(), rowBg).AlignRight().Text($"{ligne.Total:N2}").Bold();
+                        }
+                    });
+
+                    col.Item().Height(12);
+
+                    // ── TOTAUX ──────────────────────────────
+                    col.Item().Row(outer =>
+                    {
+                        outer.RelativeItem();
+                        outer.ConstantItem(265).Background(bg).Padding(14).Column(totaux =>
+                        {
+                            void TRow(string label, string val, bool highlight = false)
+                            {
+                                totaux.Item().Row(r =>
+                                {
+                                    var ls = r.RelativeItem().Text(label).FontSize(highlight ? 12 : 10);
+                                    if (highlight) ls.Bold();
+                                    r.ConstantItem(110).AlignRight().Text(val)
+                                        .FontSize(highlight ? 12 : 10).Bold()
+                                        .FontColor(highlight ? primary : "#1a1d2e");
+                                });
+                                if (!highlight) totaux.Item().Height(5);
+                            }
+                            TRow("Sous-total HT", $"{devis.MontantTotalHT:N2} MAD");
+                            TRow("TVA", $"{devis.MontantTVA:N2} MAD");
+                            totaux.Item().PaddingTop(6).BorderTop(2).BorderColor(primary).Height(1);
+                            totaux.Item().Height(6);
+                            TRow("TOTAL TTC", $"{devis.MontantTotal:N2} MAD", highlight: true);
+                        });
+                    });
+
+                    if (!string.IsNullOrWhiteSpace(devis.Notes))
+                    {
+                        col.Item().Height(12);
+                        col.Item().Background("#eef0ff").BorderLeft(3).BorderColor(primary).Padding(12).Column(c =>
+                        {
+                            c.Item().Text("Notes").FontSize(8).Bold().FontColor(primary);
+                            c.Item().Height(4);
+                            c.Item().Text(devis.Notes);
+                        });
+                    }
+                });
+
+                page.Footer()
+                    .BorderTop(1).BorderColor(border).PaddingTop(8)
+                    .Column(footer =>
+                    {
+                        footer.Item().AlignCenter()
+                            .Text("Ce devis est valable jusqu'à la date de validité indiquée. Merci de votre confiance.")
+                            .FontSize(8).FontColor(muted);
+                        footer.Item().AlignCenter().PaddingTop(2)
+                            .Text($"{e.RaisonSociale} · Capital : {e.Capital} · RC {e.Rc} · ICE {e.Ice}")
+                            .FontSize(8).FontColor(muted);
+                    });
+            });
+        }).GeneratePdf();
+    }
+
+    // ═══════════════════════════════════════════════════════
     // P&L REPORT PDF
     // ═══════════════════════════════════════════════════════
     public byte[] GeneratePLReportPdf(PLReportDto r, string entreprise)

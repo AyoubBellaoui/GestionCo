@@ -7,6 +7,17 @@ import { ToastService } from '../../core/services/toast.service';
 import { Client, Produit } from '../../core/models';
 import { formatNum } from '../../core/utils/format';
 
+interface NewClientForm {
+  nomClient: string;
+  type: string;
+  telephone: string;
+  email: string;
+  ville: string;
+  ice: string;
+  personneContact: string;
+  sourceAcquisition: string;
+}
+
 interface LigneForm {
   produitId: number;
   nomProduit?: string;
@@ -35,6 +46,11 @@ export class DevisFormComponent implements OnInit {
   notes = '';
   lignes: LigneForm[] = [];
   saving = false;
+
+  newClientModalOpen = false;
+  newClientSaving = false;
+  readonly sourcesAcquisition = ['Facebook', 'Instagram', 'WhatsApp', 'Email', 'Recommandation', 'Site web', 'Salon / Événement', 'Autre'];
+  newClientForm: NewClientForm = { nomClient: '', type: 'Particulier', telephone: '', email: '', ville: '', ice: '', personneContact: '', sourceAcquisition: '' };
 
   formatNum = formatNum;
   Math = Math;
@@ -122,6 +138,35 @@ export class DevisFormComponent implements OnInit {
   }
 
   removeLigne(i: number): void { this.lignes = this.lignes.filter((_, idx) => idx !== i); }
+
+  openNewClientModal(): void {
+    this.newClientForm = { nomClient: '', type: 'Particulier', telephone: '', email: '', ville: '', ice: '', personneContact: '', sourceAcquisition: '' };
+    this.newClientModalOpen = true;
+  }
+
+  async saveNewClient(): Promise<void> {
+    if (!this.newClientForm.nomClient.trim()) {
+      this.toast.notify('Le nom du client est requis', 'warning'); return;
+    }
+    this.newClientSaving = true;
+    try {
+      const created = await this.api.clientCreate({
+        nomClient: this.newClientForm.nomClient.trim(),
+        type: this.newClientForm.type,
+        telephone: this.newClientForm.telephone.trim() || undefined,
+        email: this.newClientForm.email.trim() || undefined,
+        ville: this.newClientForm.ville.trim() || undefined,
+        ice: this.newClientForm.ice.trim() || undefined,
+        personneContact: this.newClientForm.personneContact.trim() || undefined,
+        sourceAcquisition: this.newClientForm.sourceAcquisition.trim() || undefined,
+      });
+      this.clients = [...this.clients, created];
+      this.clientId = created.id;
+      this.newClientModalOpen = false;
+      this.toast.notify(`Client « ${created.nomClient} » créé et sélectionné`, 'success');
+    } catch { this.toast.notify('Erreur lors de la création du client', 'error'); }
+    finally { this.newClientSaving = false; }
+  }
 
   async save(): Promise<void> {
     if (!this.clientId) { this.toast.notify('Sélectionnez un client', 'warning'); return; }

@@ -237,41 +237,61 @@ public class CategoriesChargeController : ControllerBase
 [ApiController]
 [Route("api/devis")]
 [Authorize(Policy = "AdminOrManager")]
-public class DevisController : ControllerBase
+public class DevisController(IMediator mediator) : ControllerBase
 {
-    private readonly IMediator _mediator;
-    public DevisController(IMediator mediator) => _mediator = mediator;
-
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] GetDevisQuery q, CancellationToken ct)
-        => Ok(await _mediator.Send(q, ct));
+        => Ok(await mediator.Send(q, ct));
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
-        => Ok(await _mediator.Send(new GetDevisByIdQuery(id), ct));
+        => Ok(await mediator.Send(new GetDevisByIdQuery(id), ct));
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateDevisDto dto, CancellationToken ct)
-        => Ok(await _mediator.Send(new CreateDevisCommand(dto), ct));
+        => Ok(await mediator.Send(new CreateDevisCommand(dto), ct));
 
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateDevisDto dto, CancellationToken ct)
-        => Ok(await _mediator.Send(new UpdateDevisCommand(id, dto), ct));
+        => Ok(await mediator.Send(new UpdateDevisCommand(id, dto), ct));
 
     [HttpPut("{id}/statut")]
     public async Task<IActionResult> UpdateStatut(int id, [FromBody] UpdateDevisStatutDto dto, CancellationToken ct)
-        => Ok(await _mediator.Send(new UpdateDevisStatutCommand(id, dto.Statut), ct));
+        => Ok(await mediator.Send(new UpdateDevisStatutCommand(id, dto.Statut), ct));
 
     [HttpPost("{id}/convertir")]
     public async Task<IActionResult> Convertir(int id, CancellationToken ct)
-        => Ok(await _mediator.Send(new ConvertirDevisEnVenteCommand(id), ct));
+        => Ok(await mediator.Send(new ConvertirDevisEnVenteCommand(id), ct));
+
+    [HttpPost("{id}/pdf")]
+    public async Task<IActionResult> DownloadPdf(int id, [FromBody] EntrepriseInfoDto? info, CancellationToken ct)
+    {
+        var devis = await mediator.Send(new GetDevisByIdQuery(id), ct);
+        var bytes = await mediator.Send(new GenerateDevisPdfQuery(id, info), ct);
+        return File(bytes, "application/pdf", $"Devis-{devis.Reference}.pdf");
+    }
+
+    [HttpPost("{id}/email")]
+    public async Task<IActionResult> SendEmail(int id, [FromBody] SendDevisEmailDto dto, CancellationToken ct)
+    {
+        await mediator.Send(new EnvoyerDevisEmailCommand(id, dto.Email, dto.Message, dto.EntrepriseInfo, dto.SmtpConfig), ct);
+        return Ok(new { message = "Devis envoyé par email" });
+    }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
-        await _mediator.Send(new DeleteDevisCommand(id), ct);
+        await mediator.Send(new DeleteDevisCommand(id), ct);
         return Ok(new { message = "Devis supprimé" });
     }
+}
+
+public class SendDevisEmailDto
+{
+    public string Email { get; set; } = string.Empty;
+    public string? Message { get; set; }
+    public EntrepriseInfoDto? EntrepriseInfo { get; set; }
+    public SmtpConfigDto? SmtpConfig { get; set; }
 }
 
 [ApiController]
