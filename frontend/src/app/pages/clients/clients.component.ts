@@ -8,6 +8,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Client } from '../../core/models';
 import { formatNum, getInitials, getAvatarClass } from '../../core/utils/format';
+import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-clients',
@@ -52,6 +53,62 @@ export class ClientsComponent implements OnInit {
       ca: this.clients.reduce((s, c) => s + (c.totalDepense || 0), 0),
       impayes: this.clients.reduce((s, c) => s + (c.totalImpaye || 0), 0),
     };
+  }
+
+  importRunning = false;
+  importProgress = '';
+
+  downloadClientTemplate(): void {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Nom Client', 'Type', 'Telephone', 'Email', 'Ville', 'ICE', 'RC', 'IF', 'Personne Contact'],
+      ['Société ABC', 'Entreprise', '+212600000000', 'contact@abc.ma', 'Casablanca', '002000000000000', 'RC123', 'IF456', 'Mohammed'],
+      ['Jean Dupont', 'Particulier', '+212611111111', 'jean@mail.com', 'Rabat', '', '', '', ''],
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Clients');
+    XLSX.writeFile(wb, 'modele-import-clients.xlsx');
+  }
+
+  triggerImportClients(): void {
+    const input = document.getElementById('import-clients') as HTMLInputElement;
+    input?.click();
+  }
+
+  async onImportClientsFile(event: Event): Promise<void> {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    this.importRunning = true;
+    this.importProgress = 'Lecture du fichier…';
+    try {
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data);
+      const rows: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+      if (rows.length === 0) { this.toast.notify('Fichier vide ou format incorrect', 'warning'); return; }
+      let ok = 0; let errors = 0;
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        this.importProgress = `Import ${i + 1}/${rows.length}…`;
+        const nom = r['Nom Client'] || r['Nom'] || r['nom'];
+        if (!nom) { errors++; continue; }
+        try {
+          await this.api.clientCreate({
+            nomClient: String(nom),
+            type: r['Type'] || r['type'] || 'Particulier',
+            telephone: r['Telephone'] || r['Téléphone'] || r['telephone'] || '',
+            email: r['Email'] || r['email'] || '',
+            ville: r['Ville'] || r['ville'] || '',
+            ice: r['ICE'] || r['ice'] || '',
+            rc: r['RC'] || r['rc'] || '',
+            if: r['IF'] || r['if'] || '',
+            personneContact: r['Personne Contact'] || r['Contact'] || '',
+          });
+          ok++;
+        } catch { errors++; }
+      }
+      await this.load();
+      this.toast.notify(`Import terminé : ${ok} client(s) créé(s)${errors > 0 ? ', ' + errors + ' erreur(s)' : ''}`, ok > 0 ? 'success' : 'warning');
+    } catch { this.toast.notify('Erreur lors de la lecture du fichier', 'error'); }
+    finally { this.importRunning = false; this.importProgress = ''; (event.target as HTMLInputElement).value = ''; }
   }
 
   async handleDelete(id: number): Promise<void> {

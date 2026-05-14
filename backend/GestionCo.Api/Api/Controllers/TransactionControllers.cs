@@ -135,6 +135,21 @@ public class FacturesController : ControllerBase
     [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> GetVentesSansFacture(CancellationToken ct)
         => Ok(await _mediator.Send(new GetVentesSansFactureQuery(), ct));
+
+    [HttpPost("{id}/email")]
+    [Authorize(Policy = "AdminOrManager")]
+    public async Task<IActionResult> SendEmail(int id, [FromBody] SendFactureEmailDto dto, CancellationToken ct)
+    {
+        await _mediator.Send(new EnvoyerFactureEmailCommand(id, dto.Email, dto.Message, dto.EntrepriseInfo), ct);
+        return Ok(new { message = "Facture envoyée par email" });
+    }
+}
+
+public class SendFactureEmailDto
+{
+    public string Email { get; set; } = string.Empty;
+    public string? Message { get; set; }
+    public EntrepriseInfoDto? EntrepriseInfo { get; set; }
 }
 
 [ApiController]
@@ -157,6 +172,17 @@ public class ChargesController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateChargeDto dto, CancellationToken ct)
         => Ok(await _mediator.Send(new CreateChargeCommand(dto), ct));
 
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateChargeDto dto, CancellationToken ct)
+        => Ok(await _mediator.Send(new UpdateChargeCommand(id, dto), ct));
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    {
+        await _mediator.Send(new DeleteChargeCommand(id), ct);
+        return Ok(new { message = "Charge supprimée" });
+    }
+
     [HttpPost("{id}/paiements")]
     public async Task<IActionResult> AddPaiement(int id, [FromBody] AddPaiementChargeDto dto, CancellationToken ct)
     {
@@ -167,6 +193,14 @@ public class ChargesController : ControllerBase
     [HttpGet("paiements")]
     public async Task<IActionResult> GetPaiements([FromQuery] GetPaiementsChargeQuery q, CancellationToken ct)
         => Ok(await _mediator.Send(q, ct));
+
+    [HttpPost("generer-recurrentes")]
+    [Authorize(Policy = "AdminOrManager")]
+    public async Task<IActionResult> GenererRecurrentes(CancellationToken ct)
+    {
+        var count = await _mediator.Send(new GenererChargesRecurrentesCommand(), ct);
+        return Ok(new { count, message = $"{count} charge(s) récurrente(s) générée(s)" });
+    }
 }
 
 [ApiController]
@@ -274,7 +308,7 @@ public class DevisController(IMediator mediator) : ControllerBase
     [HttpPost("{id}/email")]
     public async Task<IActionResult> SendEmail(int id, [FromBody] SendDevisEmailDto dto, CancellationToken ct)
     {
-        await mediator.Send(new EnvoyerDevisEmailCommand(id, dto.Email, dto.Message, dto.EntrepriseInfo, dto.SmtpConfig), ct);
+        await mediator.Send(new EnvoyerDevisEmailCommand(id, dto.Email, dto.Message, dto.EntrepriseInfo), ct);
         return Ok(new { message = "Devis envoyé par email" });
     }
 
@@ -291,7 +325,6 @@ public class SendDevisEmailDto
     public string Email { get; set; } = string.Empty;
     public string? Message { get; set; }
     public EntrepriseInfoDto? EntrepriseInfo { get; set; }
-    public SmtpConfigDto? SmtpConfig { get; set; }
 }
 
 [ApiController]
@@ -324,4 +357,8 @@ public class ReportsController(IMediator mediator, IPdfService pdf, IConfigurati
         var bytes = pdf.GenerateTVAReportPdf(report, EntrepriseName);
         return File(bytes, "application/pdf", $"rapport-tva-{annee}.pdf");
     }
+
+    [HttpGet("cashflow/{annee:int}/{mois:int}")]
+    public async Task<IActionResult> GetCashFlow(int annee, int mois, CancellationToken ct)
+        => Ok(await mediator.Send(new GetCashFlowQuery(annee, mois), ct));
 }

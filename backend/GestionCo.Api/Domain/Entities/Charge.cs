@@ -26,6 +26,11 @@ public class Charge : AuditableEntity
 
     public ICollection<PaiementCharge> Paiements { get; set; } = new List<PaiementCharge>();
 
+    // Récurrence
+    public bool EstRecurrente { get; set; } = false;
+    public string? Periodicite { get; set; } // Mensuelle | Trimestrielle | Annuelle
+    public DateTime? DateProchaine { get; set; }
+
     public decimal Reste => Montant - MontantPaye;
     public bool EstPaye => MontantPaye >= Montant;
     public int ProgressionPaiement => Montant > 0 ? (int)((MontantPaye / Montant) * 100) : 0;

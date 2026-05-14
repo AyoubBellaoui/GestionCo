@@ -9,6 +9,7 @@ import { ExportService } from '../../core/services/export.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Produit } from '../../core/models';
 import { formatNum } from '../../core/utils/format';
+import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-produits',
@@ -37,7 +38,62 @@ export class ProduitsComponent implements OnInit {
 
   constructor(private api: ApiService, private toast: ToastService, private exportSvc: ExportService, public router: Router, public auth: AuthService) {}
 
+  importProgress = '';
+  importRunning = false;
+
   exportExcel(): void { this.exportSvc.exportProduits(this.produits); }
+
+  downloadTemplate(): void {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Nom', 'Reference', 'Description', 'Prix Achat HT', 'Prix Vente HT', 'TVA Vente (%)', 'Stock', 'Seuil Alerte'],
+      ['Exemple Produit', 'PRD-001', 'Description optionnelle', 100, 150, 20, 10, 3],
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Produits');
+    XLSX.writeFile(wb, 'modele-import-produits.xlsx');
+  }
+
+  triggerImport(): void {
+    const input = document.getElementById('import-produits') as HTMLInputElement;
+    input?.click();
+  }
+
+  async onImportFile(event: Event): Promise<void> {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    this.importRunning = true;
+    this.importProgress = 'Lecture du fichier…';
+    try {
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data);
+      const rows: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+      if (rows.length === 0) { this.toast.notify('Fichier vide ou format incorrect', 'warning'); return; }
+      let ok = 0; let errors = 0;
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        this.importProgress = `Import ${i + 1}/${rows.length}…`;
+        const nom = r['Nom'] || r['nom'] || r['NOM'];
+        if (!nom) { errors++; continue; }
+        try {
+          await this.api.produitCreate({
+            nom: String(nom),
+            reference: r['Reference'] || r['Référence'] || r['reference'] || undefined,
+            description: r['Description'] || r['description'] || '',
+            prixHT: +(r['Prix Achat HT'] || r['Prix HT'] || r['prixHT'] || 0),
+            prixVenteHT: +(r['Prix Vente HT'] || r['prixVenteHT'] || 0),
+            tva: +(r['TVA (%)'] || r['TVA'] || r['tva'] || 20),
+            tvaVente: +(r['TVA Vente (%)'] || r['TVA Vente'] || r['tvaVente'] || 20),
+            quantiteStock: +(r['Stock'] || r['stock'] || r['quantiteStock'] || 0),
+            seuilAlerte: +(r['Seuil Alerte'] || r['seuilAlerte'] || 5),
+          });
+          ok++;
+        } catch { errors++; }
+      }
+      await this.load();
+      this.toast.notify(`Import terminé : ${ok} produit(s) créé(s)${errors > 0 ? ', ' + errors + ' erreur(s)' : ''}`, ok > 0 ? 'success' : 'warning');
+    } catch { this.toast.notify('Erreur lors de la lecture du fichier', 'error'); }
+    finally { this.importRunning = false; this.importProgress = ''; (event.target as HTMLInputElement).value = ''; }
+  }
 
   async ngOnInit(): Promise<void> { await this.load(); }
 

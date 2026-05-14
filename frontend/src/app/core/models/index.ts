@@ -372,14 +372,6 @@ export interface AppSettings {
     tvaParDefaut: number;
     delaiPaiement: number;
   };
-  smtp: {
-    host: string;
-    port: number;
-    username: string;
-    password: string;
-    fromName: string;
-    fromAddress: string;
-  };
 }
 
 // ============ VENTES SANS FACTURE ============
@@ -456,6 +448,9 @@ export interface Charge {
   fournisseurId?: number;
   nomFournisseur?: string;
   iconeFournisseur?: string;
+  estRecurrente: boolean;
+  periodicite?: string;
+  dateProchaine?: string;
   paiements: PaiementCharge[];
 }
 

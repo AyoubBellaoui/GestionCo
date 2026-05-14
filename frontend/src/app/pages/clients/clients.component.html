@@ -1,4 +1,9 @@
 <app-topbar title="Clients" [subtitle]="clients.length + ' client' + (clients.length > 1 ? 's' : '') + ' — Annuaire clients'" icon="👥">
+  <button class="btn btn-ghost" (click)="downloadClientTemplate()" title="Télécharger le modèle Excel">📥 Modèle</button>
+  <button class="btn btn-ghost" (click)="triggerImportClients()" [disabled]="importRunning">
+    {{ importRunning ? importProgress : '📤 Importer Excel' }}
+  </button>
+  <input id="import-clients" type="file" accept=".xlsx,.xls" style="display:none" (change)="onImportClientsFile($event)" />
   <button class="btn btn-primary" (click)="router.navigate(['/clients/nouveau'])">+ Nouveau client</button>
 </app-topbar>
 

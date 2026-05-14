@@ -510,7 +510,7 @@ public class GetDevisHandler : IRequestHandler<GetDevisQuery, PagedList<DevisDto
 
 public record GetDevisByIdQuery(int Id) : IRequest<DevisDto>;
 public record GenerateDevisPdfQuery(int Id, EntrepriseInfoDto? Info = null) : IRequest<byte[]>;
-public record EnvoyerDevisEmailCommand(int Id, string ToEmail, string? Message = null, EntrepriseInfoDto? Info = null, SmtpConfigDto? Smtp = null) : IRequest;
+public record EnvoyerDevisEmailCommand(int Id, string ToEmail, string? Message = null, EntrepriseInfoDto? Info = null) : IRequest;
 
 public class GetDevisByIdHandler : IRequestHandler<GetDevisByIdQuery, DevisDto>
 {
@@ -545,7 +545,7 @@ public class EnvoyerDevisEmailHandler : IRequestHandler<EnvoyerDevisEmailCommand
     public EnvoyerDevisEmailHandler(IEmailService email) => _email = email;
 
     public Task Handle(EnvoyerDevisEmailCommand cmd, CancellationToken ct)
-        => _email.SendDevisAsync(cmd.Id, cmd.ToEmail, cmd.Message, cmd.Info, cmd.Smtp, ct);
+        => _email.SendDevisAsync(cmd.Id, cmd.ToEmail, cmd.Message, cmd.Info, ct);
 }
 
 // ============ MAPPER ============

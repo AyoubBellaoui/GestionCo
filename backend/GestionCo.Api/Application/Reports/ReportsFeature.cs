@@ -148,3 +148,62 @@ public class GetTVAReportHandler : IRequestHandler<GetTVAReportQuery, TVAReportD
         );
     }
 }
+
+// ─── Cash Flow ───────────────────────────────────────────────────────────────
+
+public record CashFlowJourDto(string Date, decimal Entrees, decimal Sorties, decimal Net);
+
+public record CashFlowReportDto(
+    int Annee, int Mois,
+    List<CashFlowJourDto> Jours,
+    decimal TotalEntrees,
+    decimal TotalSorties,
+    decimal NetMois
+);
+
+public record GetCashFlowQuery(int Annee, int Mois) : IRequest<CashFlowReportDto>;
+
+public class GetCashFlowHandler : IRequestHandler<GetCashFlowQuery, CashFlowReportDto>
+{
+    private readonly IAppDbContext _db;
+    public GetCashFlowHandler(IAppDbContext db) => _db = db;
+
+    public async Task<CashFlowReportDto> Handle(GetCashFlowQuery q, CancellationToken ct)
+    {
+        var debut = new DateTime(q.Annee, q.Mois, 1);
+        var fin   = debut.AddMonths(1);
+
+        // Encaissements : paiements reçus des clients (ventes)
+        var entrees = await _db.Paiements
+            .Where(p => p.DatePaiement >= debut && p.DatePaiement < fin && p.Statut != StatutPaiement.Annule)
+            .Select(p => new { Date = p.DatePaiement.Date, p.Montant })
+            .ToListAsync(ct);
+
+        // Décaissements : paiements achats + paiements charges
+        var sortiesAchats = await _db.PaiementsAchat
+            .Where(p => p.DatePaiement >= debut && p.DatePaiement < fin)
+            .Select(p => new { Date = p.DatePaiement.Date, p.Montant })
+            .ToListAsync(ct);
+
+        var sortiesCharges = await _db.PaiementsCharge
+            .Where(p => p.DatePaiement >= debut && p.DatePaiement < fin)
+            .Select(p => new { Date = p.DatePaiement.Date, p.Montant })
+            .ToListAsync(ct);
+
+        var jours = Enumerable.Range(1, DateTime.DaysInMonth(q.Annee, q.Mois)).Select(d =>
+        {
+            var date = new DateTime(q.Annee, q.Mois, d).Date;
+            var e = entrees.Where(p => p.Date == date).Sum(p => p.Montant);
+            var s = sortiesAchats.Where(p => p.Date == date).Sum(p => p.Montant)
+                  + sortiesCharges.Where(p => p.Date == date).Sum(p => p.Montant);
+            return new CashFlowJourDto(date.ToString("dd/MM"), e, s, e - s);
+        }).ToList();
+
+        return new CashFlowReportDto(
+            q.Annee, q.Mois, jours,
+            jours.Sum(j => j.Entrees),
+            jours.Sum(j => j.Sorties),
+            jours.Sum(j => j.Net)
+        );
+    }
+}

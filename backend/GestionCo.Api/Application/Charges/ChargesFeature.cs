@@ -33,6 +33,9 @@ public class ChargeDto
     public string? NomFournisseur { get; set; }
     public string? IconeFournisseur { get; set; }
     public List<PaiementChargeDto> Paiements { get; set; } = new();
+    public bool EstRecurrente { get; set; }
+    public string? Periodicite { get; set; }
+    public DateTime? DateProchaine { get; set; }
 }
 
 public class PaiementChargeDto
@@ -69,6 +72,8 @@ public class CreateChargeDto
     public string? Justificatif { get; set; }
     public decimal? PaiementInitial { get; set; }
     public MethodePaiement? MethodePaiementInitial { get; set; }
+    public bool EstRecurrente { get; set; } = false;
+    public string? Periodicite { get; set; }
 }
 
 public class AddPaiementChargeDto
@@ -101,6 +106,22 @@ public class CreateChargeValidator : AbstractValidator<CreateChargeCommand>
 public record AddPaiementChargeCommand(AddPaiementChargeDto Dto) : IRequest<ChargeDto>;
 
 public record CreateCategorieChargeCommand(CreateCategorieChargeDto Dto) : IRequest<CategorieChargeDto>;
+
+public class UpdateChargeDto
+{
+    public string Titre { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public decimal Montant { get; set; }
+    public int CategorieChargeId { get; set; }
+    public DateTime? DateCharge { get; set; }
+    public int? FournisseurId { get; set; }
+    public string? Justificatif { get; set; }
+    public bool EstRecurrente { get; set; } = false;
+    public string? Periodicite { get; set; }
+}
+
+public record UpdateChargeCommand(int Id, UpdateChargeDto Dto) : IRequest<ChargeDto>;
+public record DeleteChargeCommand(int Id) : IRequest;
 
 public record DeleteCategorieChargeCommand(int Id) : IRequest;
 
@@ -146,7 +167,10 @@ public class CreateChargeHandler : IRequestHandler<CreateChargeCommand, ChargeDt
             DateCharge = dto.DateCharge ?? now,
             UtilisateurId = userId,
             FournisseurId = dto.FournisseurId,
-            Justificatif = dto.Justificatif?.Trim()
+            Justificatif = dto.Justificatif?.Trim(),
+            EstRecurrente = dto.EstRecurrente,
+            Periodicite   = dto.EstRecurrente ? dto.Periodicite : null,
+            DateProchaine = dto.EstRecurrente ? ComputeNextDate(dto.DateCharge ?? now, dto.Periodicite) : null,
         };
 
         var paiementInitial = dto.PaiementInitial ?? 0;
@@ -192,6 +216,80 @@ public class CreateChargeHandler : IRequestHandler<CreateChargeCommand, ChargeDt
             .FirstAsync(x => x.Id == id, ct);
         return ChargeMapper.ToDto(c);
     }
+
+    private static DateTime? ComputeNextDate(DateTime from, string? periodicite) => periodicite switch
+    {
+        "Mensuelle"     => from.AddMonths(1),
+        "Trimestrielle" => from.AddMonths(3),
+        "Annuelle"      => from.AddYears(1),
+        _               => null
+    };
+}
+
+// ── Génération des charges récurrentes du mois ───────────────────────────────
+public record GenererChargesRecurrentesCommand : IRequest<int>;
+
+public class GenererChargesRecurrentesHandler : IRequestHandler<GenererChargesRecurrentesCommand, int>
+{
+    private readonly IAppDbContext _db;
+    private readonly IReferenceGenerator _refGen;
+    private readonly ICurrentUserService _current;
+    private readonly IAuditLogger _audit;
+
+    public GenererChargesRecurrentesHandler(IAppDbContext db, IReferenceGenerator refGen,
+        ICurrentUserService current, IAuditLogger audit)
+    {
+        _db = db; _refGen = refGen; _current = current; _audit = audit;
+    }
+
+    public async Task<int> Handle(GenererChargesRecurrentesCommand _, CancellationToken ct)
+    {
+        var today     = DateTime.UtcNow;
+        var debutMois = new DateTime(today.Year, today.Month, 1);
+        var finMois   = debutMois.AddMonths(1);
+        var userId    = _current.UserId ?? throw new UnauthorizedException();
+
+        var recurrentes = await _db.Charges
+            .Where(c => c.EstRecurrente && c.DateProchaine.HasValue
+                     && c.DateProchaine.Value >= debutMois && c.DateProchaine.Value < finMois)
+            .ToListAsync(ct);
+
+        int count = 0;
+        foreach (var source in recurrentes)
+        {
+            var reference = await _refGen.GenerateChargeReferenceAsync(ct);
+            var newCharge = new Charge
+            {
+                Reference         = reference,
+                Titre             = source.Titre,
+                Description       = source.Description,
+                Montant           = source.Montant,
+                CategorieChargeId = source.CategorieChargeId,
+                FournisseurId     = source.FournisseurId,
+                DateCharge        = source.DateProchaine!.Value,
+                UtilisateurId     = userId,
+                EstRecurrente     = true,
+                Periodicite       = source.Periodicite,
+                DateProchaine     = NextDate(source.DateProchaine.Value, source.Periodicite),
+            };
+            source.DateProchaine = newCharge.DateProchaine;
+            _db.Charges.Add(newCharge);
+            await _audit.LogAsync(ActionLog.Create, "charges",
+                $"Charge récurrente générée : {reference} — {newCharge.Titre}",
+                0, reference, ct: ct);
+            count++;
+        }
+        if (count > 0) await _db.SaveChangesAsync(ct);
+        return count;
+    }
+
+    private static DateTime? NextDate(DateTime from, string? p) => p switch
+    {
+        "Mensuelle"     => from.AddMonths(1),
+        "Trimestrielle" => from.AddMonths(3),
+        "Annuelle"      => from.AddYears(1),
+        _               => null
+    };
 }
 
 public class AddPaiementChargeHandler : IRequestHandler<AddPaiementChargeCommand, ChargeDto>
@@ -258,6 +356,99 @@ public class AddPaiementChargeHandler : IRequestHandler<AddPaiementChargeCommand
             .Include(x => x.Paiements)
             .FirstAsync(x => x.Id == id, ct);
         return ChargeMapper.ToDto(c);
+    }
+}
+
+public class UpdateChargeHandler : IRequestHandler<UpdateChargeCommand, ChargeDto>
+{
+    private readonly IAppDbContext _db;
+    private readonly IAuditLogger _audit;
+
+    public UpdateChargeHandler(IAppDbContext db, IAuditLogger audit)
+    {
+        _db = db; _audit = audit;
+    }
+
+    public async Task<ChargeDto> Handle(UpdateChargeCommand req, CancellationToken ct)
+    {
+        var dto = req.Dto;
+
+        var charge = await _db.Charges
+            .Include(c => c.Paiements)
+            .FirstOrDefaultAsync(c => c.Id == req.Id, ct)
+            ?? throw new NotFoundException("Charge", req.Id);
+
+        if (charge.Statut == StatutCharge.Annule)
+            throw new BusinessException("Impossible de modifier une charge annulée");
+
+        if (dto.Montant < charge.MontantPaye)
+            throw new BusinessException($"Le montant ne peut pas être inférieur au montant déjà payé ({charge.MontantPaye:N2} MAD)");
+
+        var categorie = await _db.CategoriesCharge.AnyAsync(c => c.Id == dto.CategorieChargeId, ct);
+        if (!categorie) throw new NotFoundException("CategorieCharge", dto.CategorieChargeId);
+
+        if (dto.FournisseurId.HasValue)
+        {
+            var fExists = await _db.Fournisseurs.AnyAsync(f => f.Id == dto.FournisseurId.Value, ct);
+            if (!fExists) throw new NotFoundException("Fournisseur", dto.FournisseurId.Value);
+        }
+
+        charge.Titre           = dto.Titre.Trim();
+        charge.Description     = dto.Description?.Trim();
+        charge.Montant         = dto.Montant;
+        charge.CategorieChargeId = dto.CategorieChargeId;
+        charge.DateCharge      = dto.DateCharge ?? charge.DateCharge;
+        charge.FournisseurId   = dto.FournisseurId;
+        charge.Justificatif    = dto.Justificatif?.Trim();
+        charge.EstRecurrente   = dto.EstRecurrente;
+        charge.Periodicite     = dto.EstRecurrente ? dto.Periodicite : null;
+
+        charge.Statut = charge.MontantPaye >= charge.Montant ? StatutCharge.Paye
+                      : charge.MontantPaye > 0               ? StatutCharge.Partiel
+                      :                                        StatutCharge.EnAttente;
+
+        await _db.SaveChangesAsync(ct);
+
+        await _audit.LogAsync(ActionLog.Update, "charges",
+            $"Charge modifiée : {charge.Reference} — {charge.Titre}",
+            charge.Id, charge.Reference, ct: ct);
+
+        var updated = await _db.Charges
+            .Include(c => c.CategorieCharge)
+            .Include(c => c.Utilisateur)
+            .Include(c => c.Fournisseur)
+            .Include(c => c.Paiements)
+            .FirstAsync(c => c.Id == charge.Id, ct);
+        return ChargeMapper.ToDto(updated);
+    }
+}
+
+public class DeleteChargeHandler : IRequestHandler<DeleteChargeCommand>
+{
+    private readonly IAppDbContext _db;
+    private readonly IAuditLogger _audit;
+
+    public DeleteChargeHandler(IAppDbContext db, IAuditLogger audit)
+    {
+        _db = db; _audit = audit;
+    }
+
+    public async Task Handle(DeleteChargeCommand req, CancellationToken ct)
+    {
+        var charge = await _db.Charges
+            .Include(c => c.Paiements)
+            .FirstOrDefaultAsync(c => c.Id == req.Id, ct)
+            ?? throw new NotFoundException("Charge", req.Id);
+
+        if (charge.MontantPaye > 0)
+            throw new BusinessException("Impossible de supprimer une charge ayant des paiements enregistrés");
+
+        _db.Charges.Remove(charge);
+        await _db.SaveChangesAsync(ct);
+
+        await _audit.LogAsync(ActionLog.Delete, "charges",
+            $"Charge supprimée : {charge.Reference} — {charge.Titre}",
+            charge.Id, charge.Reference, ct: ct);
     }
 }
 
@@ -472,6 +663,9 @@ public static class ChargeMapper
             DatePaiement = p.DatePaiement,
             Reference = p.Reference,
             Notes = p.Notes
-        }).ToList() ?? new()
+        }).ToList() ?? new(),
+        EstRecurrente = c.EstRecurrente,
+        Periodicite   = c.Periodicite,
+        DateProchaine = c.DateProchaine,
     };
 }

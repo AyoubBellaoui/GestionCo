@@ -70,8 +70,8 @@
                 <tr>
                   <th>Produit</th>
                   <th style="width:70px">Qté</th>
-                  <th style="width:160px">Prix réf. HT</th>
-                  <th style="width:160px">Prix proposé HT</th>
+                  <th style="width:160px">Prix achat TTC</th>
+                  <th style="width:160px">Prix vente HT</th>
                   <th style="width:70px">TVA</th>
                   <th style="width:130px;text-align:right">Total HT</th>
                   <th style="width:40px"></th>
@@ -87,12 +87,17 @@
                       <select class="form-select" style="height:34px;font-size:13px" [value]="l.produitId" (change)="updateLigneProduit($index, +$any($event.target).value)">
                         <option [value]="0">— Produit —</option>
                         @for (p of produits; track p.id) {
-                          <option [value]="p.id">{{ p.reference }} — {{ p.nom }}</option>
+                          <option [value]="p.id" [disabled]="p.quantiteStock === 0">{{ p.reference }} — {{ p.nom }}{{ p.quantiteStock === 0 ? ' (Rupture)' : p.isStockFaible ? ' (⚠️ ' + p.quantiteStock + ' en stock)' : ' (' + p.quantiteStock + ' en stock)' }}</option>
                         }
                       </select>
                     </td>
                     <td>
-                      <input type="number" min="1" class="form-input" style="height:34px" [value]="l.quantite" (change)="updateLigneQty($index, +$any($event.target).value)" />
+                      <div class="input-group">
+                        <input type="number" [min]="1" [max]="l.stockDisponible" class="form-input with-suffix" style="height:34px" [value]="l.quantite" (change)="updateLigneQty($index, +$any($event.target).value)" />
+                        <span class="input-suffix" style="font-size:11px;padding:0 8px" [style.color]="l.stockDisponible===0 ? 'var(--danger)' : (l.stockDisponible!==undefined && l.quantite>=l.stockDisponible!) ? 'var(--warning)' : 'var(--text-muted)'">
+                          {{ l.produitId !== 0 && l.stockDisponible !== undefined ? (l.stockDisponible === 0 ? '⚠️' : '/'+l.stockDisponible) : '' }}
+                        </span>
+                      </div>
                     </td>
                     <td>
                       <div class="input-group">

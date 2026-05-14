@@ -7,7 +7,7 @@ import { PLReport, TVAReport } from '../../core/models';
 import { formatNum } from '../../core/utils/format';
 import * as XLSX from 'xlsx';
 
-type Tab = 'pl' | 'tva';
+type Tab = 'pl' | 'tva' | 'cashflow';
 
 @Component({
   selector: 'app-rapports',
@@ -22,7 +22,11 @@ export class RapportsComponent implements OnInit {
 
   plReport: PLReport | null = null;
   tvaReport: TVAReport | null = null;
+  cashFlow: any = null;
+  cfMois = new Date().getMonth() + 1;
   loading = false;
+
+  readonly moisLabels = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
   formatNum = formatNum;
 
@@ -36,16 +40,34 @@ export class RapportsComponent implements OnInit {
   async load(): Promise<void> {
     this.loading = true;
     try {
-      const [pl, tva] = await Promise.all([
+      const [pl, tva, cf] = await Promise.all([
         this.api.rapportPL(this.annee),
         this.api.rapportTVA(this.annee),
+        this.api.rapportCashFlow(this.annee, this.cfMois),
       ]);
       this.plReport = pl;
       this.tvaReport = tva;
+      this.cashFlow = cf;
     } finally { this.loading = false; }
   }
 
   async onAnneeChange(): Promise<void> { await this.load(); }
+
+  async onCfMoisChange(): Promise<void> {
+    this.loading = true;
+    try { this.cashFlow = await this.api.rapportCashFlow(this.annee, this.cfMois); }
+    finally { this.loading = false; }
+  }
+
+  cfAllZero(): boolean {
+    return !this.cashFlow || this.cashFlow.jours.every((j: any) => j.entrees === 0 && j.sorties === 0);
+  }
+
+  cfBarMax(): number {
+    if (!this.cashFlow) return 1;
+    return Math.max(1, ...this.cashFlow.jours.map((j: any) => Math.max(j.entrees, j.sorties)));
+  }
+  cfBar(val: number): number { return Math.round((val / this.cfBarMax()) * 100); }
 
   // ── Excel export ──────────────────────────────────────────
   exportExcel(): void {
@@ -102,7 +124,7 @@ export class RapportsComponent implements OnInit {
   async exportPdf(): Promise<void> {
     this.exportingPdf = true;
     try {
-      const type = this.tab;
+      const type = this.tab as 'pl' | 'tva';
       const bytes = await this.api.rapportPdf(type, this.annee);
       const blob = new Blob([bytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);

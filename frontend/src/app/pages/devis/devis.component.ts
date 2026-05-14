@@ -152,6 +152,13 @@ export class DevisComponent implements OnInit {
     } catch { this.toast.notify('Erreur lors de la suppression', 'error'); }
   }
 
+  shareWhatsApp(d: Devis): void {
+    const entreprise = this.settings.settings.entreprise.raisonSociale || 'GestionCo';
+    const client = this.clients.find(c => c.id === d.clientId)?.nomClient || '';
+    const msg = `Bonjour${client ? ' ' + client : ''},\n\nVeuillez trouver ci-joint notre devis *${d.reference}*.\n\nMontant TTC : *${d.montantTotal.toLocaleString('fr-FR')} MAD*${d.dateValidite ? '\nValide jusqu\'au : ' + new Date(d.dateValidite).toLocaleDateString('fr-FR') : ''}\n\nCordialement,\n${entreprise}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
   async printPdf(d: Devis): Promise<void> {
     try {
       const blob = await this.api.devisPdf(d.id, this.settings.settings.entreprise as any);
@@ -181,7 +188,7 @@ export class DevisComponent implements OnInit {
     }
     this.emailSending = true;
     try {
-      await this.api.devisEmail(this.emailTarget.id, this.emailTo.trim(), this.emailMessage.trim() || undefined, this.settings.settings.entreprise as any, this.settings.settings.smtp as any);
+      await this.api.devisEmail(this.emailTarget.id, this.emailTo.trim(), this.emailMessage.trim() || undefined, this.settings.settings.entreprise as any);
       await this.api.devisUpdateStatut(this.emailTarget.id, 'Envoye');
       await this.load();
       this.emailModalOpen = false;

@@ -162,3 +162,77 @@ Fichier : `backend/GestionCo.Api/appsettings.json`
   }
 }
 ```
+
+---
+
+## Déploiement — Envoi d'emails
+
+L'envoi de devis par email est entièrement géré côté serveur. Aucune configuration n'est requise de la part des utilisateurs de l'application.
+
+### 1. Créer un App Password Gmail
+
+> Si vous utilisez un autre fournisseur SMTP (Brevo, Mailgun…), passez directement à l'étape 2.
+
+1. Connectez-vous au compte Gmail qui servira d'expéditeur
+2. Activez la **validation en 2 étapes** : myaccount.google.com/security
+3. Allez sur **myaccount.google.com/apppasswords**
+4. Tapez un nom (ex. `GestionCo`) et cliquez **Créer**
+5. Copiez le mot de passe de 16 caractères généré (ex. `abcd efgh ijkl mnop`)
+
+### 2. Configurer `appsettings.Production.json`
+
+Ce fichier est **ignoré par git** (`.gitignore`) — vos identifiants ne seront jamais exposés dans le dépôt.
+
+Créez ou modifiez `backend/GestionCo.Api/appsettings.Production.json` :
+
+```json
+{
+  "Smtp": {
+    "Host": "smtp.gmail.com",
+    "Port": 587,
+    "EnableSsl": true,
+    "Username": "votre-email@gmail.com",
+    "Password": "abcd efgh ijkl mnop",
+    "FromName": "Nom Affiché",
+    "FromAddress": "votre-email@gmail.com"
+  }
+}
+```
+
+> **Brevo / Mailgun** : remplacez `Host` par `smtp-relay.brevo.com` ou `smtp.mailgun.org`, et utilisez les identifiants SMTP fournis par le service.
+
+### 3. Définir l'environnement sur le serveur
+
+.NET charge automatiquement `appsettings.Production.json` si la variable d'environnement suivante est définie :
+
+```bash
+ASPNETCORE_ENVIRONMENT=Production
+```
+
+**Sur Linux / systemd** (`/etc/systemd/system/gestionco.service`) :
+```ini
+[Service]
+Environment=ASPNETCORE_ENVIRONMENT=Production
+```
+
+**Sur IIS** (Windows) : définissez la variable dans les paramètres du site ou dans `web.config` :
+```xml
+<environmentVariable name="ASPNETCORE_ENVIRONMENT" value="Production" />
+```
+
+**Sur Docker** :
+```dockerfile
+ENV ASPNETCORE_ENVIRONMENT=Production
+```
+
+### 4. Vérification
+
+Démarrez le backend et envoyez un devis depuis l'interface. Le destinataire reçoit l'email avec le PDF en pièce jointe. Aucune configuration n'est nécessaire dans l'interface utilisateur.
+
+### Résumé
+
+| Étape | Fichier / Action |
+|-------|-----------------|
+| Identifiants SMTP | `appsettings.Production.json` (gitignored) |
+| Variable d'environnement | `ASPNETCORE_ENVIRONMENT=Production` |
+| Configuration utilisateur | Aucune — tout est côté serveur |

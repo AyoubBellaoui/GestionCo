@@ -9,7 +9,7 @@ import { SettingsService } from '../../core/services/settings.service';
 import { UtilisateurDto, CreateUtilisateurPayload, UpdateUtilisateurPayload } from '../../core/models';
 import { getAvatarClass } from '../../core/utils/format';
 
-type TabKey = 'entreprise' | 'profil' | 'apparence' | 'notifications' | 'securite' | 'facturation' | 'email' | 'comptes' | 'a-propos';
+type TabKey = 'entreprise' | 'profil' | 'apparence' | 'notifications' | 'securite' | 'facturation' | 'comptes' | 'a-propos';
 
 const TABS: { key: TabKey; label: string; icon: string; desc: string; adminOnly?: boolean }[] = [
   { key: 'entreprise',    label: 'Entreprise',     icon: '🏢', desc: 'Infos légales, ICE, RC, IF' },
@@ -18,7 +18,6 @@ const TABS: { key: TabKey; label: string; icon: string; desc: string; adminOnly?
   { key: 'notifications', label: 'Notifications',  icon: '🔔', desc: 'Alertes & emails' },
   { key: 'securite',      label: 'Sécurité',       icon: '🔒', desc: 'Mot de passe, sessions' },
   { key: 'facturation',   label: 'Facturation',    icon: '📋', desc: 'Numérotation, TVA, RIB' },
-  { key: 'email',         label: 'Email',          icon: '📧', desc: 'Configuration SMTP' },
   { key: 'comptes',       label: 'Comptes',        icon: '👥', desc: 'Gérer les accès utilisateurs', adminOnly: true },
   { key: 'a-propos',      label: 'À propos',       icon: 'ℹ️', desc: 'Version & infos système' },
 ];
@@ -151,15 +150,6 @@ export class SettingsComponent implements OnInit {
   removeLogo(): void {
     this.settings.setDraftEntreprise({ logo: '' });
     this.toast.notify('Logo supprimé', 'success');
-  }
-
-  showSmtpPassword = false;
-
-  handleSmtpUsernameChange(val: string): void {
-    this.settings.setDraftSmtp({ username: val });
-    if (!this.settings.settings.smtp.fromAddress) {
-      this.settings.setDraftSmtp({ fromAddress: val });
-    }
   }
 
   handleReset(): void {

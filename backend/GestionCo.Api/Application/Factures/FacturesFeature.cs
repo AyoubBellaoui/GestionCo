@@ -227,6 +227,18 @@ public class GetVentesSansFactureHandler : IRequestHandler<GetVentesSansFactureQ
     }
 }
 
+// ============ ENVOYER FACTURE PAR EMAIL ============
+public record EnvoyerFactureEmailCommand(int Id, string ToEmail, string? Message = null, EntrepriseInfoDto? Info = null) : IRequest;
+
+public class EnvoyerFactureEmailHandler : IRequestHandler<EnvoyerFactureEmailCommand>
+{
+    private readonly IEmailService _email;
+    public EnvoyerFactureEmailHandler(IEmailService email) => _email = email;
+
+    public Task Handle(EnvoyerFactureEmailCommand cmd, CancellationToken ct)
+        => _email.SendFactureAsync(cmd.Id, cmd.ToEmail, cmd.Message, cmd.Info, ct);
+}
+
 public static class FactureMapper
 {
     public static FactureDto ToDto(Facture f)

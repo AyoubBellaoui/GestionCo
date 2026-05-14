@@ -31,14 +31,6 @@ const DEFAULT_SETTINGS: AppSettings = {
     prefixeFacture: 'FAC', prefixeVente: 'VNT', prefixeAchat: 'ACH',
     prefixeProduit: 'PRD', tvaParDefaut: 20, delaiPaiement: 30,
   },
-  smtp: {
-    host: 'smtp.gmail.com',
-    port: 587,
-    username: '',
-    password: '',
-    fromName: '',
-    fromAddress: '',
-  },
 };
 
 function loadFromStorage(): AppSettings {
@@ -51,7 +43,6 @@ function loadFromStorage(): AppSettings {
         entreprise: { ...DEFAULT_SETTINGS.entreprise, ...(parsed.entreprise || {}) },
         notifs: { ...DEFAULT_SETTINGS.notifs, ...(parsed.notifs || {}) },
         facturation: { ...DEFAULT_SETTINGS.facturation, ...(parsed.facturation || {}) },
-        smtp: { ...DEFAULT_SETTINGS.smtp, ...(parsed.smtp || {}) },
       };
     }
   } catch { /* ignore */ }
@@ -91,10 +82,6 @@ export class SettingsService {
 
   setDraftFacturation(patch: Partial<AppSettings['facturation']>): void {
     this.settingsSubject.next({ ...this.settings, facturation: { ...this.settings.facturation, ...patch } });
-  }
-
-  setDraftSmtp(patch: Partial<AppSettings['smtp']>): void {
-    this.settingsSubject.next({ ...this.settings, smtp: { ...this.settings.smtp, ...patch } });
   }
 
   resetSettings(): void {

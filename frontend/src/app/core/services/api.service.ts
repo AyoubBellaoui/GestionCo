@@ -220,6 +220,12 @@ export class ApiService {
   chargeCreate(data: any): Promise<Charge> {
     return firstValueFrom(this.http.post<Charge>(`${this.base}/charges`, data));
   }
+  chargeUpdate(id: number, data: any): Promise<Charge> {
+    return firstValueFrom(this.http.put<Charge>(`${this.base}/charges/${id}`, data));
+  }
+  chargeDelete(id: number): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.base}/charges/${id}`));
+  }
   chargeAddPaiement(id: number, data: any): Promise<Charge> {
     return firstValueFrom(this.http.post<Charge>(`${this.base}/charges/${id}/paiements`, data));
   }
@@ -228,6 +234,9 @@ export class ApiService {
       this.http.get<PaiementCharge[] | PagedList<PaiementCharge>>(`${this.base}/charges/paiements`, { params: LIST_PARAMS })
         .pipe(map(normalizeList))
     );
+  }
+  chargeGenererRecurrentes(): Promise<{ count: number; message: string }> {
+    return firstValueFrom(this.http.post<{ count: number; message: string }>(`${this.base}/charges/generer-recurrentes`, {}));
   }
 
   // ── CATEGORIES CHARGE ──
@@ -286,8 +295,11 @@ export class ApiService {
   devisPdf(id: number, entreprise?: Record<string, string>): Promise<Blob> {
     return firstValueFrom(this.http.post(`${this.base}/devis/${id}/pdf`, entreprise ?? {}, { responseType: 'blob' }));
   }
-  devisEmail(id: number, email: string, message?: string, entreprise?: Record<string, string>, smtp?: Record<string, any>): Promise<void> {
-    return firstValueFrom(this.http.post<void>(`${this.base}/devis/${id}/email`, { email, message, entrepriseInfo: entreprise ?? {}, smtpConfig: smtp ?? {} }));
+  devisEmail(id: number, email: string, message?: string, entreprise?: Record<string, string>): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.base}/devis/${id}/email`, { email, message, entrepriseInfo: entreprise ?? {} }));
+  }
+  factureEmail(id: number, email: string, message?: string, entreprise?: Record<string, string>): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.base}/factures/${id}/email`, { email, message, entrepriseInfo: entreprise ?? {} }));
   }
 
   // ── AUDIT ──
@@ -300,6 +312,9 @@ export class ApiService {
 
   // ── UTILISATEURS ──
   // ── RAPPORTS ──
+  rapportCashFlow(annee: number, mois: number): Promise<any> {
+    return firstValueFrom(this.http.get<any>(`${this.base}/reports/cashflow/${annee}/${mois}`));
+  }
   rapportPL(annee: number): Promise<PLReport> {
     return firstValueFrom(this.http.get<PLReport>(`${this.base}/reports/pl/${annee}`));
   }

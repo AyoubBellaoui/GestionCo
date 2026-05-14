@@ -5,6 +5,7 @@ import { NgIf } from '@angular/common';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
+import { SettingsService } from '../../core/services/settings.service';
 import { ToastComponent } from '../../shared/toast/toast.component';
 
 @Component({
@@ -20,14 +21,18 @@ export class LoginComponent {
   remember = false;
   loading = false;
   error: string | null = null;
-  lang: 'FR' | 'EN' | 'AR' = 'FR';
 
   constructor(
     private api: ApiService,
     private auth: AuthService,
     private toast: ToastService,
-    private router: Router
+    private router: Router,
+    public settings: SettingsService,
   ) {}
+
+  get nomEntreprise(): string { return this.settings.settings.entreprise.raisonSociale || 'GestionCo.'; }
+  get logoEntreprise(): string { return this.settings.settings.entreprise.logo || ''; }
+  get initialeEntreprise(): string { return (this.nomEntreprise[0] || 'G').toUpperCase(); }
 
   async handleSubmit(): Promise<void> {
     this.loading = true;

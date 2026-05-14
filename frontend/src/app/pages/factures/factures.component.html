@@ -85,6 +85,9 @@
                 <button class="btn-icon" title="Télécharger PDF" (click)="downloadPdf(f.id, f.numeroFacture)">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 </button>
+                <button class="btn-icon" [class.primary]="f.estEnvoyeeEmail" [title]="f.estEnvoyeeEmail ? 'Email déjà envoyé — renvoyer' : 'Envoyer par email'" (click)="openEmailModal(f)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                </button>
               </td>
             </tr>
           }
@@ -187,6 +190,32 @@
     </div>
   </app-modal>
 }
+
+<!-- Modal email facture -->
+<app-modal [open]="emailModalOpen" [title]="'Envoyer la facture par email'" (closed)="emailModalOpen=false">
+  <div body style="display:flex;flex-direction:column;gap:14px">
+    @if (emailTarget) {
+      <div class="info-box" style="font-size:13px">{{ emailTarget.numeroFacture }} · {{ emailTarget.nomClient }}</div>
+    }
+    <div class="form-field">
+      <label class="label">Adresse email du destinataire *</label>
+      <input type="email" class="form-input" placeholder="client@example.com" [(ngModel)]="emailTo" />
+    </div>
+    <div class="form-field">
+      <label class="label">Message personnalisé <span style="color:var(--text-muted)">(optionnel)</span></label>
+      <textarea class="form-input" rows="3" placeholder="Bonjour, veuillez trouver ci-joint..." [(ngModel)]="emailMessage" style="resize:vertical"></textarea>
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text-muted)">
+      Le PDF de la facture sera automatiquement joint. Le statut passera à <strong>Envoyée</strong>.
+    </div>
+  </div>
+  <div footer style="display:flex;gap:8px;justify-content:flex-end">
+    <button class="btn btn-ghost" (click)="emailModalOpen=false">Annuler</button>
+    <button class="btn btn-primary" (click)="sendEmail()" [disabled]="emailSending || !emailTo.trim()">
+      {{ emailSending ? 'Envoi…' : '✉️ Envoyer' }}
+    </button>
+  </div>
+</app-modal>
 
 <!-- Modal info -->
 <app-modal [open]="showInfoModal" title="ℹ️ À propos des factures" (closed)="showInfoModal=false">

@@ -8,8 +8,14 @@
 
   <div class="login-page">
     <div class="brand">
-      <div class="logo-box">G</div>
-      <div class="logo-text">Gestion<span>Co.</span></div>
+      <div class="logo-box" [style.background]="logoEntreprise ? '#fff' : ''">
+        @if (logoEntreprise) {
+          <img [src]="logoEntreprise" alt="logo" style="width:100%;height:100%;object-fit:contain;border-radius:8px" />
+        } @else {
+          {{ initialeEntreprise }}
+        }
+      </div>
+      <div class="logo-text">{{ nomEntreprise }}</div>
     </div>
 
     <div class="login-card">
@@ -95,20 +101,6 @@
 
     <div class="page-footer">
       <span class="footer-text">© 2026 GestionCo.</span>
-      <span class="footer-dot"></span>
-      <div class="lang-switcher">
-        <button [class]="'lang-btn' + (lang==='FR' ? ' active' : '')" (click)="lang='FR'">FR</button>
-        <button [class]="'lang-btn' + (lang==='EN' ? ' active' : '')" (click)="lang='EN'">EN</button>
-        <button [class]="'lang-btn' + (lang==='AR' ? ' active' : '')" (click)="lang='AR'">AR</button>
-      </div>
-      <span class="footer-dot"></span>
-      <span class="footer-text">PFE 2026</span>
-    </div>
-
-    <div class="tech-badge">
-      <span class="tech-tag">Angular 18</span>
-      <span class="tech-tag">.NET 9</span>
-      <span class="tech-tag">SQL Server</span>
     </div>
   </div>
 </div>

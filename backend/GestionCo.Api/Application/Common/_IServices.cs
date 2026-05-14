@@ -92,17 +92,8 @@ public interface IPdfService
     byte[] GenerateTVAReportPdf(GestionCo.Api.Application.Reports.TVAReportDto report, string entreprise);
 }
 
-public class SmtpConfigDto
-{
-    public string Host { get; set; } = "smtp.gmail.com";
-    public int Port { get; set; } = 587;
-    public string Username { get; set; } = "";
-    public string Password { get; set; } = "";
-    public string FromName { get; set; } = "";
-    public string FromAddress { get; set; } = "";
-}
-
 public interface IEmailService
 {
-    Task SendDevisAsync(int devisId, string toEmail, string? message = null, EntrepriseInfoDto? info = null, SmtpConfigDto? smtp = null, CancellationToken ct = default);
+    Task SendDevisAsync(int devisId, string toEmail, string? message = null, EntrepriseInfoDto? info = null, CancellationToken ct = default);
+    Task SendFactureAsync(int factureId, string toEmail, string? message = null, EntrepriseInfoDto? info = null, CancellationToken ct = default);
 }

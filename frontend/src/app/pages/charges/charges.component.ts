@@ -34,10 +34,26 @@ export class ChargesComponent implements OnInit {
   paiementMethode = 'Espece';
   paiementSaving = false;
 
+  // Edit modal
+  editModalOpen = false;
+  editCharge: Charge | null = null;
+  editTitre = '';
+  editDescription = '';
+  editMontant = 0;
+  editCategorieId: number | '' = '';
+  editDateCharge = '';
+  editFournisseurId: number | '' = '';
+  editJustificatif = '';
+  editEstRecurrente = false;
+  editPeriodicite = 'Mensuelle';
+  editSaving = false;
+  fournisseurs: any[] = [];
+
   newCatModalOpen = false;
   newCatNom = '';
   newCatIcone = '📋';
   newCatSaving = false;
+  generatingRecurrentes = false;
 
   readonly emojiOptions = ['🏠','🏢','⚡','💡','🌐','🚗','✈️','👤','🔧','💧','🛡️','📎','📣','📋','💰','💳','🧾','📦','🏥','🎓','☕','🍽️','🎯','🖨️','📱'];
 
@@ -53,12 +69,14 @@ export class ChargesComponent implements OnInit {
   async load(): Promise<void> {
     this.loading = true;
     try {
-      const [c, cats] = await Promise.all([
+      const [c, cats, fournisseurs] = await Promise.all([
         this.api.chargesList().catch(() => []),
         this.api.categoriesChargeList().catch(() => []),
+        this.api.fournisseursList().catch(() => []),
       ]);
       this.charges = c;
       this.categories = cats;
+      this.fournisseurs = fournisseurs;
     } finally { this.loading = false; }
   }
 
@@ -115,6 +133,63 @@ export class ChargesComponent implements OnInit {
     this.page = 1;
   }
 
+  openEdit(c: Charge): void {
+    this.editCharge = c;
+    this.editTitre = c.titre;
+    this.editDescription = c.description ?? '';
+    this.editMontant = c.montant;
+    this.editCategorieId = c.categorieChargeId;
+    const d = new Date(c.dateCharge);
+    this.editDateCharge = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    this.editFournisseurId = c.fournisseurId ?? '';
+    this.editJustificatif = c.justificatif ?? '';
+    this.editEstRecurrente = c.estRecurrente;
+    this.editPeriodicite = c.periodicite ?? 'Mensuelle';
+    this.editSaving = false;
+    this.editModalOpen = true;
+  }
+
+  async saveEdit(): Promise<void> {
+    if (!this.editCharge) return;
+    if (!this.editTitre.trim()) { this.toast.notify('Le titre est requis', 'warning'); return; }
+    if (!this.editMontant || this.editMontant <= 0) { this.toast.notify('Le montant doit être > 0', 'warning'); return; }
+    if (!this.editCategorieId) { this.toast.notify('Sélectionnez une catégorie', 'warning'); return; }
+
+    this.editSaving = true;
+    try {
+      const updated = await this.api.chargeUpdate(this.editCharge.id, {
+        titre: this.editTitre.trim(),
+        description: this.editDescription.trim() || null,
+        montant: +this.editMontant,
+        categorieChargeId: Number(this.editCategorieId),
+        dateCharge: this.editDateCharge || null,
+        fournisseurId: this.editFournisseurId !== '' ? Number(this.editFournisseurId) : null,
+        justificatif: this.editJustificatif.trim() || null,
+        estRecurrente: this.editEstRecurrente,
+        periodicite: this.editEstRecurrente ? this.editPeriodicite : null,
+      });
+      this.charges = this.charges.map(c => c.id === updated.id ? updated : c);
+      this.editModalOpen = false;
+      this.editCharge = null;
+      this.toast.notify('Charge modifiée avec succès', 'success');
+    } catch (e: any) {
+      this.toast.notify(e?.error?.message || 'Erreur lors de la modification', 'error');
+    } finally {
+      this.editSaving = false;
+    }
+  }
+
+  async deleteCharge(c: Charge): Promise<void> {
+    if (!confirm(`Supprimer la charge « ${c.titre } » (${this.formatNum(c.montant)} MAD) ?\n\nCette action est irréversible.`)) return;
+    try {
+      await this.api.chargeDelete(c.id);
+      this.charges = this.charges.filter(x => x.id !== c.id);
+      this.toast.notify('Charge supprimée', 'success');
+    } catch (e: any) {
+      this.toast.notify(e?.error?.message || 'Impossible de supprimer cette charge', 'error');
+    }
+  }
+
   openDetail(c: Charge): void {
     this.viewCharge = c;
     this.paiementMontant = 0;
@@ -131,13 +206,31 @@ export class ChargesComponent implements OnInit {
         methode: this.paiementMethode,
       });
       this.charges = this.charges.map(c => c.id === updated.id ? updated : c);
-      this.viewCharge = updated;
       this.paiementMontant = 0;
       this.toast.notify('Paiement enregistré', 'success');
+      if (updated.statut === 'Paye') {
+        this.modalOpen = false;
+        this.viewCharge = null;
+      } else {
+        this.viewCharge = updated;
+      }
     } catch {
       this.toast.notify('Erreur lors du paiement', 'error');
     } finally {
       this.paiementSaving = false;
+    }
+  }
+
+  async genererRecurrentes(): Promise<void> {
+    this.generatingRecurrentes = true;
+    try {
+      const result = await this.api.chargeGenererRecurrentes();
+      this.toast.notify(result.message, result.count > 0 ? 'success' : 'info');
+      if (result.count > 0) await this.load();
+    } catch {
+      this.toast.notify('Erreur lors de la génération des charges récurrentes', 'error');
+    } finally {
+      this.generatingRecurrentes = false;
     }
   }
 

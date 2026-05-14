@@ -140,6 +140,34 @@ export class FacturesComponent implements OnInit {
     } catch { this.toast.notify('Erreur lors du téléchargement', 'error'); }
   }
 
+  emailModalOpen = false;
+  emailTarget: Facture | null = null;
+  emailTo = '';
+  emailMessage = '';
+  emailSending = false;
+
+  openEmailModal(f: Facture): void {
+    this.emailTarget = f;
+    this.emailTo = '';
+    this.emailMessage = '';
+    this.emailModalOpen = true;
+  }
+
+  async sendEmail(): Promise<void> {
+    if (!this.emailTarget || !this.emailTo.trim()) {
+      this.toast.notify('Adresse email requise', 'warning'); return;
+    }
+    this.emailSending = true;
+    try {
+      await this.api.factureEmail(this.emailTarget.id, this.emailTo.trim(), this.emailMessage.trim() || undefined, this.settings.settings.entreprise as any);
+      this.emailModalOpen = false;
+      this.toast.notify(`Facture envoyée à ${this.emailTo}`, 'success');
+      await this.load();
+    } catch (e: any) {
+      this.toast.notify(e?.error?.message || e?.error?.detail || 'Erreur lors de l\'envoi', 'error');
+    } finally { this.emailSending = false; }
+  }
+
   statutCls(s: string): string {
     if (s === 'Paye' || s === 'Payee') return 'good';
     if (s === 'PartielPaye') return 'medium';
