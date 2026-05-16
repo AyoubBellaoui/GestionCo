@@ -30,7 +30,8 @@
             <div class="form-field">
               <label class="label">Fournisseur *</label>
               <div style="display:flex;gap:8px;align-items:center">
-                <select class="form-select" style="flex:1" [(ngModel)]="fournisseurId">
+                <select class="form-select" style="flex:1" [(ngModel)]="fournisseurId"
+                        [class.invalid]="submitted && !fournisseurId">
                   <option value="">— Sélectionner un fournisseur —</option>
                   @for (f of fournisseurs; track f.id) {
                     <option [value]="f.id">{{ f.icone || '🏢' }} {{ f.nom }}</option>
@@ -42,6 +43,9 @@
                 </button>
               </div>
             </div>
+            @if (submitted && !fournisseurId) {
+              <div class="form-error" style="margin-top:4px">Veuillez sélectionner un fournisseur</div>
+            }
             @if (selectedFournisseur) {
               <div class="info-box" style="margin-top:12px">
                 <div style="display:flex;align-items:center;gap:12px">
@@ -70,6 +74,9 @@
                 <div class="empty-title">Aucun article ajouté</div>
                 <div class="empty-sub">Cliquez sur "Ajouter une ligne" pour commencer</div>
               </div>
+              @if (submitted) {
+                <div class="form-error-banner">Ajoutez au moins un article</div>
+              }
             } @else {
               <div class="lignes-list">
                 @for (l of lignes; track $index) {
@@ -78,24 +85,53 @@
                     <div class="ligne-fields">
                       <div class="form-field" style="flex:2">
                         <label class="label">Produit</label>
-                        <select class="form-select" [value]="l.produitId" (change)="updateLigneProduit($index, +$any($event.target).value)">
+                        <select class="form-select" [value]="l.produitId"
+                                (change)="updateLigneProduit($index, +$any($event.target).value)"
+                                [class.invalid]="submitted && l.produitId === 0">
                           <option [value]="0">— Choisir —</option>
                           @for (p of produits; track p.id) {
                             <option [value]="p.id">{{ p.image || '📦' }} {{ p.nom }} ({{ p.reference }}) · Stock: {{ p.quantiteStock }}</option>
                           }
                         </select>
+                        @if (submitted && l.produitId === 0) {
+                          <div class="form-error" style="font-size:10.5px;margin-top:2px">Produit requis</div>
+                        }
                       </div>
                       <div class="form-field" style="width:90px">
                         <label class="label">Quantité</label>
-                        <input type="number" class="form-input" min="1" [value]="l.quantite" (change)="updateLigneQty($index, +$any($event.target).value)" />
+                        <input type="number" class="form-input" min="1" [value]="l.quantite"
+                               (change)="updateLigneQty($index, +$any($event.target).value)"
+                               [class.invalid]="submitted && l.quantite < 1" />
+                        @if (submitted && l.quantite < 1) {
+                          <div class="form-error" style="font-size:10.5px;margin-top:2px">Min. 1</div>
+                        }
                       </div>
                       <div class="form-field" style="width:110px">
                         <label class="label">Prix unit. (HT)</label>
-                        <input type="number" class="form-input" step="0.01" min="0" [value]="l.prixUnitaire" (change)="updateLignePrix($index, +$any($event.target).value)" />
+                        <input type="number" class="form-input" step="0.01" min="0" [value]="l.prixUnitaire"
+                               (change)="updateLignePrix($index, +$any($event.target).value)"
+                               [class.invalid]="submitted && l.prixUnitaire <= 0" />
+                        @if (submitted && l.prixUnitaire <= 0) {
+                          <div class="form-error" style="font-size:10.5px;margin-top:2px">Prix requis</div>
+                        }
+                      </div>
+                      <div class="form-field" style="width:80px">
+                        <label class="label">Remise %</label>
+                        <div class="input-group">
+                          <input type="number" [min]="0" [max]="100" step="1" class="form-input with-suffix"
+                                 placeholder="0" [value]="l.remise || 0"
+                                 (change)="updateLigneRemise($index, +$any($event.target).value)" />
+                          <span class="input-suffix">%</span>
+                        </div>
                       </div>
                       <div class="form-field" style="width:110px">
                         <label class="label">Total</label>
-                        <div class="form-input" style="display:flex;align-items:center;font-weight:700;background:var(--surface2)">{{ formatNum(l.total) }} MAD</div>
+                        <div class="form-input" style="display:flex;align-items:center;font-weight:700;background:var(--surface2)">
+                          {{ formatNum(l.total) }} MAD
+                          @if (l.remise > 0) {
+                            <span style="font-size:10px;color:var(--success);margin-left:4px">-{{ l.remise }}%</span>
+                          }
+                        </div>
                       </div>
                     </div>
                     <button class="btn-icon" style="color:var(--danger);align-self:flex-end;margin-bottom:4px" (click)="removeLigne($index)">

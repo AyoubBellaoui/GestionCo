@@ -143,6 +143,7 @@ export interface LigneVente {
   imageProduit?: string;
   quantite: number;
   prixUnitaire: number;
+  remise: number;
   tva: number;
   total: number;
 }
@@ -180,6 +181,7 @@ export interface LigneAchat {
   referenceProduit?: string;
   quantite: number;
   prixUnitaire: number;
+  remise: number;
   total: number;
 }
 
@@ -471,6 +473,7 @@ export interface LigneDevis {
   referenceProduit?: string;
   quantite: number;
   prixUnitaire: number;
+  remise: number;
   tva: number;
   total: number;
 }

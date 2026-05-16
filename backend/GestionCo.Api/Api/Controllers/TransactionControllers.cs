@@ -10,6 +10,9 @@ using GestionCo.Api.Application.Ventes;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace GestionCo.Api.Api.Controllers;
 
@@ -275,8 +278,16 @@ public class CategoriesChargeController : ControllerBase
 [ApiController]
 [Route("api/devis")]
 [Authorize(Policy = "AdminOrManager")]
-public class DevisController(IMediator mediator) : ControllerBase
+public class DevisController(IMediator mediator, IConfiguration config) : ControllerBase
 {
+    private string ComputeShareToken(int id)
+    {
+        var secret = config["JwtSettings:SecretKey"] ?? "GestionCo_Share_Secret";
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes($"devis-share-{id}"));
+        return Convert.ToBase64String(hash).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] GetDevisQuery q, CancellationToken ct)
         => Ok(await mediator.Send(q, ct));
@@ -306,6 +317,25 @@ public class DevisController(IMediator mediator) : ControllerBase
     {
         var devis = await mediator.Send(new GetDevisByIdQuery(id), ct);
         var bytes = await mediator.Send(new GenerateDevisPdfQuery(id, info), ct);
+        return File(bytes, "application/pdf", $"Devis-{devis.Reference}.pdf");
+    }
+
+    [HttpGet("{id}/share-link")]
+    public IActionResult GetShareLink(int id)
+    {
+        var token = ComputeShareToken(id);
+        var baseUrl = $"{Request.Scheme}://{Request.Host}";
+        return Ok(new { url = $"{baseUrl}/api/devis/{id}/pdf-share?t={token}" });
+    }
+
+    [HttpGet("{id}/pdf-share")]
+    [AllowAnonymous]
+    public async Task<IActionResult> DownloadPdfPublic(int id, [FromQuery] string t, CancellationToken ct)
+    {
+        var expected = ComputeShareToken(id);
+        if (t != expected) return Forbid();
+        var devis = await mediator.Send(new GetDevisByIdQuery(id), ct);
+        var bytes = await mediator.Send(new GenerateDevisPdfQuery(id), ct);
         return File(bytes, "application/pdf", $"Devis-{devis.Reference}.pdf");
     }
 

@@ -41,6 +41,7 @@ public class LigneDevisDto
     public string NomProduit { get; set; } = string.Empty;
     public string ReferenceProduit { get; set; } = string.Empty;
     public int Quantite { get; set; }
+    public decimal Remise { get; set; }
     public decimal PrixUnitaire { get; set; }
     public decimal Tva { get; set; }
     public decimal Total { get; set; }
@@ -68,6 +69,7 @@ public class CreateLigneDevisDto
     public int ProduitId { get; set; }
     public int Quantite { get; set; }
     public decimal PrixUnitaire { get; set; }
+    public decimal Remise { get; set; } = 0;
     public decimal Tva { get; set; } = 20;
 }
 
@@ -153,12 +155,13 @@ public class CreateDevisHandler : IRequestHandler<CreateDevisCommand, DevisDto>
                 ProduitId = l.ProduitId,
                 Quantite = l.Quantite,
                 PrixUnitaire = l.PrixUnitaire,
+                Remise = l.Remise,
                 Tva = l.Tva
             }).ToList()
         };
 
-        devis.MontantTotalHT = devis.Lignes.Sum(l => l.Quantite * l.PrixUnitaire);
-        devis.MontantTVA = devis.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (l.Tva / 100));
+        devis.MontantTotalHT = devis.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (1 - l.Remise / 100));
+        devis.MontantTVA = devis.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (1 - l.Remise / 100) * (l.Tva / 100));
         devis.MontantTotal = devis.MontantTotalHT + devis.MontantTVA;
 
         _db.Devis.Add(devis);
@@ -225,11 +228,12 @@ public class UpdateDevisHandler : IRequestHandler<UpdateDevisCommand, DevisDto>
             ProduitId = l.ProduitId,
             Quantite = l.Quantite,
             PrixUnitaire = l.PrixUnitaire,
+            Remise = l.Remise,
             Tva = l.Tva
         }).ToList();
 
-        devis.MontantTotalHT = devis.Lignes.Sum(l => l.Quantite * l.PrixUnitaire);
-        devis.MontantTVA = devis.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (l.Tva / 100));
+        devis.MontantTotalHT = devis.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (1 - l.Remise / 100));
+        devis.MontantTVA = devis.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (1 - l.Remise / 100) * (l.Tva / 100));
         devis.MontantTotal = devis.MontantTotalHT + devis.MontantTVA;
 
         await _db.SaveChangesAsync(ct);
@@ -358,12 +362,13 @@ public class ConvertirDevisEnVenteHandler : IRequestHandler<ConvertirDevisEnVent
                 ProduitId = l.ProduitId,
                 Quantite = l.Quantite,
                 PrixUnitaire = l.PrixUnitaire,
+                Remise = l.Remise,
                 TVA = l.Tva
             }).ToList()
         };
 
-        vente.MontantTotalHT = vente.Lignes.Sum(l => l.Quantite * l.PrixUnitaire);
-        vente.MontantTVA = vente.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (l.TVA / 100));
+        vente.MontantTotalHT = vente.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (1 - l.Remise / 100));
+        vente.MontantTVA = vente.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (1 - l.Remise / 100) * (l.TVA / 100));
         vente.MontantTotal = vente.MontantTotalHT + vente.MontantTVA;
 
         _db.Ventes.Add(vente);
@@ -580,6 +585,7 @@ public static class DevisMapper
             ReferenceProduit = l.Produit?.Reference ?? "",
             Quantite = l.Quantite,
             PrixUnitaire = l.PrixUnitaire,
+            Remise = l.Remise,
             Tva = l.Tva,
             Total = l.Total
         }).ToList() ?? new()

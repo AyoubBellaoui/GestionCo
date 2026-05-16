@@ -307,6 +307,9 @@ export class ApiService {
   devisPdf(id: number, entreprise?: Record<string, string>): Promise<Blob> {
     return firstValueFrom(this.http.post(`${this.base}/devis/${id}/pdf`, entreprise ?? {}, { responseType: 'blob' }));
   }
+  devisShareLink(id: number): Promise<{ url: string }> {
+    return firstValueFrom(this.http.get<{ url: string }>(`${this.base}/devis/${id}/share-link`));
+  }
   devisEmail(id: number, email: string, message?: string, entreprise?: Record<string, string>): Promise<void> {
     return firstValueFrom(this.http.post<void>(`${this.base}/devis/${id}/email`, { email, message, entrepriseInfo: entreprise ?? {} }));
   }

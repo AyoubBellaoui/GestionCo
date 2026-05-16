@@ -42,7 +42,8 @@ public class LigneDevis
 
     public int Quantite { get; set; }
     public decimal PrixUnitaire { get; set; }
+    public decimal Remise { get; set; } = 0;
     public decimal Tva { get; set; } = 20;
 
-    public decimal Total => Quantite * PrixUnitaire;
+    public decimal Total => Quantite * PrixUnitaire * (1 - Remise / 100);
 }

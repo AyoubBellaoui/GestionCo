@@ -45,6 +45,7 @@ public class LigneVenteDto
     public string? ImageProduit { get; set; }
     public int Quantite { get; set; }
     public decimal PrixUnitaire { get; set; }
+    public decimal Remise { get; set; }
     public decimal TVA { get; set; }
     public decimal Total { get; set; }
 }
@@ -64,6 +65,7 @@ public class CreateLigneVenteDto
     public int ProduitId { get; set; }
     public int Quantite { get; set; }
     public decimal PrixUnitaire { get; set; }
+    public decimal Remise { get; set; } = 0;
     public decimal TVA { get; set; } = 20;
 }
 
@@ -150,12 +152,13 @@ public class CreateVenteHandler : IRequestHandler<CreateVenteCommand, VenteDto>
                 ProduitId = l.ProduitId,
                 Quantite = l.Quantite,
                 PrixUnitaire = l.PrixUnitaire,
+                Remise = l.Remise,
                 TVA = l.TVA
             }).ToList()
         };
 
-        vente.MontantTotalHT = vente.Lignes.Sum(l => l.Quantite * l.PrixUnitaire);
-        vente.MontantTVA = vente.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (l.TVA / 100));
+        vente.MontantTotalHT = vente.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (1 - l.Remise / 100));
+        vente.MontantTVA = vente.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (1 - l.Remise / 100) * (l.TVA / 100));
         vente.MontantTotal = vente.MontantTotalHT + vente.MontantTVA;
 
         _db.Ventes.Add(vente);
@@ -530,6 +533,7 @@ public static class VenteMapper
             ImageProduit = l.Produit?.Image,
             Quantite = l.Quantite,
             PrixUnitaire = l.PrixUnitaire,
+            Remise = l.Remise,
             TVA = l.TVA,
             Total = l.Total
         }).ToList() ?? new(),

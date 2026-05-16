@@ -22,6 +22,7 @@ interface LigneForm {
   referenceProduit?: string;
   quantite: number;
   prixUnitaire: number;
+  remise: number;
   total: number;
 }
 
@@ -41,6 +42,7 @@ export class AchatFormComponent implements OnInit {
   paiementInitial = 0;
   methodePaiement = 'Espece';
   saving = false;
+  submitted = false;
 
   newFournisseurModalOpen = false;
   newFournisseurSaving = false;
@@ -61,7 +63,7 @@ export class AchatFormComponent implements OnInit {
     this.loadingData = false;
   }
 
-  get totalGeneral(): number { return this.lignes.reduce((s, l) => s + l.quantite * l.prixUnitaire, 0); }
+  get totalGeneral(): number { return this.lignes.reduce((s, l) => s + l.quantite * l.prixUnitaire * (1 - l.remise / 100), 0); }
   get totalArticles(): number { return this.lignes.reduce((s, l) => s + (Number(l.quantite) || 0), 0); }
   get selectedFournisseur(): Fournisseur | undefined { return this.fournisseurs.find(f => f.id === this.fournisseurId); }
   get reste(): number { return this.totalGeneral - this.paiementInitial; }
@@ -70,8 +72,12 @@ export class AchatFormComponent implements OnInit {
     this.paiementInitial = Math.min(this.paiementInitial, this.totalGeneral);
   }
 
+  private calcTotal(l: LigneForm): number {
+    return l.quantite * l.prixUnitaire * (1 - l.remise / 100);
+  }
+
   addLigne(): void {
-    this.lignes = [...this.lignes, { produitId: 0, quantite: 1, prixUnitaire: 0, total: 0 }];
+    this.lignes = [...this.lignes, { produitId: 0, quantite: 1, prixUnitaire: 0, remise: 0, total: 0 }];
   }
 
   updateLigneProduit(i: number, produitId: number): void {
@@ -82,19 +88,25 @@ export class AchatFormComponent implements OnInit {
       l.referenceProduit = p.reference;
       l.nomProduit = p.nom;
     }
-    l.total = l.quantite * l.prixUnitaire;
+    l.total = this.calcTotal(l);
     this.lignes = this.lignes.map((x, idx) => idx === i ? l : x);
   }
 
   updateLigneQty(i: number, quantite: number): void {
     const l = { ...this.lignes[i], quantite: quantite || 0 };
-    l.total = l.quantite * l.prixUnitaire;
+    l.total = this.calcTotal(l);
     this.lignes = this.lignes.map((x, idx) => idx === i ? l : x);
   }
 
   updateLignePrix(i: number, prixUnitaire: number): void {
     const l = { ...this.lignes[i], prixUnitaire: prixUnitaire || 0 };
-    l.total = l.quantite * l.prixUnitaire;
+    l.total = this.calcTotal(l);
+    this.lignes = this.lignes.map((x, idx) => idx === i ? l : x);
+  }
+
+  updateLigneRemise(i: number, remise: number): void {
+    const l = { ...this.lignes[i], remise: Math.min(100, Math.max(0, remise || 0)) };
+    l.total = this.calcTotal(l);
     this.lignes = this.lignes.map((x, idx) => idx === i ? l : x);
   }
 
@@ -129,10 +141,12 @@ export class AchatFormComponent implements OnInit {
   }
 
   async save(): Promise<void> {
+    this.submitted = true;
     if (!this.fournisseurId) { this.toast.notify('Sélectionnez un fournisseur', 'warning'); return; }
     if (this.lignes.length === 0) { this.toast.notify('Ajoutez au moins une ligne', 'warning'); return; }
-    if (this.lignes.some(l => l.produitId === 0)) { this.toast.notify('Tous les produits doivent être sélectionnés', 'warning'); return; }
-    if (this.lignes.some(l => l.quantite <= 0)) { this.toast.notify('Quantités doivent être > 0', 'warning'); return; }
+    if (this.lignes.some(l => l.produitId === 0)) { this.toast.notify('Sélectionnez un produit pour chaque ligne', 'warning'); return; }
+    if (this.lignes.some(l => l.quantite < 1)) { this.toast.notify('La quantité doit être ≥ 1 sur chaque ligne', 'warning'); return; }
+    if (this.lignes.some(l => l.prixUnitaire <= 0)) { this.toast.notify('Le prix unitaire doit être > 0 sur chaque ligne', 'warning'); return; }
     this.saving = true;
     try {
       await this.api.achatCreate({

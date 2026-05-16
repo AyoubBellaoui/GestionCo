@@ -17,6 +17,7 @@ export class ChargeFormComponent implements OnInit {
   fournisseurs: Fournisseur[] = [];
   loadingData = true;
   saving = false;
+  submitted = false;
 
   titre = '';
   description = '';
@@ -79,6 +80,7 @@ export class ChargeFormComponent implements OnInit {
   }
 
   async save(): Promise<void> {
+    this.submitted = true;
     if (!this.titre.trim()) { this.toast.notify('Le titre est requis', 'warning'); return; }
     if (!this.montant || this.montant <= 0) { this.toast.notify('Le montant doit être > 0', 'warning'); return; }
     if (!this.categorieId) { this.toast.notify('Sélectionnez une catégorie', 'warning'); return; }

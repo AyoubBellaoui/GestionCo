@@ -143,11 +143,16 @@ export class DevisComponent implements OnInit {
     } catch { this.toast.notify('Erreur lors de la suppression', 'error'); }
   }
 
-  shareWhatsApp(d: Devis): void {
+  async shareWhatsApp(d: Devis): Promise<void> {
     const entreprise = this.settings.settings.entreprise.raisonSociale || 'GestionCo';
     const client = this.clients.find(c => c.id === d.clientId)?.nomClient || '';
-    const msg = `Bonjour${client ? ' ' + client : ''},\n\nVeuillez trouver ci-joint notre devis *${d.reference}*.\n\nMontant TTC : *${d.montantTotal.toLocaleString('fr-FR')} MAD*${d.dateValidite ? '\nValide jusqu\'au : ' + new Date(d.dateValidite).toLocaleDateString('fr-FR') : ''}\n\nCordialement,\n${entreprise}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    try {
+      const { url } = await this.api.devisShareLink(d.id);
+      const msg = `Bonjour${client ? ' ' + client : ''},\n\nVeuillez trouver notre devis *${d.reference}* en cliquant sur le lien ci-dessous :\n\n📄 ${url}\n\nMontant TTC : *${d.montantTotal.toLocaleString('fr-FR')} MAD*${d.dateValidite ? '\nValide jusqu\'au : ' + new Date(d.dateValidite).toLocaleDateString('fr-FR') : ''}\n\nCordialement,\n${entreprise}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    } catch {
+      this.toast.notify('Erreur lors de la génération du lien de partage', 'error');
+    }
   }
 
   async printPdf(d: Devis): Promise<void> {

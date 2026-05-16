@@ -30,7 +30,11 @@
           <div class="form-card-body">
             <div class="form-field">
               <label class="label">Titre *</label>
-              <input type="text" class="form-input" placeholder="Ex: Loyer mensuel, Facture électricité..." [(ngModel)]="titre" />
+              <input type="text" class="form-input" placeholder="Ex: Loyer mensuel, Facture électricité..."
+                     [(ngModel)]="titre" [class.invalid]="submitted && !titre.trim()" />
+              @if (submitted && !titre.trim()) {
+                <div class="form-error" style="margin-top:4px">Le titre est requis</div>
+              }
             </div>
             <div class="form-field">
               <label class="label">Description</label>
@@ -44,9 +48,13 @@
               <div class="form-field">
                 <label class="label">Montant *</label>
                 <div class="input-group">
-                  <input type="number" class="form-input with-suffix" min="0.01" step="0.01" [(ngModel)]="montant" placeholder="0.00" />
+                  <input type="number" class="form-input with-suffix" min="0.01" step="0.01" [(ngModel)]="montant"
+                         placeholder="0.00" [class.invalid]="submitted && (!montant || montant <= 0)" />
                   <span class="input-suffix">MAD</span>
                 </div>
+                @if (submitted && (!montant || montant <= 0)) {
+                  <div class="form-error" style="margin-top:4px">Le montant doit être supérieur à 0</div>
+                }
               </div>
             </div>
           </div>
@@ -58,7 +66,8 @@
           <div class="form-card-body">
             <div class="form-field">
               <div style="display:flex;gap:8px;align-items:center">
-                <select class="form-select" style="flex:1" [(ngModel)]="categorieId">
+                <select class="form-select" style="flex:1" [(ngModel)]="categorieId"
+                        [class.invalid]="submitted && !categorieId">
                   <option value="">— Sélectionner une catégorie —</option>
                   @for (cat of categories; track cat.id) {
                     <option [value]="cat.id">{{ cat.icone || '📋' }} {{ cat.nom }}</option>
@@ -69,6 +78,9 @@
                   Nouvelle catégorie
                 </button>
               </div>
+              @if (submitted && !categorieId) {
+                <div class="form-error" style="margin-top:4px">Veuillez sélectionner une catégorie</div>
+              }
             </div>
 
             @if (newCatOpen) {

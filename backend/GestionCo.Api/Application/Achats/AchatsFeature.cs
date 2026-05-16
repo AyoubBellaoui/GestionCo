@@ -38,6 +38,7 @@ public class LigneAchatDto
     public string NomProduit { get; set; } = string.Empty;
     public string ReferenceProduit { get; set; } = string.Empty;
     public int Quantite { get; set; }
+    public decimal Remise { get; set; }
     public decimal PrixUnitaire { get; set; }
     public decimal Total { get; set; }
 }
@@ -57,6 +58,7 @@ public class CreateLigneAchatDto
     public int ProduitId { get; set; }
     public int Quantite { get; set; }
     public decimal PrixUnitaire { get; set; }
+    public decimal Remise { get; set; } = 0;
 }
 
 public class AddPaiementAchatDto
@@ -133,10 +135,11 @@ public class CreateAchatHandler : IRequestHandler<CreateAchatCommand, AchatDto>
             {
                 ProduitId = l.ProduitId,
                 Quantite = l.Quantite,
-                PrixUnitaire = l.PrixUnitaire
+                PrixUnitaire = l.PrixUnitaire,
+                Remise = l.Remise
             }).ToList()
         };
-        achat.MontantTotal = achat.Lignes.Sum(l => l.Quantite * l.PrixUnitaire);
+        achat.MontantTotal = achat.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (1 - l.Remise / 100));
 
         // Paiement initial
         var paiementInitial = dto.PaiementInitial ?? 0;
@@ -441,6 +444,7 @@ public static class AchatMapper
             ReferenceProduit = l.Produit?.Reference ?? "",
             Quantite = l.Quantite,
             PrixUnitaire = l.PrixUnitaire,
+            Remise = l.Remise,
             Total = l.Total
         }).ToList() ?? new()
     };

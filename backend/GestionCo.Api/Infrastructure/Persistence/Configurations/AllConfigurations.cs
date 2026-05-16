@@ -112,6 +112,8 @@ public class LigneAchatConfiguration : IEntityTypeConfiguration<LigneAchat>
         b.ToTable("lignes_achat");
         b.HasKey(x => x.Id);
         b.Property(x => x.PrixUnitaire).HasColumnType("decimal(18,2)");
+        b.Property(x => x.Remise).HasColumnType("decimal(5,2)");
+        b.Ignore(x => x.Total);
 
         b.HasOne(x => x.Achat)
             .WithMany(a => a.Lignes)
@@ -158,7 +160,9 @@ public class LigneVenteConfiguration : IEntityTypeConfiguration<LigneVente>
         b.ToTable("lignes_vente");
         b.HasKey(x => x.Id);
         b.Property(x => x.PrixUnitaire).HasColumnType("decimal(18,2)");
+        b.Property(x => x.Remise).HasColumnType("decimal(5,2)");
         b.Property(x => x.TVA).HasColumnType("decimal(5,2)");
+        b.Ignore(x => x.Total);
 
         b.HasOne(x => x.Vente)
             .WithMany(v => v.Lignes)
@@ -388,6 +392,7 @@ public class LigneDevisConfiguration : IEntityTypeConfiguration<LigneDevis>
         b.ToTable("lignes_devis");
         b.HasKey(x => x.Id);
         b.Property(x => x.PrixUnitaire).HasColumnType("decimal(18,2)");
+        b.Property(x => x.Remise).HasColumnType("decimal(5,2)");
         b.Property(x => x.Tva).HasColumnType("decimal(5,2)");
         b.Ignore(x => x.Total);
 

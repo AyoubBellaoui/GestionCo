@@ -17,8 +17,152 @@
   --text: #1a1d2e;
   --text-muted: #6b7280;
   --text-light: #9ca3af;
+  --bg-surface: #ffffff;
+  --bg-alt: #f0f1f7;
   --radius: 12px;
   --radius-sm: 8px;
+}
+
+/* ─── DARK MODE — Soft & eye-friendly (Facebook/Twitter Dim inspired) ─── */
+[data-theme="dark"] {
+  /* Base surfaces — neutral dark, not pitch black */
+  --bg:       #111318;
+  --surface:  #1c1f2e;
+  --surface2: #242840;
+  --border:   #2e3352;
+
+  /* Text — soft, never blinding white */
+  --text:       #cdd2e8;
+  --text-muted: #7a82a0;
+  --text-light: #4e5570;
+
+  /* Semantic colors — shifted lighter for dark backgrounds */
+  --success: #4ade80;
+  --danger:  #f87171;
+  --warning: #fbbf24;
+  --info:    #38bdf8;
+
+  /* Accent tints — very muted so they don't pop aggressively */
+  --primary-light:  #1a1e42;
+  --success-light:  #0f2118;
+  --danger-light:   #231014;
+  --warning-light:  #211a0a;
+  --info-light:     #0a1c2e;
+
+  /* Date-picker internal vars */
+  --bg-surface: #1c1f2e;
+  --bg-alt:     #242840;
+
+  color-scheme: dark;
+}
+
+/* ── Reference badges (.mono) — muted indigo, not neon ── */
+[data-theme="dark"] .mono {
+  background: #1e2245;
+  color: #818cf8;
+}
+
+/* ── Status badges — softer, pastel-ish text on muted bg ── */
+[data-theme="dark"] .status-badge.paid,
+[data-theme="dark"] .status-badge.good,
+[data-theme="dark"] .status-badge.active  { color: #6ee7b7; }
+[data-theme="dark"] .status-badge.partial  { background: #162040; color: #93c5fd; }
+[data-theme="dark"] .status-badge.pending,
+[data-theme="dark"] .status-badge.medium  { color: #fcd34d; }
+[data-theme="dark"] .status-badge.cancelled,
+[data-theme="dark"] .status-badge.low     { color: #fca5a5; }
+[data-theme="dark"] .status-badge.neutral { background: var(--surface2); color: var(--text-muted); }
+[data-theme="dark"] .status-badge.bad     { color: #fca5a5; }
+
+/* ── Stat trends ── */
+[data-theme="dark"] .stat-trend       { color: #6ee7b7; }
+[data-theme="dark"] .stat-trend.down  { color: #fca5a5; }
+[data-theme="dark"] .stat-trend.neutral { color: var(--text-muted); }
+
+/* ── Cards & elevation ── */
+[data-theme="dark"] .stat-card:hover  { box-shadow: 0 4px 16px rgba(0,0,0,0.35); border-color: #3a3f60; }
+[data-theme="dark"] .table-card,
+[data-theme="dark"] .toolbar          { box-shadow: none; }
+
+/* ── Modal & overlays ── */
+[data-theme="dark"] .modal-backdrop   { background: rgba(0,0,0,0.65); }
+[data-theme="dark"] .modal            { box-shadow: 0 24px 64px rgba(0,0,0,0.5); }
+[data-theme="dark"] .toast            { box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
+
+/* ── Misc ── */
+[data-theme="dark"] .logo-box         { box-shadow: 0 4px 14px rgba(79,70,229,0.3); }
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7) brightness(0.85); }
+[data-theme="dark"] .page-btn.active  { background: #4F46E5; color: #fff; }
+[data-theme="dark"] .nav-item.active  { background: #1a1e42; color: #818cf8; }
+
+/* ── Theme toggle hover in dark mode ── */
+[data-theme="dark"] .theme-toggle:hover {
+  color: #fcd34d;
+  border-color: rgba(252,211,77,0.35);
+  background: #211a0a;
+}
+
+/* ── Dashboard equity card (hardcoded light greens/reds) ── */
+[data-theme="dark"] .db-eq-status.pos { background: #0f2118; color: #6ee7b7; }
+[data-theme="dark"] .db-eq-result.pos { background: #0f2118; border-color: #1a5c35; }
+[data-theme="dark"] .db-eq-result.pos .db-eq-result-amount { color: #6ee7b7; }
+[data-theme="dark"] .db-eq-result.neg { background: #231014; border-color: #7f1d1d; }
+[data-theme="dark"] .db-eq-result.neg .db-eq-result-amount { color: #fca5a5; }
+[data-theme="dark"] .db-eq-bar { background: rgba(255,255,255,0.08); }
+
+/* ── Factures status tabs — text colors are hardcoded dark for light bg ── */
+[data-theme="dark"] .fac-tab.blue.active  { background: var(--primary-light); color: #93c5fd; }
+[data-theme="dark"] .fac-tab.green.active { color: #6ee7b7; }
+[data-theme="dark"] .fac-tab.amber.active { color: #fcd34d; }
+[data-theme="dark"] .fac-tab.red.active   { color: #fca5a5; }
+
+/* ── Factures/stat icon emoji colors ── */
+[data-theme="dark"] .fac-stat-icon.green { color: #6ee7b7; }
+[data-theme="dark"] .fac-stat-icon.amber { color: #fcd34d; }
+
+/* ── Email sent badge in factures list ── */
+[data-theme="dark"] .fac-email-badge { color: #6ee7b7; }
+
+/* ── Dashboard alert badges ── */
+[data-theme="dark"] .db-alert-badge.warn { color: #fcd34d; }
+[data-theme="dark"] .db-alert-badge.bad  { color: #fca5a5; }
+
+/* ── Stock adjustment type buttons ── */
+[data-theme="dark"] .ajust-type-btn.active-in  { background: #0f2118; border-color: #1a5c35; color: #6ee7b7; }
+[data-theme="dark"] .ajust-type-btn.active-out { background: #231014; border-color: #7f1d1d; color: #fca5a5; }
+
+/* ── Stock adjustment value color ── */
+[data-theme="dark"] .ajust-stock-val.up { color: #6ee7b7; }
+
+/* ── Validation error banner (block) ── */
+.form-error-banner {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--danger-light);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 6px;
+  color: var(--danger);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+[data-theme="dark"] .form-error-banner {
+  background: #180d0d;
+  border-color: rgba(248,113,113,0.15);
+  color: #fca5a5;
+}
+[data-theme="dark"] .form-error { color: #fca5a5; }
+[data-theme="dark"] .form-input.invalid,
+[data-theme="dark"] .form-select.invalid { border-color: #f87171 !important; }
+
+/* ── Unpaid row highlight ── */
+.row-unpaid { background: color-mix(in srgb, var(--warning-light) 40%, transparent) !important; }
+[data-theme="dark"] .row-unpaid { background: rgba(251,191,36,0.05) !important; }
+
+/* ── Smooth transition on toggle ── */
+body.theme-transitioning,
+body.theme-transitioning * {
+  transition: background-color 0.25s ease, border-color 0.25s ease,
+              color 0.25s ease, box-shadow 0.25s ease !important;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -114,6 +258,9 @@ input, select, textarea { font-family: inherit; }
 
 .topbar-icon-btn { width: 38px; height: 38px; border-radius: 9px; background: transparent; border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 15px; transition: all 0.15s; position: relative; }
 .topbar-icon-btn:hover { background: var(--surface2); }
+.theme-toggle { color: var(--text-muted); }
+.theme-toggle:hover { color: var(--primary); border-color: var(--primary); background: var(--primary-light); }
+[data-theme="dark"] .theme-toggle:hover { color: #fbbf24; border-color: #fbbf24; background: #2a1e0b; }
 .notif-dot { position: absolute; top: 7px; right: 7px; width: 8px; height: 8px; background: var(--danger); border-radius: 50%; border: 2px solid var(--surface); }
 
 .content { flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 18px; }
@@ -260,6 +407,8 @@ input, select, textarea { font-family: inherit; }
 .form-input::placeholder, .form-textarea::placeholder { color: var(--text-light); }
 .form-select { cursor: pointer; padding-right: 32px; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>"); background-repeat: no-repeat; background-position: right 10px center; }
 .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+.form-input.invalid, .form-select.invalid { border-color: var(--danger) !important; }
+.form-input.invalid:focus, .form-select.invalid:focus { box-shadow: 0 0 0 3px rgba(239,68,68,0.12) !important; }
 .form-hint { font-size: 11.5px; color: var(--text-muted); }
 .form-error { font-size: 11.5px; color: var(--danger); font-weight: 500; }
 
@@ -806,6 +955,7 @@ input, select, textarea { font-family: inherit; }
 .input-suffix {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
   padding: 0 12px;
   background: transparent;
   border-left: 1px solid var(--border);
@@ -1450,21 +1600,6 @@ input, select, textarea { font-family: inherit; }
   gap: 16px;
 }
 
-/* ============ DARK THEME ============ */
-[data-theme="dark"] {
-  --bg: #0f172a;
-  --surface: #1e293b;
-  --surface2: #334155;
-  --border: #334155;
-  --text: #f1f5f9;
-  --text-muted: #94a3b8;
-  --text-light: #64748b;
-  --primary-light: #312e81;
-  --success-light: #14532d;
-  --danger-light: #7f1d1d;
-  --warning-light: #78350f;
-  --info-light: #164e63;
-}
 
 [data-theme="dark"] body {
   background: var(--bg);

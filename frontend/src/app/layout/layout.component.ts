@@ -4,6 +4,7 @@ import { SidebarComponent } from '../shared/sidebar/sidebar.component';
 import { ToastComponent } from '../shared/toast/toast.component';
 import { GlobalSearchComponent } from '../shared/global-search/global-search.component';
 import { AuthService } from '../core/services/auth.service';
+import { ThemeService } from '../core/services/theme.service';
 
 @Component({
   selector: 'app-layout',
@@ -12,7 +13,7 @@ import { AuthService } from '../core/services/auth.service';
   templateUrl: './layout.component.html',
 })
 export class LayoutComponent {
-  constructor(public auth: AuthService, private router: Router) {
+  constructor(public auth: AuthService, private router: Router, _theme: ThemeService) {
     if (!auth.user && !localStorage.getItem('gc_token')) {
       this.router.navigate(['/login']);
     }

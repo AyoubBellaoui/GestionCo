@@ -29,7 +29,8 @@
           <div class="form-group">
             <label class="form-label">Client <span class="required">*</span></label>
             <div style="display:flex;gap:8px;align-items:center">
-              <select class="form-select" style="flex:1" [(ngModel)]="clientId" [disabled]="loadingData">
+              <select class="form-select" style="flex:1" [(ngModel)]="clientId" [disabled]="loadingData"
+                      [class.invalid]="submitted && !clientId">
                 <option value="">— Sélectionner un client —</option>
                 @for (c of clients; track c.id) { <option [value]="c.id">{{ c.nomClient }}</option> }
               </select>
@@ -38,6 +39,9 @@
                 Nouveau client
               </button>
             </div>
+            @if (submitted && !clientId) {
+              <div class="form-error" style="margin-top:4px">Veuillez sélectionner un client</div>
+            }
             @if (selectedClient) {
               <div class="form-help">
                 {{ selectedClient.telephone ? '📞 ' + selectedClient.telephone : '' }}
@@ -62,24 +66,31 @@
           <div class="form-section-sub">Produits et quantités de cette vente</div>
           <div class="lignes-table-wrap">
             <table class="data-table lignes-table">
-              <thead><tr><th>Produit</th><th style="width:70px">Qté</th><th style="width:160px">Prix achat TTC</th><th style="width:160px">Prix vente HT</th><th style="width:70px">TVA</th><th style="width:130px;text-align:right">Total HT</th><th style="width:40px"></th></tr></thead>
+              <thead><tr><th>Produit</th><th style="width:70px">Qté</th><th style="width:160px">Prix achat TTC</th><th style="width:160px">Prix vente HT</th><th style="width:90px">Remise %</th><th style="width:70px">TVA</th><th style="width:130px;text-align:right">Total HT</th><th style="width:40px"></th></tr></thead>
               <tbody>
                 @if (lignes.length === 0) {
-                  <tr><td colspan="7"><div class="empty-state" style="padding:24px 0"><div class="empty-icon">🛒</div><div class="empty-title">Aucune ligne</div><div class="empty-sub">Cliquez sur "Ajouter une ligne" pour commencer</div></div></td></tr>
+                  <tr><td colspan="8"><div class="empty-state" style="padding:24px 0"><div class="empty-icon">🛒</div><div class="empty-title">Aucune ligne</div><div class="empty-sub">Cliquez sur "Ajouter une ligne" pour commencer</div></div></td></tr>
                 }
                 @for (l of lignes; track $index) {
                   <tr>
                     <td>
-                      <select class="form-select" style="height:34px;font-size:13px" [value]="l.produitId" (change)="updateLigneProduit($index, +$any($event.target).value)">
+                      <select class="form-select" style="height:34px;font-size:13px" [value]="l.produitId"
+                              (change)="updateLigneProduit($index, +$any($event.target).value)"
+                              [class.invalid]="submitted && l.produitId === 0">
                         <option [value]="0">— Produit —</option>
                         @for (p of produits; track p.id) {
                           <option [value]="p.id" [disabled]="p.quantiteStock === 0">{{ p.reference }} — {{ p.nom }}{{ p.quantiteStock === 0 ? ' (Rupture)' : p.isStockFaible ? ' (⚠️ ' + p.quantiteStock + ' en stock)' : ' (' + p.quantiteStock + ' en stock)' }}</option>
                         }
                       </select>
+                      @if (submitted && l.produitId === 0) {
+                        <div class="form-error" style="font-size:10.5px;margin-top:2px">Requis</div>
+                      }
                     </td>
                     <td>
                       <div class="input-group">
-                        <input type="number" [min]="1" [max]="l.stockDisponible" class="form-input with-suffix" [value]="l.quantite" (change)="updateLigneQty($index, +$any($event.target).value)" />
+                        <input type="number" [min]="1" [max]="l.stockDisponible" class="form-input with-suffix"
+                               [value]="l.quantite" (change)="updateLigneQty($index, +$any($event.target).value)"
+                               [class.invalid]="submitted && l.quantite < 1" />
                         <span class="input-suffix" style="font-size:11px;padding:0 8px" [style.color]="l.stockDisponible===0 ? 'var(--danger)' : (l.stockDisponible!==undefined && l.quantite>=l.stockDisponible!) ? 'var(--warning)' : 'var(--text-muted)'">
                           {{ l.produitId !== 0 && l.stockDisponible !== undefined ? (l.stockDisponible === 0 ? '⚠️' : '/'+l.stockDisponible) : '' }}
                         </span>
@@ -93,8 +104,22 @@
                     </td>
                     <td>
                       <div class="input-group">
-                        <input type="number" [min]="0" step="0.01" class="form-input with-suffix" style="height:34px" placeholder="0.00" [value]="l.prixUnitaire || ''" (change)="updateLignePrix($index, +$any($event.target).value)" />
+                        <input type="number" [min]="0" step="0.01" class="form-input with-suffix" style="height:34px"
+                               placeholder="0.00" [value]="l.prixUnitaire || ''"
+                               (change)="updateLignePrix($index, +$any($event.target).value)"
+                               [class.invalid]="submitted && l.prixUnitaire <= 0" />
                         <span class="input-suffix" style="top:50%">MAD</span>
+                      </div>
+                      @if (submitted && l.prixUnitaire <= 0) {
+                        <div class="form-error" style="font-size:10.5px;margin-top:2px">Prix requis</div>
+                      }
+                    </td>
+                    <td>
+                      <div class="input-group">
+                        <input type="number" [min]="0" [max]="100" step="1" class="form-input with-suffix" style="height:34px"
+                               placeholder="0" [value]="l.remise || 0"
+                               (change)="updateLigneRemise($index, +$any($event.target).value)" />
+                        <span class="input-suffix" style="top:50%">%</span>
                       </div>
                     </td>
                     <td>
@@ -102,13 +127,21 @@
                         <option [value]="0">0%</option><option [value]="7">7%</option><option [value]="14">14%</option><option [value]="20">20%</option>
                       </select>
                     </td>
-                    <td style="text-align:right;font-weight:700">{{ formatNum(l.quantite * l.prixUnitaire) }} MAD</td>
+                    <td style="text-align:right;font-weight:700">
+                      {{ formatNum(l.quantite * l.prixUnitaire * (1 - l.remise / 100)) }} MAD
+                      @if (l.remise > 0) {
+                        <div style="font-size:10px;color:var(--success);font-weight:400">-{{ l.remise }}%</div>
+                      }
+                    </td>
                     <td><button class="btn-icon danger" (click)="removeLigne($index)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg></button></td>
                   </tr>
                 }
               </tbody>
             </table>
           </div>
+          @if (submitted && lignes.length === 0) {
+            <div class="form-error-banner">Ajoutez au moins une ligne de produit</div>
+          }
           @if (lignes.length > 0) {
             <div class="totals-row">
               <div class="total-item"><span class="total-label">Total HT</span><span class="total-value">{{ formatNum(totalHT) }} MAD</span></div>

@@ -20,6 +20,7 @@ export class ProduitFormComponent implements OnInit {
   isEdit = false;
   loading = false;
   saving = false;
+  submitted = false;
 
   form: Partial<Produit> = {
     nom: '', description: '', prixHT: 0, tva: 20, prixTTC: 0,
@@ -88,8 +89,10 @@ export class ProduitFormComponent implements OnInit {
   }
 
   async save(andNew = false): Promise<void> {
+    this.submitted = true;
     if (!this.form.nom?.trim()) { this.toast.notify('Le nom du produit est requis', 'warning'); return; }
-    if ((this.form.prixHT ?? 0) <= 0) { this.toast.notify('Le prix HT doit être > 0', 'warning'); return; }
+    if ((this.form.prixHT ?? 0) <= 0) { this.toast.notify("Le prix d'achat HT doit être > 0", 'warning'); return; }
+    if ((this.form.prixVenteHT ?? 0) <= 0) { this.toast.notify('Le prix de vente HT doit être > 0', 'warning'); return; }
     this.saving = true;
     try {
       if (this.isEdit && this.id) {

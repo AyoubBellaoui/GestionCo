@@ -25,6 +25,7 @@ interface LigneForm {
   referenceProduit?: string;
   quantite: number;
   prixUnitaire: number;
+  remise: number;
   prixReference?: number;
   tva: number;
   total: number;
@@ -46,6 +47,7 @@ export class VenteFormComponent implements OnInit {
   paiementInitial = 0;
   methodePaiement = 'Espece';
   saving = false;
+  submitted = false;
 
   newClientModalOpen = false;
   newClientSaving = false;
@@ -67,15 +69,19 @@ export class VenteFormComponent implements OnInit {
     this.loadingData = false;
   }
 
-  get totalHT(): number { return this.lignes.reduce((s, l) => s + l.quantite * l.prixUnitaire, 0); }
-  get totalTVA(): number { return this.lignes.reduce((s, l) => s + l.quantite * l.prixUnitaire * (l.tva / 100), 0); }
+  get totalHT(): number { return this.lignes.reduce((s, l) => s + l.quantite * l.prixUnitaire * (1 - l.remise / 100), 0); }
+  get totalTVA(): number { return this.lignes.reduce((s, l) => s + l.quantite * l.prixUnitaire * (1 - l.remise / 100) * (l.tva / 100), 0); }
   get totalTTC(): number { return this.totalHT + this.totalTVA; }
   get reste(): number { return this.totalTTC - this.paiementInitial; }
   get selectedClient(): Client | undefined { return this.clients.find(c => c.id === this.clientId); }
 
   addLigne(): void {
     const tva = this.settings.settings.facturation.tvaParDefaut;
-    this.lignes = [...this.lignes, { produitId: 0, quantite: 1, prixUnitaire: 0, tva, total: 0 }];
+    this.lignes = [...this.lignes, { produitId: 0, quantite: 1, prixUnitaire: 0, remise: 0, tva, total: 0 }];
+  }
+
+  private calcTotal(l: LigneForm): number {
+    return l.quantite * l.prixUnitaire * (1 - l.remise / 100);
   }
 
   updateLigneProduit(i: number, produitId: number): void {
@@ -90,20 +96,26 @@ export class VenteFormComponent implements OnInit {
       l.stockDisponible = p.quantiteStock;
       l.quantite = Math.max(1, Math.min(l.quantite, p.quantiteStock));
     }
-    l.total = l.quantite * l.prixUnitaire;
+    l.total = this.calcTotal(l);
     this.lignes = this.lignes.map((x, idx) => idx === i ? l : x);
   }
 
   updateLigneQty(i: number, quantite: number): void {
     const l = { ...this.lignes[i], quantite };
     if (l.stockDisponible !== undefined) l.quantite = Math.max(1, Math.min(l.quantite, l.stockDisponible));
-    l.total = l.quantite * l.prixUnitaire;
+    l.total = this.calcTotal(l);
     this.lignes = this.lignes.map((x, idx) => idx === i ? l : x);
   }
 
   updateLignePrix(i: number, prixUnitaire: number): void {
     const l = { ...this.lignes[i], prixUnitaire };
-    l.total = l.quantite * l.prixUnitaire;
+    l.total = this.calcTotal(l);
+    this.lignes = this.lignes.map((x, idx) => idx === i ? l : x);
+  }
+
+  updateLigneRemise(i: number, remise: number): void {
+    const l = { ...this.lignes[i], remise: Math.min(100, Math.max(0, remise || 0)) };
+    l.total = this.calcTotal(l);
     this.lignes = this.lignes.map((x, idx) => idx === i ? l : x);
   }
 
@@ -147,9 +159,12 @@ export class VenteFormComponent implements OnInit {
   }
 
   async save(): Promise<void> {
+    this.submitted = true;
     if (!this.clientId) { this.toast.notify('Sélectionnez un client', 'warning'); return; }
     if (this.lignes.length === 0) { this.toast.notify('Ajoutez au moins une ligne', 'warning'); return; }
-    if (this.lignes.some(l => l.produitId === 0)) { this.toast.notify('Tous les produits doivent être sélectionnés', 'warning'); return; }
+    if (this.lignes.some(l => l.produitId === 0)) { this.toast.notify('Sélectionnez un produit pour chaque ligne', 'warning'); return; }
+    if (this.lignes.some(l => l.prixUnitaire <= 0)) { this.toast.notify('Le prix de vente doit être > 0 sur chaque ligne', 'warning'); return; }
+    if (this.lignes.some(l => l.quantite < 1)) { this.toast.notify('La quantité doit être ≥ 1 sur chaque ligne', 'warning'); return; }
     if (this.lignes.some(l => l.stockDisponible === 0)) { this.toast.notify('Un produit est en rupture de stock', 'warning'); return; }
     this.saving = true;
     try {

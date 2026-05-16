@@ -406,7 +406,10 @@ static async Task ApplyManualColumnsAsync(AppDbContext db, ILogger logger)
 {
     var columns = new[]
     {
-        ("Clients", "SourceAcquisition", "NVARCHAR(100) NULL"),
+        ("Clients",       "SourceAcquisition", "NVARCHAR(100) NULL"),
+        ("lignes_vente",  "Remise",             "DECIMAL(5,2) NOT NULL DEFAULT 0"),
+        ("lignes_achat",  "Remise",             "DECIMAL(5,2) NOT NULL DEFAULT 0"),
+        ("lignes_devis",  "Remise",             "DECIMAL(5,2) NOT NULL DEFAULT 0"),
     };
 
     foreach (var (table, column, definition) in columns)

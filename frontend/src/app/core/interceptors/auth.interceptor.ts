@@ -3,10 +3,14 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
+import { ToastService } from '../services/toast.service';
+
+let sessionExpiredShown = false;
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
   const router = inject(Router);
+  const toast = inject(ToastService);
   const token = localStorage.getItem('gc_token');
   const authReq = token
     ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
@@ -15,6 +19,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(authReq).pipe(
     catchError(err => {
       if (err.status === 401 && !router.url.includes('/login')) {
+        if (!sessionExpiredShown) {
+          sessionExpiredShown = true;
+          toast.notify('Session expirée — veuillez vous reconnecter', 'warning');
+          setTimeout(() => { sessionExpiredShown = false; }, 5000);
+        }
         auth.clearAuth();
         router.navigate(['/login']);
       }
