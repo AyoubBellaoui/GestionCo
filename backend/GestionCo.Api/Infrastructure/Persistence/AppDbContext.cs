@@ -42,6 +42,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<DevisEntity> Devis => Set<DevisEntity>();
     public DbSet<LigneDevisEntity> LignesDevis => Set<LigneDevisEntity>();
+    public DbSet<Domain.Entities.ParametresFacturation> ParametresFacturation => Set<Domain.Entities.ParametresFacturation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

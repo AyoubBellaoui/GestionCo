@@ -3,18 +3,17 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule, NgClass } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Devis, Client } from '../../core/models';
 import { formatNum, formatDate, getAvatarClass } from '../../core/utils/format';
 import { SettingsService } from '../../core/services/settings.service';
 
-type DateRange = 'today' | '7d' | '30d' | '12m' | 'all';
-
 @Component({
   selector: 'app-devis',
   standalone: true,
-  imports: [CommonModule, TopbarComponent, FormsModule, NgClass],
+  imports: [CommonModule, TopbarComponent, PaginationComponent, FormsModule, NgClass],
   templateUrl: './devis.component.html',
 })
 export class DevisComponent implements OnInit {
@@ -24,7 +23,7 @@ export class DevisComponent implements OnInit {
   search = '';
   statusFilter = '';
   clientFilter = '';
-  dateRange: DateRange = 'all';
+  selectedDate = '';
   page = 1;
   pageSize = 10;
 
@@ -32,13 +31,6 @@ export class DevisComponent implements OnInit {
   formatDate = formatDate;
   getAvatarClass = getAvatarClass;
   Math = Math;
-
-  readonly dateRangeOptions = [
-    { value: '7d',  label: '7j' },
-    { value: '30d', label: '30j' },
-    { value: '12m', label: '12m' },
-    { value: 'all', label: 'Tout' },
-  ];
 
   constructor(private api: ApiService, private toast: ToastService, public router: Router, private settings: SettingsService) {}
 
@@ -70,16 +62,17 @@ export class DevisComponent implements OnInit {
   }
 
   get filtered(): Devis[] {
-    const now = Date.now();
-    const ranges: Record<DateRange, number> = { today: 86400000, '7d': 7 * 86400000, '30d': 30 * 86400000, '12m': 365 * 86400000, all: Infinity };
-    const rangeMs = ranges[this.dateRange];
     return this.devisList.filter(d => {
       if (this.search && !(d.reference.toLowerCase().includes(this.search.toLowerCase()) || d.nomClient.toLowerCase().includes(this.search.toLowerCase()))) return false;
       if (this.statusFilter === 'Expire') {
         if (!d.estExpire && d.statut !== 'Expire') return false;
       } else if (this.statusFilter && d.statut !== this.statusFilter) return false;
       if (this.clientFilter && String(d.clientId) !== this.clientFilter) return false;
-      if (rangeMs !== Infinity && now - new Date(d.dateDevis).getTime() > rangeMs) return false;
+      if (this.selectedDate) {
+        const dd = new Date(d.dateDevis);
+        const dStr = `${dd.getFullYear()}-${String(dd.getMonth()+1).padStart(2,'0')}-${String(dd.getDate()).padStart(2,'0')}`;
+        if (dStr !== this.selectedDate) return false;
+      }
       return true;
     });
   }
@@ -99,11 +92,9 @@ export class DevisComponent implements OnInit {
   }
 
   get totalFiltered(): number { return this.filtered.length; }
-  get pageCount(): number { return Math.max(1, Math.ceil(this.totalFiltered / this.pageSize)); }
   get paged(): Devis[] { return this.filtered.slice((this.page - 1) * this.pageSize, this.page * this.pageSize); }
 
-  setDateRange(r: string): void { this.dateRange = r as DateRange; this.page = 1; }
-  resetFilters(): void { this.search = ''; this.statusFilter = ''; this.clientFilter = ''; this.dateRange = 'all'; this.page = 1; }
+  resetFilters(): void { this.search = ''; this.statusFilter = ''; this.clientFilter = ''; this.selectedDate = ''; this.page = 1; }
 
   async marquerEnvoye(d: Devis): Promise<void> {
     try {
@@ -199,16 +190,4 @@ export class DevisComponent implements OnInit {
     } finally { this.emailSending = false; }
   }
 
-  buildPageList(): (number | '…')[] {
-    const total = this.pageCount;
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-    const pages: (number | '…')[] = [1];
-    if (this.page > 3) pages.push('…');
-    for (let i = Math.max(2, this.page - 1); i <= Math.min(total - 1, this.page + 1); i++) pages.push(i);
-    if (this.page < total - 2) pages.push('…');
-    pages.push(total);
-    return pages;
-  }
-
-  isPageNum(p: number | '…'): p is number { return p !== '…'; }
 }

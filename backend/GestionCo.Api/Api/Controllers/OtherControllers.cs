@@ -1,6 +1,8 @@
 using GestionCo.Api.Application.Dashboard;
 using GestionCo.Api.Application.Logs;
 using GestionCo.Api.Application.MouvementsStock;
+using GestionCo.Api.Application.Search;
+using GestionCo.Api.Application.Settings;
 using GestionCo.Api.Application.Utilisateurs;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -102,4 +104,28 @@ public class UtilisateursController : ControllerBase
         await _mediator.Send(new DeleteUtilisateurCommand(id), ct);
         return NoContent();
     }
+}
+
+[ApiController]
+[Route("api/search")]
+[Authorize]
+public class SearchController(IMediator mediator) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> Search([FromQuery] string q = "", [FromQuery] int take = 5, CancellationToken ct = default)
+        => Ok(await mediator.Send(new GlobalSearchQuery(q, take), ct));
+}
+
+[ApiController]
+[Route("api/parametres")]
+[Authorize(Policy = "AdminOnly")]
+public class ParametresController(IMediator mediator) : ControllerBase
+{
+    [HttpGet("facturation")]
+    public async Task<IActionResult> GetFacturation(CancellationToken ct)
+        => Ok(await mediator.Send(new GetFacturationSettingsQuery(), ct));
+
+    [HttpPut("facturation")]
+    public async Task<IActionResult> UpdateFacturation([FromBody] FacturationSettingsDto dto, CancellationToken ct)
+        => Ok(await mediator.Send(new UpdateFacturationSettingsCommand(dto), ct));
 }

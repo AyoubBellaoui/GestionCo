@@ -334,6 +334,15 @@ export interface UpdateUtilisateurPayload {
 }
 
 // ============ SETTINGS ============
+export type FacturationSettings = {
+  prefixeFacture: string;
+  prefixeVente: string;
+  prefixeAchat: string;
+  prefixeProduit: string;
+  tvaParDefaut: number;
+  delaiPaiement: number;
+};
+
 export type Devise = 'MAD' | 'EUR' | 'USD';
 export type FormatDate = 'dd/MM/yyyy' | 'MM/dd/yyyy' | 'yyyy-MM-dd';
 
@@ -534,6 +543,85 @@ export interface TVAReport {
   totalTVACollectee: number;
   totalTVADeductible: number;
   totalTVANette: number;
+}
+
+// ============ GLOBAL SEARCH ============
+export interface SearchItem {
+  type: string;
+  id: number;
+  label: string;
+  sublabel?: string;
+  badge?: string;
+  route: string;
+  icon: string;
+}
+
+export interface SearchResults {
+  clients: SearchItem[];
+  produits: SearchItem[];
+  ventes: SearchItem[];
+  factures: SearchItem[];
+  devis: SearchItem[];
+  achats: SearchItem[];
+  fournisseurs: SearchItem[];
+  total: number;
+}
+
+// ============ RAPPORTS - Balance Âgée ============
+export interface BalanceAgeeClient {
+  clientId: number;
+  nomClient: string;
+  initiales: string;
+  totalImpaye: number;
+  courant: number;
+  j1_30: number;
+  j31_60: number;
+  j61_90: number;
+  j90Plus: number;
+}
+
+export interface BalanceAgeeReport {
+  dateArrete: string;
+  clients: BalanceAgeeClient[];
+  totalImpaye: number;
+  totalCourant: number;
+  totalJ1_30: number;
+  totalJ31_60: number;
+  totalJ61_90: number;
+  totalJ90Plus: number;
+  nombreClients: number;
+}
+
+// ============ RAPPORTS - Performance Commerciale ============
+export interface TopClientPerf {
+  clientId: number;
+  nomClient: string;
+  initiales: string;
+  nombreVentes: number;
+  montantTotalHT: number;
+  montantTotal: number;
+  montantPaye: number;
+  montantImpaye: number;
+  panierMoyen: number;
+}
+
+export interface TopProduitPerf {
+  produitId: number;
+  nomProduit: string;
+  reference: string;
+  quantiteVendue: number;
+  montantHT: number;
+  pourcentageCA: number;
+}
+
+export interface PerformanceCommerciale {
+  annee: number;
+  nombreVentes: number;
+  nombreClients: number;
+  caHt: number;
+  caTtc: number;
+  topClients: TopClientPerf[];
+  topProduits: TopProduitPerf[];
 }
 
 // ============ PAGED LIST ============

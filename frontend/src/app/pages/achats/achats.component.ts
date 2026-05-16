@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
 import { ModalComponent } from '../../shared/modal/modal.component';
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ExportService } from '../../core/services/export.service';
@@ -13,11 +14,11 @@ import { formatNum, formatDate, getInitials, getAvatarClass, getPayStatus } from
 @Component({
   selector: 'app-achats',
   standalone: true,
-  imports: [CommonModule, TopbarComponent, ModalComponent, FormsModule],
+  imports: [CommonModule, TopbarComponent, ModalComponent, PaginationComponent, FormsModule],
   templateUrl: './achats.component.html',
 })
 export class AchatsComponent implements OnInit {
-  achats: Achat[] = [];
+  items: Achat[] = [];
   fournisseurs: Fournisseur[] = [];
   loading = true;
   search = '';
@@ -26,10 +27,11 @@ export class AchatsComponent implements OnInit {
   selectedDate = '';
   page = 1;
   pageSize = 10;
+  total = 0;
+  stats = { depenses: 0, count: 0, fournisseurs: 0, impayes: 0, nbImpayes: 0 };
+
   modalOpen = false;
   viewAchat: Achat | null = null;
-
-  // Paiement rapide depuis le modal
   paiementMontant = 0;
   paiementMethode = 'Espece';
   paiementSaving = false;
@@ -41,22 +43,58 @@ export class AchatsComponent implements OnInit {
   getPayStatus = getPayStatus;
   Math = Math;
 
+  private searchTimer: any;
+
   constructor(private api: ApiService, private toast: ToastService, private exportSvc: ExportService, public router: Router) {}
 
-  async ngOnInit(): Promise<void> { await this.load(); }
+  async ngOnInit(): Promise<void> {
+    await Promise.all([this.load(), this.loadStats(), this.loadFournisseurs()]);
+  }
 
-  exportExcel(): void { this.exportSvc.exportAchats(this.achats); }
+  private async loadFournisseurs(): Promise<void> {
+    try { this.fournisseurs = await this.api.fournisseursList(); } catch { /* ignore */ }
+  }
+
+  async loadStats(): Promise<void> {
+    const now = new Date();
+    const dateDebut = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const [monthRes, allRes] = await Promise.allSettled([
+      this.api.achatsListPaged({ page: 1, pageSize: 500, dateDebut }),
+      this.api.achatsListPaged({ page: 1, pageSize: 500 }),
+    ]);
+    const month = monthRes.status === 'fulfilled' ? monthRes.value.items : [];
+    const all   = allRes.status === 'fulfilled'   ? allRes.value.items   : [];
+    const fournIds = new Set(all.map(a => a.fournisseurId));
+    const depenses = month.reduce((s, a) => s + a.montantTotal, 0);
+    const impayes  = all.filter(a => a.statut !== 'Paye' && a.statut !== 'Annule').reduce((s, a) => s + a.reste, 0);
+    this.stats = {
+      depenses, count: month.length, fournisseurs: fournIds.size,
+      impayes, nbImpayes: all.filter(a => a.statut !== 'Paye' && a.statut !== 'Annule' && a.reste > 0).length,
+    };
+  }
 
   async load(): Promise<void> {
     this.loading = true;
     try {
-      const [a, f] = await Promise.all([
-        this.api.achatsList().catch(() => []),
-        this.api.fournisseursList().catch(() => []),
-      ]);
-      this.achats = a;
-      this.fournisseurs = f;
+      const result = await this.api.achatsListPaged({
+        page: this.page, pageSize: this.pageSize,
+        search: this.search || undefined,
+        statut: this.statusFilter || undefined,
+        fournisseurId: this.fournisseurFilter ? Number(this.fournisseurFilter) : undefined,
+        dateDebut: this.selectedDate || undefined,
+        dateFin: this.selectedDate || undefined,
+      });
+      this.items = result.items;
+      this.total = result.totalCount;
     } finally { this.loading = false; }
+  }
+
+  onPage(p: number): void { this.page = p; this.load(); }
+  onPageSize(ps: number): void { this.pageSize = ps; this.page = 1; this.load(); }
+  onFilterChange(): void { this.page = 1; this.load(); }
+  onSearchChange(): void {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => { this.page = 1; this.load(); }, 300);
   }
 
   achatStatus(a: Achat): { label: string; cls: string } {
@@ -66,84 +104,32 @@ export class AchatsComponent implements OnInit {
     return { label: 'Crédit', cls: 'pending' };
   }
 
-  get filtered(): Achat[] {
-    return this.achats.filter(a => {
-      if (this.search && !a.reference.toLowerCase().includes(this.search.toLowerCase()) &&
-        !(a.nomFournisseur || '').toLowerCase().includes(this.search.toLowerCase())) return false;
-      if (this.statusFilter && a.statut !== this.statusFilter) return false;
-      if (this.fournisseurFilter && String(a.fournisseurId) !== this.fournisseurFilter) return false;
-      if (this.selectedDate) {
-        const d = new Date(a.dateAchat);
-        const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        if (iso !== this.selectedDate) return false;
-      }
-      return true;
-    });
-  }
-
-  get stats() {
-    const now = new Date();
-    const thisMonth = this.achats.filter(a => {
-      const d = new Date(a.dateAchat);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    });
-    const depenses = thisMonth.reduce((s, a) => s + a.montantTotal, 0);
-    const count = thisMonth.length;
-    const fournisseurs = new Set(this.achats.map(a => a.fournisseurId)).size;
-    const impayes = this.achats.filter(a => a.statut !== 'Paye' && a.statut !== 'Annule').reduce((s, a) => s + a.reste, 0);
-    const nbImpayes = this.achats.filter(a => a.statut !== 'Paye' && a.statut !== 'Annule' && a.reste > 0).length;
-    return { depenses, count, fournisseurs, impayes, nbImpayes };
-  }
-
-  get total(): number { return this.filtered.length; }
-  get pageCount(): number { return Math.max(1, Math.ceil(this.total / this.pageSize)); }
-  get paged(): Achat[] { return this.filtered.slice((this.page - 1) * this.pageSize, this.page * this.pageSize); }
-
   resetFilters(): void {
-    this.search = '';
-    this.statusFilter = '';
-    this.fournisseurFilter = '';
-    this.selectedDate = '';
-    this.page = 1;
+    this.search = ''; this.statusFilter = ''; this.fournisseurFilter = ''; this.selectedDate = ''; this.page = 1;
+    this.load();
   }
 
   openDetail(a: Achat): void {
-    this.viewAchat = a;
-    this.paiementMontant = 0;
-    this.paiementMethode = 'Espece';
-    this.modalOpen = true;
+    this.viewAchat = a; this.paiementMontant = 0; this.paiementMethode = 'Espece'; this.modalOpen = true;
   }
 
   async addPaiement(): Promise<void> {
     if (!this.viewAchat || this.paiementMontant <= 0) return;
     this.paiementSaving = true;
     try {
-      const updated = await this.api.achatAddPaiement(this.viewAchat.id, {
-        montant: this.paiementMontant,
-        methode: this.paiementMethode,
-      });
-      this.achats = this.achats.map(a => a.id === updated.id ? updated : a);
+      await this.api.achatAddPaiement(this.viewAchat.id, { montant: this.paiementMontant, methode: this.paiementMethode });
       this.paiementMontant = 0;
       this.toast.notify('Paiement enregistré', 'success');
-      this.modalOpen = false;
-      this.viewAchat = null;
-    } catch {
-      this.toast.notify('Erreur lors du paiement', 'error');
-    } finally {
-      this.paiementSaving = false;
-    }
+      this.modalOpen = false; this.viewAchat = null;
+      await Promise.all([this.load(), this.loadStats()]);
+    } catch { this.toast.notify('Erreur lors du paiement', 'error'); }
+    finally { this.paiementSaving = false; }
   }
 
-  buildPageList(): (number | '…')[] {
-    const total = this.pageCount;
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-    const pages: (number | '…')[] = [1];
-    if (this.page > 3) pages.push('…');
-    for (let i = Math.max(2, this.page - 1); i <= Math.min(total - 1, this.page + 1); i++) pages.push(i);
-    if (this.page < total - 2) pages.push('…');
-    pages.push(total);
-    return pages;
+  async exportExcel(): Promise<void> {
+    try {
+      const r = await this.api.achatsListPaged({ page: 1, pageSize: 2000 });
+      this.exportSvc.exportAchats(r.items);
+    } catch { this.toast.notify('Erreur export', 'error'); }
   }
-
-  isPageNum(p: number | '…'): p is number { return p !== '…'; }
 }

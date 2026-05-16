@@ -280,7 +280,8 @@ public record GetAchatsQuery(
     string? Search = null,
     int? FournisseurId = null,
     DateTime? DateDebut = null,
-    DateTime? DateFin = null
+    DateTime? DateFin = null,
+    string? Statut = null
 ) : IRequest<PagedList<AchatDto>>;
 
 public class GetAchatsHandler : IRequestHandler<GetAchatsQuery, PagedList<AchatDto>>
@@ -306,8 +307,10 @@ public class GetAchatsHandler : IRequestHandler<GetAchatsQuery, PagedList<AchatD
         }
 
         if (q.FournisseurId.HasValue) query = query.Where(a => a.FournisseurId == q.FournisseurId);
-        if (q.DateDebut.HasValue) query = query.Where(a => a.DateAchat >= q.DateDebut);
-        if (q.DateFin.HasValue) query = query.Where(a => a.DateAchat <= q.DateFin);
+        if (q.DateDebut.HasValue) query = query.Where(a => a.DateAchat >= q.DateDebut.Value.Date);
+        if (q.DateFin.HasValue) query = query.Where(a => a.DateAchat < q.DateFin.Value.Date.AddDays(1));
+        if (!string.IsNullOrWhiteSpace(q.Statut) && Enum.TryParse<StatutAchat>(q.Statut, out var statut))
+            query = query.Where(a => a.Statut == statut);
 
         query = query.OrderByDescending(a => a.DateAchat);
 

@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
 import { ModalComponent } from '../../shared/modal/modal.component';
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Charge, CategorieCharge } from '../../core/models';
@@ -12,7 +13,7 @@ import { formatNum, formatDate, getPayStatus } from '../../core/utils/format';
 @Component({
   selector: 'app-charges',
   standalone: true,
-  imports: [CommonModule, TopbarComponent, ModalComponent, FormsModule],
+  imports: [CommonModule, TopbarComponent, ModalComponent, PaginationComponent, FormsModule],
   templateUrl: './charges.component.html',
 })
 export class ChargesComponent implements OnInit {
@@ -122,7 +123,6 @@ export class ChargesComponent implements OnInit {
   }
 
   get total(): number { return this.filtered.length; }
-  get pageCount(): number { return Math.max(1, Math.ceil(this.total / this.pageSize)); }
   get paged(): Charge[] { return this.filtered.slice((this.page - 1) * this.pageSize, this.page * this.pageSize); }
 
   resetFilters(): void {
@@ -263,16 +263,4 @@ export class ChargesComponent implements OnInit {
     }
   }
 
-  buildPageList(): (number | '…')[] {
-    const total = this.pageCount;
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-    const pages: (number | '…')[] = [1];
-    if (this.page > 3) pages.push('…');
-    for (let i = Math.max(2, this.page - 1); i <= Math.min(total - 1, this.page + 1); i++) pages.push(i);
-    if (this.page < total - 2) pages.push('…');
-    pages.push(total);
-    return pages;
-  }
-
-  isPageNum(p: number | '…'): p is number { return p !== '…'; }
 }

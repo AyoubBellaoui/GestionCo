@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NgClass } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ExportService } from '../../core/services/export.service';
@@ -14,7 +15,7 @@ import * as XLSX from 'xlsx';
 @Component({
   selector: 'app-produits',
   standalone: true,
-  imports: [TopbarComponent, FormsModule, NgClass],
+  imports: [TopbarComponent, PaginationComponent, FormsModule, NgClass],
   templateUrl: './produits.component.html',
 })
 export class ProduitsComponent implements OnInit {
@@ -23,6 +24,8 @@ export class ProduitsComponent implements OnInit {
   search = '';
   categorieFilter = '';
   stockFilter = '';
+  page = 1;
+  pageSize = 15;
 
   // Detail modal
   detailModal = false;
@@ -105,6 +108,10 @@ export class ProduitsComponent implements OnInit {
 
   get categories(): string[] {
     return Array.from(new Set(this.produits.map(p => p.categorieNom).filter(Boolean))) as string[];
+  }
+
+  get paged(): Produit[] {
+    return this.filtered.slice((this.page - 1) * this.pageSize, this.page * this.pageSize);
   }
 
   get filtered(): Produit[] {
@@ -203,5 +210,5 @@ export class ProduitsComponent implements OnInit {
     finally { this.ajustSaving = false; }
   }
 
-  resetFilters(): void { this.search = ''; this.categorieFilter = ''; this.stockFilter = ''; }
+  resetFilters(): void { this.search = ''; this.categorieFilter = ''; this.stockFilter = ''; this.page = 1; }
 }

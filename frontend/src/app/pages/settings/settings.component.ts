@@ -9,17 +9,16 @@ import { SettingsService } from '../../core/services/settings.service';
 import { UtilisateurDto, CreateUtilisateurPayload, UpdateUtilisateurPayload } from '../../core/models';
 import { getAvatarClass } from '../../core/utils/format';
 
-type TabKey = 'entreprise' | 'profil' | 'apparence' | 'notifications' | 'securite' | 'facturation' | 'comptes' | 'a-propos';
+type TabKey = 'entreprise' | 'profil' | 'apparence' | 'securite' | 'facturation' | 'comptes' | 'a-propos';
 
 const TABS: { key: TabKey; label: string; icon: string; desc: string; adminOnly?: boolean }[] = [
-  { key: 'entreprise',    label: 'Entreprise',     icon: '🏢', desc: 'Infos légales, ICE, RC, IF' },
-  { key: 'profil',        label: 'Mon profil',     icon: '👤', desc: 'Informations personnelles' },
-  { key: 'apparence',     label: 'Apparence',      icon: '🎨', desc: 'Devise & format de date' },
-  { key: 'notifications', label: 'Notifications',  icon: '🔔', desc: 'Alertes & emails' },
-  { key: 'securite',      label: 'Sécurité',       icon: '🔒', desc: 'Mot de passe, sessions' },
-  { key: 'facturation',   label: 'Facturation',    icon: '📋', desc: 'Numérotation, TVA, RIB' },
-  { key: 'comptes',       label: 'Comptes',        icon: '👥', desc: 'Gérer les accès utilisateurs', adminOnly: true },
-  { key: 'a-propos',      label: 'À propos',       icon: 'ℹ️', desc: 'Version & infos système' },
+  { key: 'entreprise',  label: 'Entreprise',  icon: '🏢', desc: 'Infos légales, ICE, RC, IF' },
+  { key: 'profil',      label: 'Mon profil',  icon: '👤', desc: 'Informations personnelles' },
+  { key: 'apparence',   label: 'Apparence',   icon: '🎨', desc: 'Format de date & affichage' },
+  { key: 'securite',    label: 'Sécurité',    icon: '🔒', desc: 'Mot de passe, sessions' },
+  { key: 'facturation', label: 'Facturation', icon: '📋', desc: 'Numérotation, TVA, délais' },
+  { key: 'comptes',     label: 'Comptes',     icon: '👥', desc: 'Gérer les accès utilisateurs', adminOnly: true },
+  { key: 'a-propos',    label: 'À propos',    icon: 'ℹ️', desc: 'Version & infos système' },
 ];
 
 @Component({
@@ -35,6 +34,8 @@ export class SettingsComponent implements OnInit {
 
   profil = { prenom: '', nom: '', telephone: '' };
   securite = { ancienMdp: '', nouveauMdp: '', confirmMdp: '' };
+  securiteChanging = false;
+  factuLoading = false;
 
   comptesList: UtilisateurDto[] = [];
   comptesLoading = false;
@@ -79,18 +80,33 @@ export class SettingsComponent implements OnInit {
   async setTab(key: TabKey): Promise<void> {
     this.activeTab = key;
     if (key === 'comptes') await this.loadComptes();
+    if (key === 'facturation') await this.loadFacturationSettings();
+  }
+
+  async loadFacturationSettings(): Promise<void> {
+    this.factuLoading = true;
+    try {
+      const data = await this.api.getFacturationSettings();
+      this.settings.setDraftFacturation(data);
+    } catch { /* use local defaults if backend unreachable */ }
+    finally { this.factuLoading = false; }
   }
 
   setIce(value: string): void {
     this.settings.setDraftEntreprise({ ice: value.replace(/\D/g, '').slice(0, 15) });
   }
 
-  setNotifKey(key: string, value: boolean): void {
-    this.settings.setDraftNotifs({ [key]: value } as any);
-  }
-
-  handleApply(): void {
-    this.toast.notify('Paramètres sauvegardés', 'success');
+  async handleApply(): Promise<void> {
+    if (this.activeTab === 'facturation') {
+      try {
+        await this.api.updateFacturationSettings(this.settings.settings.facturation);
+        this.toast.notify('Paramètres de facturation sauvegardés', 'success');
+      } catch {
+        this.toast.notify('Erreur lors de la sauvegarde', 'error');
+      }
+    } else {
+      this.toast.notify('Paramètres sauvegardés', 'success');
+    }
   }
 
   async handleSaveProfil(): Promise<void> {
@@ -111,7 +127,7 @@ export class SettingsComponent implements OnInit {
     }
   }
 
-  handleChangePassword(): void {
+  async handleChangePassword(): Promise<void> {
     if (!this.securite.ancienMdp || !this.securite.nouveauMdp) {
       this.toast.notify('Remplissez tous les champs', 'warning'); return;
     }
@@ -121,8 +137,19 @@ export class SettingsComponent implements OnInit {
     if (this.securite.nouveauMdp.length < 8) {
       this.toast.notify('Le mot de passe doit contenir au moins 8 caractères', 'warning'); return;
     }
-    this.toast.notify('Mot de passe modifié avec succès', 'success');
-    this.securite = { ancienMdp: '', nouveauMdp: '', confirmMdp: '' };
+    this.securiteChanging = true;
+    try {
+      await this.api.changePassword({
+        currentPassword: this.securite.ancienMdp,
+        newPassword: this.securite.nouveauMdp,
+      });
+      this.toast.notify('Mot de passe modifié avec succès', 'success');
+      this.securite = { ancienMdp: '', nouveauMdp: '', confirmMdp: '' };
+    } catch {
+      this.toast.notify('Mot de passe actuel incorrect', 'error');
+    } finally {
+      this.securiteChanging = false;
+    }
   }
 
   handleLogoUpload(event: Event): void {

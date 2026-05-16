@@ -31,6 +31,7 @@
         <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
         <input class="search-input" placeholder="Rechercher par client, vente..." [(ngModel)]="search" />
       </div>
+      <input type="date" class="form-input" style="width:200px" [(ngModel)]="selectedDate" />
       <select class="filter-select" [(ngModel)]="methodeFilter">
         <option value="">Toutes méthodes</option>
         <option value="Especes">Espèces</option>
@@ -120,6 +121,7 @@
         <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
         <input class="search-input" placeholder="Rechercher par fournisseur, achat..." [(ngModel)]="search" />
       </div>
+      <input type="date" class="form-input" style="width:200px" [(ngModel)]="selectedDate" />
       <select class="filter-select" [(ngModel)]="methodeFilter">
         <option value="">Toutes méthodes</option>
         <option value="Especes">Espèces</option>

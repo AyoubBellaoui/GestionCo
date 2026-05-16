@@ -525,8 +525,8 @@ public class GetChargesHandler : IRequestHandler<GetChargesQuery, PagedList<Char
         if (q.CategorieId.HasValue) query = query.Where(c => c.CategorieChargeId == q.CategorieId);
         if (q.FournisseurId.HasValue) query = query.Where(c => c.FournisseurId == q.FournisseurId);
         if (q.Statut.HasValue) query = query.Where(c => c.Statut == q.Statut);
-        if (q.DateDebut.HasValue) query = query.Where(c => c.DateCharge >= q.DateDebut);
-        if (q.DateFin.HasValue) query = query.Where(c => c.DateCharge <= q.DateFin);
+        if (q.DateDebut.HasValue) query = query.Where(c => c.DateCharge >= q.DateDebut.Value.Date);
+        if (q.DateFin.HasValue) query = query.Where(c => c.DateCharge < q.DateFin.Value.Date.AddDays(1));
 
         query = query.OrderByDescending(c => c.DateCharge);
 

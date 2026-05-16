@@ -302,6 +302,12 @@ public class CancelVenteHandler : IRequestHandler<CancelVenteCommand, Unit>
         if (vente.Facture != null)
             vente.Facture.Statut = StatutFacture.Annulee;
 
+        // Supprimer les notifications liées à cette vente (création + paiements)
+        await _db.Notifications
+            .Where(n => n.EntiteId == vente.Id &&
+                (n.Categorie == CategorieNotification.Vente || n.Categorie == CategorieNotification.Paiement))
+            .ExecuteDeleteAsync(ct);
+
         await _db.SaveChangesAsync(ct);
 
         await _audit.LogAsync(ActionLog.Delete, "ventes",
@@ -390,6 +396,25 @@ public class AddPaiementVenteHandler : IRequestHandler<AddPaiementVenteCommand, 
     }
 }
 
+// ============ GET VENTE DATES ============
+public record GetVenteDatesQuery : IRequest<List<string>>;
+
+public class GetVenteDatesHandler : IRequestHandler<GetVenteDatesQuery, List<string>>
+{
+    private readonly IAppDbContext _db;
+    public GetVenteDatesHandler(IAppDbContext db) => _db = db;
+
+    public async Task<List<string>> Handle(GetVenteDatesQuery req, CancellationToken ct)
+    {
+        var dates = await _db.Ventes
+            .Select(v => v.DateVente.Date)
+            .Distinct()
+            .OrderBy(d => d)
+            .ToListAsync(ct);
+        return dates.Select(d => d.ToString("yyyy-MM-dd")).ToList();
+    }
+}
+
 // ============ QUERIES ============
 public record GetVentesQuery(
     int Page = 1, int PageSize = 10,
@@ -440,8 +465,8 @@ public class GetVentesHandler : IRequestHandler<GetVentesQuery, PagedList<VenteD
 
         if (q.Statut.HasValue) query = query.Where(v => v.Statut == q.Statut);
         if (q.ClientId.HasValue) query = query.Where(v => v.ClientId == q.ClientId);
-        if (q.DateDebut.HasValue) query = query.Where(v => v.DateVente >= q.DateDebut);
-        if (q.DateFin.HasValue) query = query.Where(v => v.DateVente <= q.DateFin);
+        if (q.DateDebut.HasValue) query = query.Where(v => v.DateVente >= q.DateDebut.Value.Date);
+        if (q.DateFin.HasValue) query = query.Where(v => v.DateVente < q.DateFin.Value.Date.AddDays(1));
 
         query = query.OrderByDescending(v => v.DateVente);
 

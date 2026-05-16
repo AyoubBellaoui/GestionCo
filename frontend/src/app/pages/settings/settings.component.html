@@ -21,13 +21,6 @@
 
     <!-- Main content -->
     <main class="settings-main">
-      @if (settings.hasUnsavedChanges) {
-        <div class="unsaved-banner">
-          <span>⚠️ Vous avez des modifications non appliquées</span>
-          <button class="btn btn-primary btn-sm" (click)="handleApply()">💾 Appliquer maintenant</button>
-        </div>
-      }
-
       <!-- ENTREPRISE -->
       @if (activeTab === 'entreprise') {
         <div class="settings-panel">
@@ -149,17 +142,9 @@
       <!-- APPARENCE -->
       @if (activeTab === 'apparence') {
         <div class="settings-panel">
-          <div class="panel-header"><h2>🎨 Apparence</h2><p>Devise et format de date — appliqués partout dans l'application.</p></div>
+          <div class="panel-header"><h2>🎨 Apparence</h2><p>Format de date — appliqué partout dans l'application.</p></div>
           <div class="settings-row">
-            <div><div class="settings-row-label">💰 Devise</div><div class="settings-row-desc">Monnaie principale affichée dans l'app</div></div>
-            <select class="form-select" style="width:220px" [value]="settings.settings.devise" (change)="settings.setDraft('devise', $any($event.target).value)">
-              <option value="MAD">MAD (Dirham marocain)</option>
-              <option value="EUR">EUR (Euro)</option>
-              <option value="USD">USD (Dollar)</option>
-            </select>
-          </div>
-          <div class="settings-row">
-            <div><div class="settings-row-label">📅 Format de date</div><div class="settings-row-desc">Comment afficher les dates partout</div></div>
+            <div><div class="settings-row-label">📅 Format de date</div><div class="settings-row-desc">Comment afficher les dates partout dans l'app</div></div>
             <select class="form-select" style="width:220px" [value]="settings.settings.formatDate" (change)="settings.setDraft('formatDate', $any($event.target).value)">
               <option value="dd/MM/yyyy">31/12/2026 (FR)</option>
               <option value="MM/dd/yyyy">12/31/2026 (US)</option>
@@ -168,51 +153,10 @@
           </div>
           <div class="info-box" style="margin-top:20px">
             <div style="font-weight:700;margin-bottom:8px">👁️ Aperçu :</div>
-            <div style="display:flex;gap:24px;flex-wrap:wrap;font-size:14px">
-              <span>💰 Montant : <strong>1 234,56 {{ settings.settings.devise }}</strong></span>
-              <span>📅 Date : <strong>{{ getDatePreview() }}</strong></span>
-            </div>
+            <div style="font-size:14px">📅 Date : <strong>{{ getDatePreview() }}</strong></div>
           </div>
           <div class="panel-actions">
-            <button class="btn btn-primary" (click)="handleApply()" [disabled]="!settings.hasUnsavedChanges">💾 Appliquer partout</button>
-          </div>
-        </div>
-      }
-
-      <!-- NOTIFICATIONS -->
-      @if (activeTab === 'notifications') {
-        <div class="settings-panel">
-          <div class="panel-header"><h2>🔔 Notifications</h2><p>Choisissez les événements pour lesquels vous souhaitez être alerté.</p></div>
-          <div class="panel-section-title">📱 Notifications dans l'app</div>
-          @for (item of [
-            {key:'nouvelleVente',label:'Nouvelle vente créée',icon:'🛒'},
-            {key:'stockFaible',label:'Alerte stock faible',icon:'⚠️'},
-            {key:'factureImpayee',label:'Facture en retard',icon:'⏳'},
-            {key:'nouveauClient',label:'Nouveau client enregistré',icon:'👥'}
-          ]; track item.key) {
-            <div class="settings-row">
-              <div><div class="settings-row-label">{{ item.icon }} {{ item.label }}</div></div>
-              <label class="toggle">
-                <input type="checkbox" [checked]="$any(settings.settings.notifs)[item.key]" (change)="setNotifKey(item.key, $any($event.target).checked)" />
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-          }
-          <div class="panel-section-title">📧 Emails</div>
-          @for (item of [
-            {key:'emailDaily',label:'Résumé quotidien',desc:'Reçu chaque matin à 8h'},
-            {key:'emailWeekly',label:'Rapport hebdomadaire',desc:'Reçu chaque lundi'}
-          ]; track item.key) {
-            <div class="settings-row">
-              <div><div class="settings-row-label">{{ item.label }}</div><div class="settings-row-desc">{{ item.desc }}</div></div>
-              <label class="toggle">
-                <input type="checkbox" [checked]="$any(settings.settings.notifs)[item.key]" (change)="setNotifKey(item.key, $any($event.target).checked)" />
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-          }
-          <div class="panel-actions">
-            <button class="btn btn-primary" (click)="handleApply()" [disabled]="!settings.hasUnsavedChanges">💾 Appliquer les changements</button>
+            <button class="btn btn-primary" (click)="handleApply()">💾 Appliquer partout</button>
           </div>
         </div>
       }
@@ -228,7 +172,11 @@
             <div class="form-field"><label class="label">Confirmer le nouveau</label><input type="password" class="form-input" [(ngModel)]="securite.confirmMdp" /></div>
           </div>
           <div class="info-box" style="margin-top:16px;font-size:13px">💡 <strong>Recommandations :</strong> Au moins 8 caractères, avec majuscules, chiffres et symboles.</div>
-          <div class="panel-actions"><button class="btn btn-primary" (click)="handleChangePassword()">🔐 Changer le mot de passe</button></div>
+          <div class="panel-actions">
+            <button class="btn btn-primary" (click)="handleChangePassword()" [disabled]="securiteChanging">
+              {{ securiteChanging ? '⏳ Modification…' : '🔐 Changer le mot de passe' }}
+            </button>
+          </div>
           <div class="panel-section-title" style="margin-top:32px">🚨 Zone dangereuse</div>
           <div class="danger-zone">
             <div>
@@ -243,42 +191,54 @@
       <!-- FACTURATION -->
       @if (activeTab === 'facturation') {
         <div class="settings-panel">
-          <div class="panel-header"><h2>📋 Paramètres de facturation</h2><p>Personnalisez la numérotation et les paramètres par défaut.</p></div>
-          <div class="panel-section-title">🔢 Préfixes de référence</div>
-          <div class="form-grid">
-            <div class="form-field">
-              <label class="label">Préfixe factures</label>
-              <input class="form-input" [value]="settings.settings.facturation.prefixeFacture" (input)="settings.setDraftFacturation({prefixeFacture: $any($event.target).value.toUpperCase()})" />
-              <div class="field-hint">Ex: {{ settings.settings.facturation.prefixeFacture }}-2026-001</div>
+          <div class="panel-header"><h2>📋 Paramètres de facturation</h2><p>Numérotation automatique, TVA et délais — synchronisés avec le serveur.</p></div>
+          @if (factuLoading) {
+            <div class="loading-row" style="padding:32px;text-align:center">Chargement des paramètres…</div>
+          } @else {
+            <div class="info-box" style="margin-bottom:20px">
+              ℹ️ La modification d'un <strong>préfixe</strong> met à jour toutes les références existantes (ventes, factures, achats, produits) ainsi que les nouveaux documents.
+              La <strong>TVA par défaut</strong> et le <strong>délai de paiement</strong> sont appliqués aux nouveaux devis, ventes et factures.
             </div>
-            <div class="form-field">
-              <label class="label">Préfixe ventes</label>
-              <input class="form-input" [value]="settings.settings.facturation.prefixeVente" (input)="settings.setDraftFacturation({prefixeVente: $any($event.target).value.toUpperCase()})" />
-              <div class="field-hint">Ex: {{ settings.settings.facturation.prefixeVente }}-2026-0001</div>
+            <div class="panel-section-title">🔢 Préfixes de référence</div>
+            <div class="form-grid">
+              <div class="form-field">
+                <label class="label">Préfixe factures</label>
+                <input class="form-input" [value]="settings.settings.facturation.prefixeFacture" (input)="settings.setDraftFacturation({prefixeFacture: $any($event.target).value.toUpperCase()})" />
+                <div class="field-hint">Ex : {{ settings.settings.facturation.prefixeFacture }}-2026-001</div>
+              </div>
+              <div class="form-field">
+                <label class="label">Préfixe ventes</label>
+                <input class="form-input" [value]="settings.settings.facturation.prefixeVente" (input)="settings.setDraftFacturation({prefixeVente: $any($event.target).value.toUpperCase()})" />
+                <div class="field-hint">Ex : {{ settings.settings.facturation.prefixeVente }}-2026-0001</div>
+              </div>
+              <div class="form-field">
+                <label class="label">Préfixe achats</label>
+                <input class="form-input" [value]="settings.settings.facturation.prefixeAchat" (input)="settings.setDraftFacturation({prefixeAchat: $any($event.target).value.toUpperCase()})" />
+                <div class="field-hint">Ex : {{ settings.settings.facturation.prefixeAchat }}-2026-0001</div>
+              </div>
+              <div class="form-field">
+                <label class="label">Préfixe produits</label>
+                <input class="form-input" [value]="settings.settings.facturation.prefixeProduit" (input)="settings.setDraftFacturation({prefixeProduit: $any($event.target).value.toUpperCase()})" />
+                <div class="field-hint">Ex : {{ settings.settings.facturation.prefixeProduit }}-00001</div>
+              </div>
             </div>
-            <div class="form-field">
-              <label class="label">Préfixe achats</label>
-              <input class="form-input" [value]="settings.settings.facturation.prefixeAchat" (input)="settings.setDraftFacturation({prefixeAchat: $any($event.target).value.toUpperCase()})" />
+            <div class="panel-section-title">💰 Valeurs par défaut</div>
+            <div class="form-grid">
+              <div class="form-field">
+                <label class="label">TVA par défaut (%)</label>
+                <input type="number" min="0" max="100" class="form-input" [value]="settings.settings.facturation.tvaParDefaut" (input)="settings.setDraftFacturation({tvaParDefaut: +$any($event.target).value})" />
+                <div class="field-hint">Appliquée sur les nouvelles lignes de devis et ventes</div>
+              </div>
+              <div class="form-field">
+                <label class="label">Délai de paiement (jours)</label>
+                <input type="number" min="0" class="form-input" [value]="settings.settings.facturation.delaiPaiement" (input)="settings.setDraftFacturation({delaiPaiement: +$any($event.target).value})" />
+                <div class="field-hint">Date d'échéance calculée automatiquement à la création</div>
+              </div>
             </div>
-            <div class="form-field">
-              <label class="label">Préfixe produits</label>
-              <input class="form-input" [value]="settings.settings.facturation.prefixeProduit" (input)="settings.setDraftFacturation({prefixeProduit: $any($event.target).value.toUpperCase()})" />
+            <div class="panel-actions">
+              <button class="btn btn-primary" (click)="handleApply()">💾 Sauvegarder</button>
             </div>
-          </div>
-          <div class="panel-section-title">💰 Valeurs par défaut</div>
-          <div class="form-grid">
-            <div class="form-field">
-              <label class="label">TVA par défaut (%)</label>
-              <input type="number" class="form-input" [value]="settings.settings.facturation.tvaParDefaut" (input)="settings.setDraftFacturation({tvaParDefaut: +$any($event.target).value})" />
-            </div>
-            <div class="form-field">
-              <label class="label">Délai de paiement (jours)</label>
-              <input type="number" class="form-input" [value]="settings.settings.facturation.delaiPaiement" (input)="settings.setDraftFacturation({delaiPaiement: +$any($event.target).value})" />
-            </div>
-          </div>
-          <div class="panel-actions">
-            <button class="btn btn-primary" (click)="handleApply()" [disabled]="!settings.hasUnsavedChanges">💾 Appliquer les changements</button>
-          </div>
+          }
         </div>
       }
 
@@ -371,7 +331,7 @@
             Les factures incluent ICE, RC, IF, Patente, CNSS, TVA 20% et la mention article 145 du CGI.
           </div>
           <div class="panel-section-title">🎓 Crédits</div>
-          <div class="info-box">Projet PFE — <strong>Élaboration d'une méthodologie d'automatisation de la production des spécifications de l'IA</strong></div>
+          <div class="info-box">Projet PFE 2026 — <strong>Élaboration d'une méthodologie d'automatisation de la production des spécifications de l'IA</strong></div>
           <div class="info-box" style="margin-top:8px;display:flex;align-items:center;gap:10px">
             <span style="font-size:20px">👨‍💻</span>
             <div>

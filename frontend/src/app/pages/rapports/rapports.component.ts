@@ -1,18 +1,18 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NgClass, DecimalPipe } from '@angular/common';
+import { NgClass, DecimalPipe, DatePipe } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
 import { ApiService } from '../../core/services/api.service';
-import { PLReport, TVAReport } from '../../core/models';
+import { PLReport, TVAReport, BalanceAgeeReport, BalanceAgeeClient, PerformanceCommerciale } from '../../core/models';
 import { formatNum } from '../../core/utils/format';
 import * as XLSX from 'xlsx';
 
-type Tab = 'pl' | 'tva' | 'cashflow';
+type Tab = 'pl' | 'tva' | 'cashflow' | 'balance' | 'performance';
 
 @Component({
   selector: 'app-rapports',
   standalone: true,
-  imports: [FormsModule, NgClass, DecimalPipe, TopbarComponent],
+  imports: [FormsModule, NgClass, DecimalPipe, DatePipe, TopbarComponent],
   templateUrl: './rapports.component.html',
 })
 export class RapportsComponent implements OnInit {
@@ -24,6 +24,8 @@ export class RapportsComponent implements OnInit {
   tvaReport: TVAReport | null = null;
   cashFlow: any = null;
   cfMois = new Date().getMonth() + 1;
+  balanceAgee: BalanceAgeeReport | null = null;
+  performance: PerformanceCommerciale | null = null;
   loading = false;
 
   readonly moisLabels = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
@@ -40,14 +42,18 @@ export class RapportsComponent implements OnInit {
   async load(): Promise<void> {
     this.loading = true;
     try {
-      const [pl, tva, cf] = await Promise.all([
+      const [pl, tva, cf, balance, perf] = await Promise.allSettled([
         this.api.rapportPL(this.annee),
         this.api.rapportTVA(this.annee),
         this.api.rapportCashFlow(this.annee, this.cfMois),
+        this.api.rapportBalanceAgee(),
+        this.api.rapportPerformance(this.annee),
       ]);
-      this.plReport = pl;
-      this.tvaReport = tva;
-      this.cashFlow = cf;
+      if (pl.status       === 'fulfilled') this.plReport    = pl.value;
+      if (tva.status      === 'fulfilled') this.tvaReport   = tva.value;
+      if (cf.status       === 'fulfilled') this.cashFlow    = cf.value;
+      if (balance.status  === 'fulfilled') this.balanceAgee = balance.value;
+      if (perf.status     === 'fulfilled') this.performance = perf.value;
     } finally { this.loading = false; }
   }
 
@@ -69,7 +75,40 @@ export class RapportsComponent implements OnInit {
   }
   cfBar(val: number): number { return Math.round((val / this.cfBarMax()) * 100); }
 
-  // ── Excel export ──────────────────────────────────────────
+  // ── Balance Âgée helpers ──────────────────────────────────────
+  agingBarMax(): number {
+    if (!this.balanceAgee?.clients.length) return 1;
+    return Math.max(1, ...this.balanceAgee.clients.map(c => c.totalImpaye));
+  }
+  agingBar(val: number): number { return Math.round((val / this.agingBarMax()) * 100); }
+
+  agingBucketPct(val: number): number {
+    if (!this.balanceAgee || this.balanceAgee.totalImpaye === 0) return 0;
+    return Math.round((val / this.balanceAgee.totalImpaye) * 100);
+  }
+
+  agingRiskClass(c: BalanceAgeeClient): string {
+    if (c.j90Plus > 0)  return 'critical';
+    if (c.j61_90 > 0)   return 'high';
+    if (c.j31_60 > 0)   return 'medium';
+    if (c.j1_30 > 0)    return 'low';
+    return '';
+  }
+
+  // ── Performance helpers ───────────────────────────────────────
+  perfClientBarMax(): number {
+    if (!this.performance?.topClients.length) return 1;
+    return Math.max(1, ...this.performance.topClients.map(c => c.montantTotal));
+  }
+  perfClientBar(val: number): number { return Math.round((val / this.perfClientBarMax()) * 100); }
+
+  perfProduitBarMax(): number {
+    if (!this.performance?.topProduits.length) return 1;
+    return Math.max(1, ...this.performance.topProduits.map(p => p.montantHT));
+  }
+  perfProduitBar(val: number): number { return Math.round((val / this.perfProduitBarMax()) * 100); }
+
+  // ── Excel export ──────────────────────────────────────────────
   exportExcel(): void {
     if (this.tab === 'pl' && this.plReport) {
       const rows = this.plReport.mois.map(m => ({
@@ -96,6 +135,7 @@ export class RapportsComponent implements OnInit {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, `P&L ${this.annee}`);
       XLSX.writeFile(wb, `rapport-pl-${this.annee}.xlsx`);
+
     } else if (this.tab === 'tva' && this.tvaReport) {
       const rows = this.tvaReport.mois.map(m => ({
         'Mois':                m.nomMois,
@@ -115,13 +155,64 @@ export class RapportsComponent implements OnInit {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, `TVA ${this.annee}`);
       XLSX.writeFile(wb, `rapport-tva-${this.annee}.xlsx`);
+
+    } else if (this.tab === 'balance' && this.balanceAgee) {
+      const rows = this.balanceAgee.clients.map(c => ({
+        'Client':          c.nomClient,
+        'Total impayé':    c.totalImpaye,
+        'Courant':         c.courant,
+        '1-30 jours':      c.j1_30,
+        '31-60 jours':     c.j31_60,
+        '61-90 jours':     c.j61_90,
+        '90+ jours':       c.j90Plus,
+      }));
+      rows.push({
+        'Client':      'TOTAL',
+        'Total impayé': this.balanceAgee.totalImpaye,
+        'Courant':      this.balanceAgee.totalCourant,
+        '1-30 jours':   this.balanceAgee.totalJ1_30,
+        '31-60 jours':  this.balanceAgee.totalJ31_60,
+        '61-90 jours':  this.balanceAgee.totalJ61_90,
+        '90+ jours':    this.balanceAgee.totalJ90Plus,
+      });
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Balance Âgée');
+      XLSX.writeFile(wb, `balance-agee-${new Date().toISOString().slice(0,10)}.xlsx`);
+
+    } else if (this.tab === 'performance' && this.performance) {
+      const clients = this.performance.topClients.map((c, i) => ({
+        'Rang':            i + 1,
+        'Client':          c.nomClient,
+        'Nb ventes':       c.nombreVentes,
+        'CA HT (MAD)':     c.montantTotalHT,
+        'CA TTC (MAD)':    c.montantTotal,
+        'Payé (MAD)':      c.montantPaye,
+        'Impayé (MAD)':    c.montantImpaye,
+        'Panier moyen':    c.panierMoyen,
+      }));
+      const produits = this.performance.topProduits.map((p, i) => ({
+        'Rang':            i + 1,
+        'Produit':         p.nomProduit,
+        'Référence':       p.reference,
+        'Qté vendue':      p.quantiteVendue,
+        'CA HT (MAD)':     p.montantHT,
+        '% du CA':         p.pourcentageCA,
+      }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(clients),  'Top Clients');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(produits), 'Top Produits');
+      XLSX.writeFile(wb, `performance-${this.annee}.xlsx`);
     }
   }
 
-  // ── PDF download ──────────────────────────────────────────
+  // ── PDF download ──────────────────────────────────────────────
   exportingPdf = false;
 
+  canExportPdf(): boolean { return this.tab === 'pl' || this.tab === 'tva'; }
+
   async exportPdf(): Promise<void> {
+    if (!this.canExportPdf()) return;
     this.exportingPdf = true;
     try {
       const type = this.tab as 'pl' | 'tva';

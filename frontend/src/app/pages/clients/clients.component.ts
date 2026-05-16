@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NgClass } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -13,7 +14,7 @@ import * as XLSX from 'xlsx';
 @Component({
   selector: 'app-clients',
   standalone: true,
-  imports: [TopbarComponent, FormsModule, NgClass],
+  imports: [TopbarComponent, PaginationComponent, FormsModule, NgClass],
   templateUrl: './clients.component.html',
 })
 export class ClientsComponent implements OnInit {
@@ -21,6 +22,8 @@ export class ClientsComponent implements OnInit {
   loading = true;
   search = '';
   typeFilter = '';
+  page = 1;
+  pageSize = 15;
 
   formatNum = formatNum;
   getInitials = getInitials;
@@ -34,6 +37,10 @@ export class ClientsComponent implements OnInit {
     this.loading = true;
     try { this.clients = await this.api.clientsList().catch(() => []); }
     finally { this.loading = false; }
+  }
+
+  get paged(): Client[] {
+    return this.filtered.slice((this.page - 1) * this.pageSize, this.page * this.pageSize);
   }
 
   get filtered(): Client[] {
@@ -123,5 +130,5 @@ export class ClientsComponent implements OnInit {
     }
   }
 
-  resetFilters(): void { this.search = ''; this.typeFilter = ''; }
+  resetFilters(): void { this.search = ''; this.typeFilter = ''; this.page = 1; }
 }

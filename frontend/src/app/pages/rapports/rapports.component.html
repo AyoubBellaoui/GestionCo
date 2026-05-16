@@ -1,35 +1,44 @@
-<app-topbar title="Rapports financiers" subtitle="Compte de résultat et déclaration TVA" icon="📊">
+<app-topbar title="Rapports financiers" subtitle="Analyse financière et commerciale" icon="📊">
   <button class="btn btn-ghost" (click)="exportExcel()" [disabled]="loading" title="Exporter Excel">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
     Excel
   </button>
-  <button class="btn btn-ghost" (click)="exportPdf()" [disabled]="loading || exportingPdf" title="Télécharger PDF">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-    {{ exportingPdf ? 'PDF…' : 'PDF' }}
-  </button>
+  @if (canExportPdf()) {
+    <button class="btn btn-ghost" (click)="exportPdf()" [disabled]="loading || exportingPdf" title="Télécharger PDF">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      {{ exportingPdf ? 'PDF…' : 'PDF' }}
+    </button>
+  }
 </app-topbar>
 
 <div class="content">
 
   <!-- Header controls -->
-  <div class="toolbar" style="margin-bottom:0">
-    <!-- Tabs -->
-    <div style="display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:10px">
+  <div class="toolbar" style="margin-bottom:0;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:10px;flex-wrap:wrap">
       <button [class]="'btn btn-sm' + (tab === 'pl' ? ' btn-primary' : ' btn-ghost')" (click)="tab='pl'">
-        📈 Compte de résultat (P&L)
+        📈 P&amp;L
       </button>
       <button [class]="'btn btn-sm' + (tab === 'tva' ? ' btn-primary' : ' btn-ghost')" (click)="tab='tva'">
-        🧾 Déclaration TVA
+        🧾 TVA
       </button>
       <button [class]="'btn btn-sm' + (tab === 'cashflow' ? ' btn-primary' : ' btn-ghost')" (click)="tab='cashflow'">
         💸 Trésorerie
       </button>
+      <button [class]="'btn btn-sm' + (tab === 'balance' ? ' btn-primary' : ' btn-ghost')" (click)="tab='balance'">
+        ⏱️ Balance âgée
+      </button>
+      <button [class]="'btn btn-sm' + (tab === 'performance' ? ' btn-primary' : ' btn-ghost')" (click)="tab='performance'">
+        🏆 Performance
+      </button>
     </div>
     <div class="toolbar-divider"></div>
-    <label style="font-size:13px;color:var(--text-secondary);font-weight:500">Exercice :</label>
-    <select class="filter-select" style="width:110px" [(ngModel)]="annee" (ngModelChange)="onAnneeChange()">
-      @for (y of annees; track y) { <option [value]="y">{{ y }}</option> }
-    </select>
+    @if (tab !== 'balance') {
+      <label style="font-size:13px;color:var(--text-secondary);font-weight:500">Exercice :</label>
+      <select class="filter-select" style="width:110px" [(ngModel)]="annee" (ngModelChange)="onAnneeChange()">
+        @for (y of annees; track y) { <option [value]="y">{{ y }}</option> }
+      </select>
+    }
     @if (loading) {
       <div class="spinner" style="width:16px;height:16px;border-width:2px"></div>
     }
@@ -43,7 +52,6 @@
   @if (!loading || plReport) {
     @if (tab === 'pl' && plReport) {
 
-      <!-- Annual KPI cards -->
       <div class="stats-row" style="margin-top:16px">
         <div class="stat-card">
           <div class="stat-icon green">💰</div>
@@ -85,7 +93,6 @@
         </div>
       </div>
 
-      <!-- Monthly P&L table -->
       <div class="table-card" style="margin-top:16px">
         <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
           <div style="font-weight:600;font-size:15px">Détail mensuel — {{ annee }}</div>
@@ -153,19 +160,16 @@
         </div>
       </div>
 
-      <!-- P&L formula note -->
       <div style="margin-top:12px;padding:12px 16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);font-size:12px;color:var(--text-muted);display:flex;gap:24px;flex-wrap:wrap">
         <span>📐 <strong>Résultat brut</strong> = CA HT − Coût d'achat</span>
         <span>📐 <strong>Résultat net</strong> = Résultat brut − Charges opérationnelles</span>
         <span>ℹ️ Ventes annulées exclues · Coût d'achat = somme des lignes achat (HT)</span>
       </div>
-
     }
 
     <!-- ══════════════════════════════════ TVA ══════════════════════════════════ -->
     @if (tab === 'tva' && tvaReport) {
 
-      <!-- TVA KPI cards -->
       <div class="stats-row" style="margin-top:16px">
         <div class="stat-card">
           <div class="stat-icon blue">📥</div>
@@ -193,7 +197,7 @@
               {{ formatNum(tvaReport.totalTVANette) }} <small>MAD</small>
             </div>
             <div class="stat-trend neutral">
-              {{ tvaReport.totalTVANette >= 0 ? 'À reverser à l\'État' : 'Crédit de TVA' }}
+              {{ tvaReport.totalTVANette >= 0 ? "À reverser à l'État" : 'Crédit de TVA' }}
             </div>
           </div>
         </div>
@@ -209,7 +213,6 @@
         </div>
       </div>
 
-      <!-- TVA monthly table -->
       <div class="table-card" style="margin-top:16px">
         <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
           <div style="font-weight:600;font-size:15px">Déclaration TVA mensuelle — {{ annee }}</div>
@@ -276,22 +279,19 @@
         </div>
       </div>
 
-      <!-- TVA formula note -->
       <div style="margin-top:12px;padding:12px 16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);font-size:12px;color:var(--text-muted);display:flex;gap:24px;flex-wrap:wrap">
         <span>📐 <strong>TVA nette</strong> = TVA collectée (ventes) − TVA déductible (achats)</span>
         <span>🟢 Crédit TVA = la TVA déductible dépasse la collectée (remboursable)</span>
         <span>🔴 À reverser = montant dû à l'administration fiscale</span>
         <span>ℹ️ TVA déductible estimée depuis le taux TVA de chaque produit acheté</span>
       </div>
-
     }
   }
 
-  <!-- ════ CASH FLOW ════ -->
+  <!-- ════════════════════════════ CASH FLOW ════════════════════════════════ -->
   @if (tab === 'cashflow') {
     @if (!loading && cashFlow) {
-      <!-- Month selector -->
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;margin-top:16px">
         <label style="font-size:13px;font-weight:500;color:var(--text-secondary)">Mois :</label>
         <select class="filter-select" style="width:160px" [(ngModel)]="cfMois" (ngModelChange)="onCfMoisChange()">
           @for (m of moisLabels; track $index) {
@@ -301,7 +301,6 @@
         <span style="font-size:13px;color:var(--text-muted)">{{ annee }}</span>
       </div>
 
-      <!-- Summary cards -->
       <div class="stats-row" style="margin-bottom:16px">
         <div class="stat-card">
           <div class="stat-icon green">📥</div>
@@ -333,7 +332,6 @@
         </div>
       </div>
 
-      <!-- Daily chart -->
       <div class="table-card">
         <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);font-weight:600;font-size:15px">
           Flux de trésorerie — {{ moisLabels[cfMois - 1] }} {{ annee }}
@@ -396,9 +394,337 @@
     }
   }
 
+  <!-- ════════════════════════════ BALANCE ÂGÉE ════════════════════════════ -->
+  @if (tab === 'balance') {
+    @if (!loading && balanceAgee) {
+
+      <!-- KPI buckets -->
+      <div class="stats-row" style="margin-top:16px">
+        <div class="stat-card">
+          <div class="stat-icon red">⚠️</div>
+          <div>
+            <div class="stat-label">Total impayé</div>
+            <div class="stat-value neg">{{ formatNum(balanceAgee.totalImpaye) }} <small>MAD</small></div>
+            <div class="stat-trend neutral">{{ balanceAgee.nombreClients }} client(s) débiteurs</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue">🕐</div>
+          <div>
+            <div class="stat-label">Courant (non échu)</div>
+            <div class="stat-value">{{ formatNum(balanceAgee.totalCourant) }} <small>MAD</small></div>
+            <div class="stat-trend neutral">{{ agingBucketPct(balanceAgee.totalCourant) }}% du total</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon orange">📅</div>
+          <div>
+            <div class="stat-label">1 – 60 jours</div>
+            <div class="stat-value" [class]="(balanceAgee.totalJ1_30 + balanceAgee.totalJ31_60) > 0 ? 'neg' : ''">
+              {{ formatNum(balanceAgee.totalJ1_30 + balanceAgee.totalJ31_60) }} <small>MAD</small>
+            </div>
+            <div class="stat-trend neutral">{{ agingBucketPct(balanceAgee.totalJ1_30 + balanceAgee.totalJ31_60) }}% du total</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon red">🔴</div>
+          <div>
+            <div class="stat-label">61 jours et plus</div>
+            <div class="stat-value" [class]="(balanceAgee.totalJ61_90 + balanceAgee.totalJ90Plus) > 0 ? 'neg' : ''">
+              {{ formatNum(balanceAgee.totalJ61_90 + balanceAgee.totalJ90Plus) }} <small>MAD</small>
+            </div>
+            <div class="stat-trend down">Créances à risque élevé</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Aging distribution bar -->
+      @if (balanceAgee.totalImpaye > 0) {
+        <div class="table-card" style="margin-top:16px;padding:16px 20px">
+          <div style="font-weight:600;font-size:14px;margin-bottom:12px">Répartition des créances par ancienneté</div>
+          <div style="display:flex;height:28px;border-radius:8px;overflow:hidden;gap:2px">
+            @if (balanceAgee.totalCourant > 0) {
+              <div [style.flex]="balanceAgee.totalCourant" style="background:#3b82f6;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600;min-width:30px" [title]="'Courant: ' + formatNum(balanceAgee.totalCourant) + ' MAD'">
+                {{ agingBucketPct(balanceAgee.totalCourant) }}%
+              </div>
+            }
+            @if (balanceAgee.totalJ1_30 > 0) {
+              <div [style.flex]="balanceAgee.totalJ1_30" style="background:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600;min-width:30px" [title]="'1-30j: ' + formatNum(balanceAgee.totalJ1_30) + ' MAD'">
+                {{ agingBucketPct(balanceAgee.totalJ1_30) }}%
+              </div>
+            }
+            @if (balanceAgee.totalJ31_60 > 0) {
+              <div [style.flex]="balanceAgee.totalJ31_60" style="background:#ef4444;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600;min-width:30px" [title]="'31-60j: ' + formatNum(balanceAgee.totalJ31_60) + ' MAD'">
+                {{ agingBucketPct(balanceAgee.totalJ31_60) }}%
+              </div>
+            }
+            @if (balanceAgee.totalJ61_90 > 0) {
+              <div [style.flex]="balanceAgee.totalJ61_90" style="background:#b91c1c;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600;min-width:30px" [title]="'61-90j: ' + formatNum(balanceAgee.totalJ61_90) + ' MAD'">
+                {{ agingBucketPct(balanceAgee.totalJ61_90) }}%
+              </div>
+            }
+            @if (balanceAgee.totalJ90Plus > 0) {
+              <div [style.flex]="balanceAgee.totalJ90Plus" style="background:#7f1d1d;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600;min-width:30px" [title]="'90+j: ' + formatNum(balanceAgee.totalJ90Plus) + ' MAD'">
+                {{ agingBucketPct(balanceAgee.totalJ90Plus) }}%
+              </div>
+            }
+          </div>
+          <div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;font-size:12px">
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#3b82f6;margin-right:4px"></span>Courant</span>
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#f59e0b;margin-right:4px"></span>1-30 j</span>
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#ef4444;margin-right:4px"></span>31-60 j</span>
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#b91c1c;margin-right:4px"></span>61-90 j</span>
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#7f1d1d;margin-right:4px"></span>90+ j</span>
+          </div>
+        </div>
+      }
+
+      <!-- Aging table -->
+      <div class="table-card" style="margin-top:16px">
+        <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:600;font-size:15px">Balance âgée des créances clients</div>
+          <div style="font-size:12px;color:var(--text-muted)">Arrêtée au {{ balanceAgee.dateArrete | date:'dd/MM/yyyy' }}</div>
+        </div>
+        @if (balanceAgee.clients.length === 0) {
+          <div class="empty-state" style="padding:40px 0">
+            <div class="empty-icon">✅</div>
+            <div class="empty-title">Aucune créance en attente</div>
+            <div class="empty-sub">Tous vos clients sont à jour dans leurs paiements</div>
+          </div>
+        } @else {
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Client</th>
+                  <th style="text-align:right">Total impayé</th>
+                  <th style="text-align:right">Courant</th>
+                  <th style="text-align:right">1-30 j</th>
+                  <th style="text-align:right">31-60 j</th>
+                  <th style="text-align:right">61-90 j</th>
+                  <th style="text-align:right">90+ j</th>
+                  <th style="width:140px">Exposition</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of balanceAgee.clients; track c.clientId) {
+                  <tr>
+                    <td>
+                      <div style="display:flex;align-items:center;gap:10px">
+                        <div class="avatar-sm" style="background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:700;flex-shrink:0">{{ c.initiales }}</div>
+                        <span style="font-weight:500">{{ c.nomClient }}</span>
+                      </div>
+                    </td>
+                    <td style="text-align:right;font-weight:700;color:var(--danger)">{{ formatNum(c.totalImpaye) }}</td>
+                    <td style="text-align:right;color:#3b82f6">{{ c.courant > 0 ? formatNum(c.courant) : '—' }}</td>
+                    <td style="text-align:right;color:#f59e0b">{{ c.j1_30 > 0 ? formatNum(c.j1_30) : '—' }}</td>
+                    <td style="text-align:right;color:#ef4444">{{ c.j31_60 > 0 ? formatNum(c.j31_60) : '—' }}</td>
+                    <td style="text-align:right;color:#b91c1c">{{ c.j61_90 > 0 ? formatNum(c.j61_90) : '—' }}</td>
+                    <td style="text-align:right;color:#7f1d1d;font-weight:700">{{ c.j90Plus > 0 ? formatNum(c.j90Plus) : '—' }}</td>
+                    <td>
+                      <div style="background:var(--surface2);border-radius:4px;overflow:hidden;height:8px">
+                        <div [style.width.%]="agingBar(c.totalImpaye)"
+                             [style.background]="c.j90Plus > 0 ? '#7f1d1d' : c.j61_90 > 0 ? '#b91c1c' : c.j31_60 > 0 ? '#ef4444' : c.j1_30 > 0 ? '#f59e0b' : '#3b82f6'"
+                             style="height:100%;border-radius:4px;transition:width .3s"></div>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr style="font-weight:700;border-top:2px solid var(--border);background:var(--surface2)">
+                  <td>TOTAL ({{ balanceAgee.nombreClients }} clients)</td>
+                  <td style="text-align:right;color:var(--danger)">{{ formatNum(balanceAgee.totalImpaye) }}</td>
+                  <td style="text-align:right;color:#3b82f6">{{ formatNum(balanceAgee.totalCourant) }}</td>
+                  <td style="text-align:right;color:#f59e0b">{{ formatNum(balanceAgee.totalJ1_30) }}</td>
+                  <td style="text-align:right;color:#ef4444">{{ formatNum(balanceAgee.totalJ31_60) }}</td>
+                  <td style="text-align:right;color:#b91c1c">{{ formatNum(balanceAgee.totalJ61_90) }}</td>
+                  <td style="text-align:right;color:#7f1d1d">{{ formatNum(balanceAgee.totalJ90Plus) }}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        }
+      </div>
+
+      <div style="margin-top:12px;padding:12px 16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);font-size:12px;color:var(--text-muted);display:flex;gap:24px;flex-wrap:wrap">
+        <span>🔵 <strong>Courant</strong> = non encore échu</span>
+        <span>🟡 <strong>1-30 j</strong> = retard modéré</span>
+        <span>🔴 <strong>31-90 j</strong> = retard important — relance recommandée</span>
+        <span>🟫 <strong>90+ j</strong> = créance douteuse — action urgente</span>
+      </div>
+    }
+  }
+
+  <!-- ════════════════════════════ PERFORMANCE ═══════════════════════════════ -->
+  @if (tab === 'performance') {
+    @if (!loading && performance) {
+
+      <!-- KPI summary -->
+      <div class="stats-row" style="margin-top:16px">
+        <div class="stat-card">
+          <div class="stat-icon green">💰</div>
+          <div>
+            <div class="stat-label">CA HT {{ performance.annee }}</div>
+            <div class="stat-value">{{ formatNum(performance.caHt) }} <small>MAD</small></div>
+            <div class="stat-trend neutral">TTC : {{ formatNum(performance.caTtc) }} MAD</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue">🧾</div>
+          <div>
+            <div class="stat-label">Ventes réalisées</div>
+            <div class="stat-value">{{ performance.nombreVentes }}</div>
+            <div class="stat-trend neutral">Commandes hors annulées</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon purple">👥</div>
+          <div>
+            <div class="stat-label">Clients actifs</div>
+            <div class="stat-value">{{ performance.nombreClients }}</div>
+            <div class="stat-trend neutral">Clients ayant acheté</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon orange">🛒</div>
+          <div>
+            <div class="stat-label">Panier moyen</div>
+            <div class="stat-value">{{ performance.nombreVentes > 0 ? formatNum(performance.caTtc / performance.nombreVentes) : '0' }} <small>MAD</small></div>
+            <div class="stat-trend neutral">CA TTC / nb ventes</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+
+        <!-- Top clients -->
+        <div class="table-card">
+          <div style="padding:14px 18px 10px;border-bottom:1px solid var(--border);font-weight:600;font-size:14px">
+            🏆 Top clients — {{ performance.annee }}
+          </div>
+          @if (performance.topClients.length === 0) {
+            <div class="empty-state" style="padding:30px 0"><div class="empty-icon">👥</div><div class="empty-title">Aucune vente cette année</div></div>
+          } @else {
+            <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">
+              @for (c of performance.topClients; track c.clientId; let i = $index) {
+                <div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <span style="font-size:12px;font-weight:700;color:var(--text-muted);width:18px">{{ i + 1 }}</span>
+                      <div class="avatar-sm" style="background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:700;flex-shrink:0">{{ c.initiales }}</div>
+                      <span style="font-weight:500;font-size:13px">{{ c.nomClient }}</span>
+                    </div>
+                    <div style="text-align:right">
+                      <div style="font-weight:700;font-size:13px">{{ formatNum(c.montantTotal) }} MAD</div>
+                      <div style="font-size:11px;color:var(--text-muted)">{{ c.nombreVentes }} cmd · moy. {{ formatNum(c.panierMoyen) }}</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:4px;align-items:center">
+                    <div style="flex:1;background:var(--surface2);border-radius:4px;overflow:hidden;height:6px">
+                      <div [style.width.%]="perfClientBar(c.montantTotal)"
+                           style="height:100%;background:var(--primary);border-radius:4px;transition:width .3s"></div>
+                    </div>
+                    @if (c.montantImpaye > 0) {
+                      <span style="font-size:11px;color:var(--danger);white-space:nowrap">{{ formatNum(c.montantImpaye) }} impayé</span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Top produits -->
+        <div class="table-card">
+          <div style="padding:14px 18px 10px;border-bottom:1px solid var(--border);font-weight:600;font-size:14px">
+            📦 Top produits — {{ performance.annee }}
+          </div>
+          @if (performance.topProduits.length === 0) {
+            <div class="empty-state" style="padding:30px 0"><div class="empty-icon">📦</div><div class="empty-title">Aucune vente cette année</div></div>
+          } @else {
+            <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">
+              @for (p of performance.topProduits; track p.produitId; let i = $index) {
+                <div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <span style="font-size:12px;font-weight:700;color:var(--text-muted);width:18px">{{ i + 1 }}</span>
+                      <div style="font-size:11px;font-weight:500">
+                        <div>{{ p.nomProduit }}</div>
+                        <div style="color:var(--text-muted)">{{ p.reference }}</div>
+                      </div>
+                    </div>
+                    <div style="text-align:right">
+                      <div style="font-weight:700;font-size:13px">{{ formatNum(p.montantHT) }} MAD</div>
+                      <div style="font-size:11px;color:var(--text-muted)">{{ p.quantiteVendue }} unités · {{ p.pourcentageCA }}% du CA</div>
+                    </div>
+                  </div>
+                  <div style="background:var(--surface2);border-radius:4px;overflow:hidden;height:6px">
+                    <div [style.width.%]="perfProduitBar(p.montantHT)"
+                         style="height:100%;background:var(--success);border-radius:4px;transition:width .3s"></div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+      </div>
+
+      <!-- Full clients table -->
+      <div class="table-card" style="margin-top:16px">
+        <div style="padding:14px 18px 10px;border-bottom:1px solid var(--border);font-weight:600;font-size:14px">
+          Détail clients — {{ performance.annee }}
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:32px">#</th>
+                <th>Client</th>
+                <th style="text-align:right">Nb ventes</th>
+                <th style="text-align:right">CA HT</th>
+                <th style="text-align:right">CA TTC</th>
+                <th style="text-align:right">Payé</th>
+                <th style="text-align:right">Impayé</th>
+                <th style="text-align:right">Panier moy.</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of performance.topClients; track c.clientId; let i = $index) {
+                <tr>
+                  <td style="font-weight:700;color:var(--text-muted)">{{ i + 1 }}</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div class="avatar-sm" style="background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:700">{{ c.initiales }}</div>
+                      {{ c.nomClient }}
+                    </div>
+                  </td>
+                  <td style="text-align:right">{{ c.nombreVentes }}</td>
+                  <td style="text-align:right">{{ formatNum(c.montantTotalHT) }}</td>
+                  <td style="text-align:right;font-weight:600">{{ formatNum(c.montantTotal) }}</td>
+                  <td style="text-align:right;color:var(--success)">{{ formatNum(c.montantPaye) }}</td>
+                  <td style="text-align:right" [class]="c.montantImpaye > 0 ? 'neg' : ''">
+                    {{ c.montantImpaye > 0 ? formatNum(c.montantImpaye) : '—' }}
+                  </td>
+                  <td style="text-align:right;color:var(--text-secondary)">{{ formatNum(c.panierMoyen) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  }
+
 </div>
 
 <style>
 .pos { color: var(--success) !important; }
 .neg { color: var(--danger) !important; }
+.avatar-sm {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
 </style>

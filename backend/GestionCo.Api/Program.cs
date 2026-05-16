@@ -178,6 +178,21 @@ using (var scope = app.Services.CreateScope())
         // Colonnes ajoutées après la création initiale (ALTER TABLE manuel)
         await ApplyManualColumnsAsync(db, logger);
 
+        // Seed par défaut pour parametres_facturation
+        try
+        {
+            if (!await db.ParametresFacturation.AnyAsync())
+            {
+                db.ParametresFacturation.Add(new GestionCo.Api.Domain.Entities.ParametresFacturation());
+                await db.SaveChangesAsync();
+                logger.LogInformation("✅ Paramètres facturation initialisés par défaut");
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("⚠️  Impossible d'initialiser parametres_facturation : {Msg}", ex.Message);
+        }
+
         // Seed des données de démo
         logger.LogInformation("🌱 Insertion des données de démo...");
         await SeedData.SeedAsync(db, hasher);
@@ -349,6 +364,21 @@ static async Task ApplyManualTablesAsync(AppDbContext db, ILogger logger)
                 CONSTRAINT [FK_lignes_devis_devis]    FOREIGN KEY ([DevisId])   REFERENCES [devis]([Id]) ON DELETE CASCADE,
                 CONSTRAINT [FK_lignes_devis_produits] FOREIGN KEY ([ProduitId]) REFERENCES [produits]([Id])
             )
+            """),
+
+        ("parametres_facturation", """
+            CREATE TABLE [parametres_facturation] (
+                [Id]             INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                [PrefixeFacture] NVARCHAR(10) NOT NULL DEFAULT 'FAC',
+                [PrefixeVente]   NVARCHAR(10) NOT NULL DEFAULT 'VNT',
+                [PrefixeAchat]   NVARCHAR(10) NOT NULL DEFAULT 'ACH',
+                [PrefixeProduit] NVARCHAR(10) NOT NULL DEFAULT 'PRD',
+                [TvaParDefaut]   INT NOT NULL DEFAULT 20,
+                [DelaiPaiement]  INT NOT NULL DEFAULT 30,
+                [UpdatedAt]      DATETIME2 NOT NULL DEFAULT GETUTCDATE()
+            )
+            INSERT INTO [parametres_facturation] ([PrefixeFacture],[PrefixeVente],[PrefixeAchat],[PrefixeProduit],[TvaParDefaut],[DelaiPaiement],[UpdatedAt])
+            VALUES ('FAC','VNT','ACH','PRD',20,30,GETUTCDATE())
             """),
     };
 

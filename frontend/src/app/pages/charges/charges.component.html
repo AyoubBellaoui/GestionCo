@@ -115,20 +115,7 @@
         </tbody>
       </table>
     </div>
-    <div class="pagination">
-      <div class="pagination-info">Affichage <strong>{{ total === 0 ? 0 : (page-1)*pageSize+1 }}–{{ Math.min(page*pageSize, total) }}</strong> sur <strong>{{ total }}</strong></div>
-      <div class="pagination-controls">
-        <select class="page-size" [(ngModel)]="pageSize" (ngModelChange)="page=1">
-          <option [value]="10">10 / page</option><option [value]="25">25 / page</option><option [value]="50">50 / page</option>
-        </select>
-        <button class="page-btn" [disabled]="page===1" (click)="page=page-1">←</button>
-        @for (p of buildPageList(); track $index) {
-          @if (isPageNum(p)) { <button [class]="'page-btn' + (page===p ? ' active' : '')" (click)="page=p">{{ p }}</button> }
-          @else { <button class="page-btn" disabled>…</button> }
-        }
-        <button class="page-btn" [disabled]="page===pageCount" (click)="page=page+1">→</button>
-      </div>
-    </div>
+    <app-pagination [page]="page" [pageSize]="pageSize" [total]="total" (pageChange)="page=$event" (pageSizeChange)="pageSize=$event;page=1"></app-pagination>
   </div>
 </div>
 

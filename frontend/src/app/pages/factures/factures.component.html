@@ -1,92 +1,251 @@
-<app-topbar title="Factures" [subtitle]="factures.length + ' facture' + (factures.length > 1 ? 's' : '') + ' — Émission auto à chaque vente'" icon="📋">
-  <button class="btn btn-ghost" (click)="showInfoModal=true">ℹ️ À propos</button>
+<app-topbar title="Factures" subtitle="Gérez et suivez toutes les factures émises aux clients" icon="🧾">
+  <button class="btn btn-ghost btn-sm" (click)="exportCsv()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Exporter
+  </button>
+  <button class="btn btn-primary btn-sm" (click)="downloadSelected()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Télécharger sélection
+  </button>
   <button class="btn btn-primary" (click)="openCreateModal()">+ Nouvelle facture</button>
 </app-topbar>
 
 <div class="content">
-  <div class="stats-row">
-    <div class="stat-card"><div class="stat-icon blue">📋</div><div><div class="stat-label">Total factures</div><div class="stat-value">{{ formatNum(stats.count) }}</div><div class="stat-trend neutral">Émises</div></div></div>
-    <div class="stat-card"><div class="stat-icon green">💰</div><div><div class="stat-label">Total facturé</div><div class="stat-value">{{ formatNum(stats.total) }} <small>MAD</small></div><div class="stat-trend neutral">Cumul</div></div></div>
-    <div class="stat-card"><div class="stat-icon cyan">✅</div><div><div class="stat-label">Total encaissé</div><div class="stat-value">{{ formatNum(stats.paye) }} <small>MAD</small></div><div class="stat-trend neutral">Reçu</div></div></div>
-    <div class="stat-card"><div class="stat-icon red">⚠️</div><div><div class="stat-label">En retard</div><div class="stat-value">{{ formatNum(stats.enRetard) }}</div><div class="stat-trend down">Échues</div></div></div>
+
+  <!-- ── Status tabs ─────────────────────────────────────────────────────── -->
+  <div class="fac-tabs">
+    <button class="fac-tab" [class.active]="activeTab === 'all'" (click)="activeTab = 'all'">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Toutes <span class="fac-tab-count">{{ tabCount.all }}</span>
+    </button>
+    <button class="fac-tab green" [class.active]="activeTab === 'payee'" (click)="activeTab = 'payee'">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      Payées <span class="fac-tab-count">{{ tabCount.payee }}</span>
+    </button>
+    <button class="fac-tab blue" [class.active]="activeTab === 'partiel'" (click)="activeTab = 'partiel'">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      Partiel <span class="fac-tab-count">{{ tabCount.partiel }}</span>
+    </button>
+    <button class="fac-tab amber" [class.active]="activeTab === 'enAttente'" (click)="activeTab = 'enAttente'">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      En attente <span class="fac-tab-count">{{ tabCount.enAttente }}</span>
+    </button>
+    <button class="fac-tab red" [class.active]="activeTab === 'enRetard'" (click)="activeTab = 'enRetard'">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      En retard <span class="fac-tab-count">{{ tabCount.enRetard }}</span>
+    </button>
+    <button class="fac-tab muted" [class.active]="activeTab === 'annulee'" (click)="activeTab = 'annulee'">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      Annulées <span class="fac-tab-count">{{ tabCount.annulee }}</span>
+    </button>
   </div>
 
+  <!-- ── Stats cards ──────────────────────────────────────────────────────── -->
+  <div class="stats-row">
+
+    <!-- Total facturé ce mois -->
+    <div class="stat-card fac-stat">
+      <div class="fac-stat-icon blue">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      </div>
+      <div class="fac-stat-body">
+        <div class="stat-label">Total facturé (mois)</div>
+        <div class="stat-value">{{ formatNum(stats.totalMois) }} <small>MAD</small></div>
+        @if (stats.totalMoisTrend !== null) {
+          <div class="stat-trend" [class.down]="stats.totalMoisTrend < 0" [class.neutral]="stats.totalMoisTrend === 0">
+            {{ stats.totalMoisTrend >= 0 ? '▲' : '▼' }} {{ stats.totalMoisTrend > 0 ? '+' : '' }}{{ stats.totalMoisTrend }}% vs mois dernier
+          </div>
+        } @else {
+          <div class="stat-trend neutral">Mois en cours</div>
+        }
+      </div>
+    </div>
+
+    <!-- Total encaissé -->
+    <div class="stat-card fac-stat">
+      <div class="fac-stat-icon green">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="fac-stat-body">
+        <div class="stat-label">Total encaissé</div>
+        <div class="stat-value">{{ formatNum(stats.totalPaye) }} <small>MAD</small></div>
+        <div class="stat-trend neutral">{{ stats.payeePct }}% du total facturé</div>
+      </div>
+    </div>
+
+    <!-- En attente de paiement -->
+    <div class="stat-card fac-stat">
+      <div class="fac-stat-icon amber">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div class="fac-stat-body">
+        <div class="stat-label">En attente de paiement</div>
+        <div class="stat-value">{{ formatNum(stats.enAttenteMontant) }} <small>MAD</small></div>
+        <div class="stat-trend neutral">{{ stats.enAttenteCount }} facture{{ stats.enAttenteCount > 1 ? 's' : '' }}</div>
+      </div>
+    </div>
+
+    <!-- Factures en retard -->
+    <div class="stat-card fac-stat">
+      <div class="fac-stat-icon red">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div class="fac-stat-body">
+        <div class="stat-label">Factures en retard</div>
+        <div class="stat-value" style="color:var(--danger)">{{ stats.enRetardCount }}</div>
+        <div class="stat-trend down">{{ formatNum(stats.enRetardMontant) }} MAD à relancer</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Toolbar ──────────────────────────────────────────────────────────── -->
   <div class="toolbar">
     <div class="search-wrapper">
-      <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-      <input class="search-input" placeholder="Rechercher par numéro, client..." [(ngModel)]="search" />
+      <span class="search-icon">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </span>
+      <input class="search-input" placeholder="Rechercher par n° facture, client, ICE…" [(ngModel)]="search" />
     </div>
-    <select class="filter-select" [(ngModel)]="statusFilter">
-      <option value="">Tous statuts</option>
-      <option value="EnAttente">En attente</option>
-      <option value="Partiel">Partiel</option>
-      <option value="Payee">Payée</option>
-      <option value="EnRetard">En retard</option>
+
+    <input type="date" class="form-input" style="width:200px" [(ngModel)]="selectedDate" (ngModelChange)="page=1" />
+
+    <select class="filter-select" [(ngModel)]="clientFilter">
+      <option value="">Tous clients</option>
+      @for (c of uniqueClients; track c) {
+        <option [value]="c">{{ c }}</option>
+      }
     </select>
+
+    <select class="filter-select" style="min-width:160px" [ngModel]="sortField + ':' + sortDir" (ngModelChange)="onSortChange($event)">
+      <option value=":desc">Tri : Plus récentes</option>
+      <option value="dateEmission:desc">Date ↓ (récentes)</option>
+      <option value="dateEmission:asc">Date ↑ (anciennes)</option>
+      <option value="montant:desc">Montant ↓</option>
+      <option value="montant:asc">Montant ↑</option>
+      <option value="client:asc">Client A→Z</option>
+      <option value="client:desc">Client Z→A</option>
+    </select>
+
     <div class="toolbar-divider"></div>
-    <button class="btn btn-ghost btn-sm" (click)="resetFilters()">🔄 Réinitialiser</button>
+    <button class="btn btn-ghost btn-sm" (click)="resetFilters()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.83"/></svg>
+      Réinitialiser
+    </button>
   </div>
 
+  <!-- ── Bulk action bar ─────────────────────────────────────────────────── -->
+  @if (selectedIds.size > 0) {
+    <div class="bulk-bar">
+      <span class="bulk-info">
+        <strong>{{ selectedIds.size }}</strong> facture{{ selectedIds.size > 1 ? 's' : '' }} sélectionnée{{ selectedIds.size > 1 ? 's' : '' }}
+      </span>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" (click)="exportCsv()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exporter CSV
+        </button>
+        <button class="btn btn-primary btn-sm" (click)="downloadSelected()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Télécharger PDF(s)
+        </button>
+        <button class="btn btn-ghost btn-sm" (click)="clearSelection()">Désélectionner</button>
+      </div>
+    </div>
+  }
+
+  <!-- ── Table ────────────────────────────────────────────────────────────── -->
   <div class="table-card">
     <div class="table-wrapper">
       <table class="data-table">
-        <thead><tr><th>N° Facture</th><th>Client</th><th>Émission</th><th>Échéance</th><th style="text-align:right">Total</th><th>Paiement</th><th>Statut</th><th style="text-align:right">Actions</th></tr></thead>
+        <thead>
+          <tr>
+            <th class="checkbox-cell"><input type="checkbox" [checked]="allSelected" (change)="toggleAll()" /></th>
+            <th class="sortable" (click)="toggleSort('numero')">N° FACTURE <span class="sort-icon">{{ sortIcon('numero') }}</span></th>
+            <th class="sortable" (click)="toggleSort('client')">CLIENT <span class="sort-icon">{{ sortIcon('client') }}</span></th>
+            <th class="sortable" (click)="toggleSort('dateEmission')">DATE ÉMISSION <span class="sort-icon">{{ sortIcon('dateEmission') }}</span></th>
+            <th class="sortable" style="text-align:right" (click)="toggleSort('montant')">MONTANT TTC <span class="sort-icon">{{ sortIcon('montant') }}</span></th>
+            <th>STATUT</th>
+            <th style="text-align:right">ACTIONS</th>
+          </tr>
+        </thead>
         <tbody>
-          @if (loading) { <tr><td colspan="8" class="loading-row">Chargement…</td></tr> }
+          @if (loading) {
+            <tr><td colspan="7" class="loading-row">
+              <div style="display:flex;align-items:center;justify-content:center;gap:10px">
+                <div class="fac-spinner"></div> Chargement des factures…
+              </div>
+            </td></tr>
+          }
           @if (!loading && filtered.length === 0) {
-            <tr><td colspan="8">
+            <tr><td colspan="7">
               <div class="empty-state">
                 <div class="empty-icon">📋</div>
-                <div class="empty-title">Aucune facture</div>
-                <div class="empty-sub">Créez une facture pour une vente existante, ou créez une nouvelle vente</div>
+                <div class="empty-title">Aucune facture trouvée</div>
+                <div class="empty-sub">Modifiez vos filtres ou créez une nouvelle facture</div>
                 <div style="display:flex;gap:8px;margin-top:14px;justify-content:center">
                   <button class="btn btn-primary" (click)="openCreateModal()">+ Nouvelle facture</button>
-                  <button class="btn btn-ghost" (click)="router.navigate(['/ventes/nouvelle'])">🛒 Créer une vente</button>
+                  <button class="btn btn-ghost" (click)="resetFilters()">Réinitialiser filtres</button>
                 </div>
               </div>
             </td></tr>
           }
-          @for (f of filtered; track f.id) {
+          @for (f of paged; track f.id) {
             @let de = formatDate(f.dateEmission);
-            @let dech = formatDate(f.dateEcheance);
-            @let pay = getPayStatus(f.montantPaye, f.montantTotal);
-            <tr>
-              <td><code style="font-family:monospace;font-weight:700">{{ f.numeroFacture }}</code></td>
+            @let fs = factureStatus(f);
+            <tr [class.row-selected]="selectedIds.has(f.id)">
+              <td class="checkbox-cell"><input type="checkbox" [checked]="selectedIds.has(f.id)" (change)="toggleSelect(f.id)" /></td>
+              <td>
+                <div class="fac-num-cell">
+                  <span class="mono">{{ f.numeroFacture }}</span>
+                  @if (f.venteReference) {
+                    <span class="fac-vente-ref">→ {{ f.venteReference }}</span>
+                  }
+                </div>
+              </td>
               <td>
                 <div class="client-cell">
                   <div [class]="'client-avatar ' + getAvatarClass(f.nomClient)">{{ f.clientInitiales || getInitials(f.nomClient) }}</div>
                   <div>
                     <div class="client-name">{{ f.nomClient }}</div>
                     @if (f.clientICE) { <div class="client-sub">ICE: {{ f.clientICE }}</div> }
+                    @else { <div class="client-sub">Client particulier</div> }
                   </div>
                 </div>
               </td>
-              <td class="date-cell"><div class="date-main">{{ de.main }}</div></td>
               <td class="date-cell">
-                <div class="date-main" [style.color]="f.estEnRetard ? 'var(--danger)' : null">{{ dech.main }}</div>
-                @if (f.estEnRetard) { <div class="date-sub" style="color:var(--danger)">En retard</div> }
-                @else { <div class="date-sub">{{ f.joursEcheance }}j restants</div> }
+                <div class="date-main">{{ de.main }}</div>
+                @if (de.time) { <div class="date-sub">{{ de.time }}</div> }
               </td>
-              <td style="text-align:right"><div class="price-val">{{ formatNum(f.montantTotal) }} <small>MAD</small></div></td>
+              <td style="text-align:right">
+                <div class="price-val">{{ formatNum(f.montantTotal) }} <small>MAD</small></div>
+              </td>
               <td>
-                <div class="payment-wrap">
-                  <div class="payment-val"><strong>{{ formatNum(f.montantPaye) }}</strong> / {{ formatNum(f.montantTotal) }} MAD</div>
-                  <div class="payment-bar"><div [class]="'payment-bar-fill ' + pay.cls" [style.width]="pay.pct + '%'"></div></div>
+                <div class="fac-status-cell">
+                  <span [class]="'status-badge ' + fs.cls">{{ fs.label }}</span>
+                  @if (f.estEnvoyeeEmail) {
+                    <span class="fac-email-badge">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      Envoyée
+                    </span>
+                  }
+                  @if (f.estEnRetard) {
+                    <span class="fac-overdue-days">{{ Math.abs(f.joursEcheance) }}j échu</span>
+                  }
                 </div>
               </td>
-              <td><span [class]="'status-badge ' + factureStatus(f).cls">{{ factureStatus(f).label }}</span></td>
               <td class="actions-cell">
-                <button class="btn-icon" title="Voir détails" (click)="showDetail=f">
+                <button class="btn-icon" title="Voir détails" (click)="showDetail = f">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
-                <button class="btn-icon primary" title="Ouvrir PDF" (click)="openInvoice(f.id)">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                </button>
-                <button class="btn-icon" title="Télécharger PDF" (click)="downloadPdf(f.id, f.numeroFacture)">
+                <button class="btn-icon primary" title="Télécharger PDF" (click)="downloadPdf(f.id, f.numeroFacture)">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 </button>
                 <button class="btn-icon" [class.primary]="f.estEnvoyeeEmail" [title]="f.estEnvoyeeEmail ? 'Email déjà envoyé — renvoyer' : 'Envoyer par email'" (click)="openEmailModal(f)">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                </button>
+                <button class="btn-icon" title="Aperçu PDF" (click)="openInvoice(f.id)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                 </button>
               </td>
             </tr>
@@ -94,10 +253,17 @@
         </tbody>
       </table>
     </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;color:var(--text-muted)">
+        Montant filtré : <strong style="color:var(--text)">{{ formatNum(filteredTotal) }} MAD</strong>
+      </div>
+      <app-pagination [page]="page" [pageSize]="pageSize" [total]="filtered.length" (pageChange)="page=$event" (pageSizeChange)="pageSize=$event;page=1"></app-pagination>
+    </div>
   </div>
 </div>
 
-<!-- Modal nouvelle facture -->
+<!-- ── Modal nouvelle facture ─────────────────────────────────────────────── -->
 <app-modal [open]="showCreateModal" title="📋 Nouvelle facture" (closed)="showCreateModal=false">
   <div body style="display:flex;flex-direction:column;gap:14px">
     <div class="info-box" style="font-size:13px">
@@ -126,7 +292,7 @@
             <div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px">Aucune vente trouvée</div>
           } @else {
             @for (v of ventesFiltrees; track v.id) {
-              <label [style.display]="'flex'" [style.align-items]="'center'" [style.gap]="'12px'" [style.padding]="'12px'" [style.cursor]="'pointer'" [style.border-bottom]="'1px solid var(--border)'" [style.background]="selectedVenteId === v.id ? 'var(--primary-light)' : 'transparent'">
+              <label style="display:flex;align-items:center;gap:12px;padding:12px;cursor:pointer;border-bottom:1px solid var(--border)" [style.background]="selectedVenteId === v.id ? 'var(--primary-light)' : 'transparent'">
                 <input type="radio" name="vente" [checked]="selectedVenteId === v.id" (change)="selectedVenteId = v.id" style="cursor:pointer" />
                 <div style="flex:1;min-width:0">
                   <div style="font-family:monospace;font-weight:700;font-size:13px" [style.color]="selectedVenteId === v.id ? 'var(--primary)' : 'var(--text)'">{{ v.reference }}</div>
@@ -156,7 +322,7 @@
   </div>
 </app-modal>
 
-<!-- Modal détail facture -->
+<!-- ── Modal détail facture ────────────────────────────────────────────────── -->
 @if (showDetail) {
   <app-modal [open]="!!showDetail" [title]="'Facture ' + showDetail.numeroFacture" (closed)="showDetail=null">
     <div body class="invoice-detail">
@@ -170,7 +336,12 @@
       </div>
       <div class="invoice-detail-rows">
         <div class="invoice-detail-row"><span>📅 Date d'émission</span><strong>{{ formatDate(showDetail.dateEmission).main }}</strong></div>
-        <div class="invoice-detail-row"><span>⏰ Date d'échéance</span><strong [style.color]="showDetail.estEnRetard ? 'var(--danger)' : null">{{ formatDate(showDetail.dateEcheance).main }}{{ showDetail.estEnRetard ? ' (En retard)' : '' }}</strong></div>
+        <div class="invoice-detail-row">
+          <span>⏰ Date d'échéance</span>
+          <strong [style.color]="showDetail.estEnRetard ? 'var(--danger)' : null">
+            {{ formatDate(showDetail.dateEcheance).main }}{{ showDetail.estEnRetard ? ' (En retard)' : '' }}
+          </strong>
+        </div>
         <div class="invoice-detail-row"><span>🛒 Vente liée</span><strong class="mono">{{ showDetail.venteReference }}</strong></div>
         <div class="invoice-detail-row"><span>📧 Envoyée par email</span><strong>{{ showDetail.estEnvoyeeEmail ? '✅ Oui' : '❌ Non' }}</strong></div>
       </div>
@@ -191,11 +362,14 @@
   </app-modal>
 }
 
-<!-- Modal email facture -->
-<app-modal [open]="emailModalOpen" [title]="'Envoyer la facture par email'" (closed)="emailModalOpen=false">
+<!-- ── Modal email facture ─────────────────────────────────────────────────── -->
+<app-modal [open]="emailModalOpen" title="Envoyer la facture par email" (closed)="emailModalOpen=false">
   <div body style="display:flex;flex-direction:column;gap:14px">
     @if (emailTarget) {
-      <div class="info-box" style="font-size:13px">{{ emailTarget.numeroFacture }} · {{ emailTarget.nomClient }}</div>
+      <div class="info-box" style="font-size:13px">
+        <strong>{{ emailTarget.numeroFacture }}</strong> · {{ emailTarget.nomClient }}
+        <span style="margin-left:8px;color:var(--text-muted)">{{ formatNum(emailTarget.montantTotal) }} MAD</span>
+      </div>
     }
     <div class="form-field">
       <label class="label">Adresse email du destinataire *</label>
@@ -203,10 +377,10 @@
     </div>
     <div class="form-field">
       <label class="label">Message personnalisé <span style="color:var(--text-muted)">(optionnel)</span></label>
-      <textarea class="form-input" rows="3" placeholder="Bonjour, veuillez trouver ci-joint..." [(ngModel)]="emailMessage" style="resize:vertical"></textarea>
+      <textarea class="form-input" rows="3" placeholder="Bonjour, veuillez trouver ci-joint…" [(ngModel)]="emailMessage" style="resize:vertical"></textarea>
     </div>
     <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text-muted)">
-      Le PDF de la facture sera automatiquement joint. Le statut passera à <strong>Envoyée</strong>.
+      Le PDF de la facture sera automatiquement joint à l'email.
     </div>
   </div>
   <div footer style="display:flex;gap:8px;justify-content:flex-end">
@@ -214,24 +388,5 @@
     <button class="btn btn-primary" (click)="sendEmail()" [disabled]="emailSending || !emailTo.trim()">
       {{ emailSending ? 'Envoi…' : '✉️ Envoyer' }}
     </button>
-  </div>
-</app-modal>
-
-<!-- Modal info -->
-<app-modal [open]="showInfoModal" title="ℹ️ À propos des factures" (closed)="showInfoModal=false">
-  <div body style="line-height:1.6">
-    <p style="margin-bottom:12px">Les factures sont <strong>générées automatiquement</strong> quand vous créez une vente.</p>
-    <div class="panel-section-title" style="margin:14px 0 8px">📋 Workflow</div>
-    <ol style="padding-left:24px;margin-bottom:12px">
-      <li>Créer une <strong>vente</strong> → la facture est créée auto avec un numéro unique</li>
-      <li>OU cliquer sur <strong>"+ Nouvelle facture"</strong> pour une vente existante sans facture</li>
-      <li>Cliquer sur 🖨️ pour <strong>l'ouvrir et l'imprimer en PDF</strong></li>
-      <li>Quand le client paie, la facture passe en <strong>"Payée"</strong></li>
-    </ol>
-    <div class="panel-section-title" style="margin:14px 0 8px">📑 Conformité Maroc</div>
-    <p>Les factures incluent automatiquement : <strong>ICE, RC, IF, Patente, CNSS, TVA 20%</strong>, la mention article 145 du CGI, et le RIB de l'entreprise.</p>
-  </div>
-  <div footer style="display:flex;justify-content:flex-end">
-    <button class="btn btn-primary" (click)="showInfoModal=false">Compris</button>
   </div>
 </app-modal>

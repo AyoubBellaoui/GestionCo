@@ -52,6 +52,14 @@ public class AuthController : ControllerBase
         var user = await _mediator.Send(new UpdateProfileCommand(req.Prenom, req.Nom, req.Telephone), ct);
         return Ok(user);
     }
+
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req, CancellationToken ct)
+    {
+        await _mediator.Send(new ChangePasswordCommand(req.CurrentPassword, req.NewPassword), ct);
+        return Ok(new { message = "Mot de passe modifié avec succès" });
+    }
 }
 
 public class UpdateProfileRequest
@@ -59,4 +67,10 @@ public class UpdateProfileRequest
     public string Prenom { get; set; } = string.Empty;
     public string Nom { get; set; } = string.Empty;
     public string? Telephone { get; set; }
+}
+
+public class ChangePasswordRequest
+{
+    public string CurrentPassword { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
 }

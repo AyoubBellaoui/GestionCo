@@ -38,7 +38,7 @@
           @if (!loading && filtered.length === 0) {
             <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Aucun client</div><div class="empty-sub">Ajoutez votre premier client</div></div></td></tr>
           }
-          @for (c of filtered; track c.id) {
+          @for (c of paged; track c.id) {
             <tr>
               <td>
                 <div class="client-cell">
@@ -72,5 +72,6 @@
         </tbody>
       </table>
     </div>
+    <app-pagination [page]="page" [pageSize]="pageSize" [total]="filtered.length" (pageChange)="page=$event" (pageSizeChange)="pageSize=$event;page=1"></app-pagination>
   </div>
 </div>

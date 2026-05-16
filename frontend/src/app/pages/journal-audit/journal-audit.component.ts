@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgClass } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { ApiService } from '../../core/services/api.service';
 import { AuditLog } from '../../core/models';
 import { formatDate, getInitials, getAvatarClass } from '../../core/utils/format';
@@ -9,7 +10,7 @@ import { formatDate, getInitials, getAvatarClass } from '../../core/utils/format
 @Component({
   selector: 'app-journal-audit',
   standalone: true,
-  imports: [TopbarComponent, FormsModule, NgClass],
+  imports: [TopbarComponent, PaginationComponent, FormsModule, NgClass],
   templateUrl: './journal-audit.component.html',
 })
 export class JournalAuditComponent implements OnInit {
@@ -18,6 +19,8 @@ export class JournalAuditComponent implements OnInit {
   search = '';
   actionFilter = '';
   sensibleOnly = false;
+  page = 1;
+  pageSize = 25;
 
   formatDate = formatDate;
   getInitials = getInitials;
@@ -28,6 +31,10 @@ export class JournalAuditComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     try { this.logs = await this.api.auditList().catch(() => []); }
     finally { this.loading = false; }
+  }
+
+  get paged(): AuditLog[] {
+    return this.filtered.slice((this.page - 1) * this.pageSize, this.page * this.pageSize);
   }
 
   get filtered(): AuditLog[] {
@@ -64,5 +71,5 @@ export class JournalAuditComponent implements OnInit {
   getSensibleCount(): number { return this.logs.filter(l => l.estSensible).length; }
   getCreateCount(): number { return this.logs.filter(l => l.action === 'Create').length; }
 
-  resetFilters(): void { this.search = ''; this.actionFilter = ''; this.sensibleOnly = false; }
+  resetFilters(): void { this.search = ''; this.actionFilter = ''; this.sensibleOnly = false; this.page = 1; }
 }

@@ -55,7 +55,6 @@ export class SettingsService {
   settings$ = this.settingsSubject.asObservable();
 
   get settings(): AppSettings { return this.settingsSubject.value; }
-  get hasUnsavedChanges(): boolean { return false; }
 
   constructor() {
     this.settings$.subscribe(s => {

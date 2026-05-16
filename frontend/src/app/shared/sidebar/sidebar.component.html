@@ -10,9 +10,24 @@
     <div class="logo-text">{{ companyName }}</div>
   </div>
 
+  <!-- Global search trigger -->
+  <div style="padding: 0 12px 8px">
+    <button class="sidebar-search-btn" (click)="search.open()" title="Recherche globale (Ctrl+K)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <span>Rechercher…</span>
+      <kbd>Ctrl K</kbd>
+    </button>
+  </div>
+
   <nav class="sidebar-nav">
     <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" class="nav-item">
       <span class="nav-icon">📊</span> Tableau de bord
+    </a>
+
+    <a routerLink="/clients" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">👥</span> Clients
     </a>
     <a routerLink="/devis" routerLinkActive="active" class="nav-item">
       <span class="nav-icon">📝</span> Devis
@@ -20,8 +35,20 @@
     <a routerLink="/ventes" routerLinkActive="active" class="nav-item">
       <span class="nav-icon">🛒</span> Ventes
     </a>
+    <a routerLink="/factures" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">🧾</span> Factures
+    </a>
+    <a routerLink="/paiements" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">💰</span> Paiements
+    </a>
+    <a routerLink="/fournisseurs" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">🚚</span> Fournisseurs
+    </a>
     <a routerLink="/achats" routerLinkActive="active" class="nav-item">
       <span class="nav-icon">📥</span> Achats
+    </a>
+    <a routerLink="/charges" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">💸</span> Charges
     </a>
     <a routerLink="/produits" routerLinkActive="active" class="nav-item">
       <span class="nav-icon">📦</span> Produits
@@ -32,21 +59,6 @@
     <a routerLink="/mouvements-stock" routerLinkActive="active" class="nav-item">
       <span class="nav-icon">📈</span> Mouvements stock
     </a>
-    <a routerLink="/clients" routerLinkActive="active" class="nav-item">
-      <span class="nav-icon">👥</span> Clients
-    </a>
-    <a routerLink="/fournisseurs" routerLinkActive="active" class="nav-item">
-      <span class="nav-icon">🚚</span> Fournisseurs
-    </a>
-    <a routerLink="/charges" routerLinkActive="active" class="nav-item">
-      <span class="nav-icon">💸</span> Charges
-    </a>
-    <a routerLink="/paiements" routerLinkActive="active" class="nav-item">
-      <span class="nav-icon">💰</span> Paiements
-    </a>
-    <a routerLink="/factures" routerLinkActive="active" class="nav-item">
-      <span class="nav-icon">🧾</span> Factures
-    </a>
     <a routerLink="/rapports" routerLinkActive="active" class="nav-item">
       <span class="nav-icon">📊</span> Rapports
     </a>
@@ -56,9 +68,6 @@
     @if (isAdmin) {
       <a routerLink="/journal-audit" routerLinkActive="active" class="nav-item">
         <span class="nav-icon">🔎</span> Journal d'audit
-      </a>
-      <a routerLink="/parametres" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">⚙️</span> Paramètres
       </a>
     }
   </nav>

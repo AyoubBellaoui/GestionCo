@@ -25,6 +25,10 @@ public class VentesController : ControllerBase
     public async Task<IActionResult> GetAll([FromQuery] GetVentesQuery q, CancellationToken ct)
         => Ok(await _mediator.Send(q, ct));
 
+    [HttpGet("dates")]
+    public async Task<IActionResult> GetDates(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetVenteDatesQuery(), ct));
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
         => Ok(await _mediator.Send(new GetVenteByIdQuery(id), ct));
@@ -361,4 +365,12 @@ public class ReportsController(IMediator mediator, IPdfService pdf, IConfigurati
     [HttpGet("cashflow/{annee:int}/{mois:int}")]
     public async Task<IActionResult> GetCashFlow(int annee, int mois, CancellationToken ct)
         => Ok(await mediator.Send(new GetCashFlowQuery(annee, mois), ct));
+
+    [HttpGet("balance-agee")]
+    public async Task<IActionResult> GetBalanceAgee(CancellationToken ct)
+        => Ok(await mediator.Send(new GetBalanceAgeeQuery(), ct));
+
+    [HttpGet("performance/{annee:int}")]
+    public async Task<IActionResult> GetPerformance(int annee, CancellationToken ct)
+        => Ok(await mediator.Send(new GetPerformanceCommercialeQuery(annee), ct));
 }

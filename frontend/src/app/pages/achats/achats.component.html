@@ -1,4 +1,4 @@
-<app-topbar title="Achats" [subtitle]="achats.length + ' achat' + (achats.length > 1 ? 's' : '') + ' — Commandes fournisseurs'" icon="📥">
+<app-topbar title="Achats" [subtitle]="total + ' achat' + (total > 1 ? 's' : '') + ' — Commandes fournisseurs'" icon="📥">
   <button class="btn btn-ghost" (click)="exportExcel()" title="Exporter en Excel">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
     Exporter Excel
@@ -17,17 +17,17 @@
   <div class="toolbar">
     <div class="search-wrapper">
       <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-      <input class="search-input" placeholder="Rechercher par référence, fournisseur..." [(ngModel)]="search" (ngModelChange)="page=1" />
+      <input class="search-input" placeholder="Rechercher par référence, fournisseur..." [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
     </div>
-    <input type="date" class="form-input" style="width:200px" [(ngModel)]="selectedDate" (ngModelChange)="page=1" />
-    <select class="filter-select" [(ngModel)]="statusFilter" (ngModelChange)="page=1">
+    <input type="date" class="form-input" style="width:200px" [(ngModel)]="selectedDate" (ngModelChange)="onFilterChange()" />
+    <select class="filter-select" [(ngModel)]="statusFilter" (ngModelChange)="onFilterChange()">
       <option value="">Tous statuts</option>
       <option value="Paye">Payé</option>
       <option value="Partiel">Partiel</option>
       <option value="EnAttente">Crédit</option>
       <option value="Annule">Annulé</option>
     </select>
-    <select class="filter-select" [(ngModel)]="fournisseurFilter" (ngModelChange)="page=1">
+    <select class="filter-select" [(ngModel)]="fournisseurFilter" (ngModelChange)="onFilterChange()">
       <option value="">Tous fournisseurs</option>
       @for (f of fournisseurs; track f.id) { <option [value]="f.id">{{ f.icone || '🏢' }} {{ f.nom }}</option> }
     </select>
@@ -41,10 +41,10 @@
         <thead><tr><th>N° Achat</th><th>Fournisseur</th><th>Date</th><th>Articles</th><th style="text-align:right">Montant</th><th>Paiement</th><th>Statut</th><th style="text-align:right">Actions</th></tr></thead>
         <tbody>
           @if (loading) { <tr><td colspan="8" class="loading-row">Chargement…</td></tr> }
-          @if (!loading && paged.length === 0) {
+          @if (!loading && items.length === 0) {
             <tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📥</div><div class="empty-title">Aucun achat trouvé</div><div class="empty-sub">Ajustez vos filtres ou créez un nouvel achat</div></div></td></tr>
           }
-          @for (a of paged; track a.id) {
+          @for (a of items; track a.id) {
             @let d = formatDate(a.dateAchat);
             @let pay = getPayStatus(a.montantPaye, a.montantTotal);
             @let st = achatStatus(a);
@@ -79,20 +79,7 @@
         </tbody>
       </table>
     </div>
-    <div class="pagination">
-      <div class="pagination-info">Affichage <strong>{{ total === 0 ? 0 : (page-1)*pageSize+1 }}–{{ Math.min(page*pageSize, total) }}</strong> sur <strong>{{ total }}</strong></div>
-      <div class="pagination-controls">
-        <select class="page-size" [(ngModel)]="pageSize" (ngModelChange)="page=1">
-          <option [value]="10">10 / page</option><option [value]="25">25 / page</option><option [value]="50">50 / page</option>
-        </select>
-        <button class="page-btn" [disabled]="page===1" (click)="page=page-1">←</button>
-        @for (p of buildPageList(); track $index) {
-          @if (isPageNum(p)) { <button [class]="'page-btn' + (page===p ? ' active' : '')" (click)="page=p">{{ p }}</button> }
-          @else { <button class="page-btn" disabled>…</button> }
-        }
-        <button class="page-btn" [disabled]="page===pageCount" (click)="page=page+1">→</button>
-      </div>
-    </div>
+    <app-pagination [page]="page" [pageSize]="pageSize" [total]="total" (pageChange)="onPage($event)" (pageSizeChange)="onPageSize($event)"></app-pagination>
   </div>
 </div>
 

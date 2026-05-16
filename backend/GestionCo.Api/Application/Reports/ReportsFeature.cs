@@ -207,3 +207,218 @@ public class GetCashFlowHandler : IRequestHandler<GetCashFlowQuery, CashFlowRepo
         );
     }
 }
+
+// ─── Balance Âgée (Receivables Aging) ────────────────────────────────────────
+
+public record BalanceAgeeClientDto(
+    int     ClientId,
+    string  NomClient,
+    string  Initiales,
+    decimal TotalImpaye,
+    decimal Courant,
+    decimal J1_30,
+    decimal J31_60,
+    decimal J61_90,
+    decimal J90Plus
+);
+
+public record BalanceAgeeReportDto(
+    DateTime                   DateArrete,
+    List<BalanceAgeeClientDto> Clients,
+    decimal TotalImpaye,
+    decimal TotalCourant,
+    decimal TotalJ1_30,
+    decimal TotalJ31_60,
+    decimal TotalJ61_90,
+    decimal TotalJ90Plus,
+    int     NombreClients
+);
+
+public record GetBalanceAgeeQuery() : IRequest<BalanceAgeeReportDto>;
+
+public class GetBalanceAgeeHandler : IRequestHandler<GetBalanceAgeeQuery, BalanceAgeeReportDto>
+{
+    private readonly IAppDbContext _db;
+    public GetBalanceAgeeHandler(IAppDbContext db) => _db = db;
+
+    public async Task<BalanceAgeeReportDto> Handle(GetBalanceAgeeQuery q, CancellationToken ct)
+    {
+        var today = DateTime.Today;
+
+        var ventesImpayees = await _db.Ventes
+            .Where(v => v.Statut != StatutVente.Annule && v.MontantPaye < v.MontantTotal)
+            .Select(v => new {
+                v.ClientId,
+                v.Client.NomClient,
+                v.MontantTotal,
+                v.MontantPaye,
+                v.DateEcheance,
+                v.DateVente
+            })
+            .ToListAsync(ct);
+
+        var byClient = ventesImpayees
+            .GroupBy(v => new { v.ClientId, v.NomClient })
+            .Select(g =>
+            {
+                decimal courant = 0, j1_30 = 0, j31_60 = 0, j61_90 = 0, j90plus = 0;
+                foreach (var v in g)
+                {
+                    var reste    = v.MontantTotal - v.MontantPaye;
+                    var echeance = (v.DateEcheance ?? v.DateVente.AddDays(30)).Date;
+                    var jours    = (today - echeance).Days;
+                    if      (jours <= 0)  courant += reste;
+                    else if (jours <= 30) j1_30   += reste;
+                    else if (jours <= 60) j31_60  += reste;
+                    else if (jours <= 90) j61_90  += reste;
+                    else                  j90plus += reste;
+                }
+                var nom   = g.Key.NomClient;
+                var parts = nom.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var init  = parts.Length >= 2
+                    ? (parts[0][0].ToString() + parts[1][0].ToString()).ToUpperInvariant()
+                    : nom.Length >= 2 ? nom[..2].ToUpperInvariant() : nom.ToUpperInvariant();
+
+                return new BalanceAgeeClientDto(
+                    g.Key.ClientId, nom, init,
+                    courant + j1_30 + j31_60 + j61_90 + j90plus,
+                    courant, j1_30, j31_60, j61_90, j90plus
+                );
+            })
+            .OrderByDescending(c => c.TotalImpaye)
+            .ToList();
+
+        return new BalanceAgeeReportDto(
+            today, byClient,
+            byClient.Sum(c => c.TotalImpaye),
+            byClient.Sum(c => c.Courant),
+            byClient.Sum(c => c.J1_30),
+            byClient.Sum(c => c.J31_60),
+            byClient.Sum(c => c.J61_90),
+            byClient.Sum(c => c.J90Plus),
+            byClient.Count
+        );
+    }
+}
+
+// ─── Performance Commerciale ─────────────────────────────────────────────────
+
+public record TopClientPerfDto(
+    int     ClientId,
+    string  NomClient,
+    string  Initiales,
+    int     NombreVentes,
+    decimal MontantTotalHT,
+    decimal MontantTotal,
+    decimal MontantPaye,
+    decimal MontantImpaye,
+    decimal PanierMoyen
+);
+
+public record TopProduitPerfDto(
+    int     ProduitId,
+    string  NomProduit,
+    string  Reference,
+    int     QuantiteVendue,
+    decimal MontantHT,
+    decimal PourcentageCA
+);
+
+public record PerformanceCommercialeDto(
+    int                     Annee,
+    int                     NombreVentes,
+    int                     NombreClients,
+    decimal                 CAHt,
+    decimal                 CATtc,
+    List<TopClientPerfDto>  TopClients,
+    List<TopProduitPerfDto> TopProduits
+);
+
+public record GetPerformanceCommercialeQuery(int Annee) : IRequest<PerformanceCommercialeDto>;
+
+public class GetPerformanceCommercialeHandler : IRequestHandler<GetPerformanceCommercialeQuery, PerformanceCommercialeDto>
+{
+    private readonly IAppDbContext _db;
+    public GetPerformanceCommercialeHandler(IAppDbContext db) => _db = db;
+
+    public async Task<PerformanceCommercialeDto> Handle(GetPerformanceCommercialeQuery q, CancellationToken ct)
+    {
+        var ventes = await _db.Ventes
+            .Where(v => v.DateVente.Year == q.Annee && v.Statut != StatutVente.Annule)
+            .Select(v => new {
+                v.ClientId,
+                v.Client.NomClient,
+                v.MontantTotalHT,
+                v.MontantTotal,
+                v.MontantPaye,
+                Reste = v.MontantTotal - v.MontantPaye
+            })
+            .ToListAsync(ct);
+
+        var lignes = await _db.LignesVente
+            .Where(lv => lv.Vente.DateVente.Year == q.Annee && lv.Vente.Statut != StatutVente.Annule)
+            .Select(lv => new {
+                lv.ProduitId,
+                NomProduit = lv.Produit.Nom,
+                Reference  = lv.Produit.Reference,
+                lv.Quantite,
+                MontantHT  = lv.Quantite * lv.PrixUnitaire
+            })
+            .ToListAsync(ct);
+
+        var topClients = ventes
+            .GroupBy(v => new { v.ClientId, v.NomClient })
+            .Select(g =>
+            {
+                var nom   = g.Key.NomClient;
+                var parts = nom.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var init  = parts.Length >= 2
+                    ? (parts[0][0].ToString() + parts[1][0].ToString()).ToUpperInvariant()
+                    : nom.Length >= 2 ? nom[..2].ToUpperInvariant() : nom.ToUpperInvariant();
+                var count = g.Count();
+                var ttl   = g.Sum(v => v.MontantTotal);
+                return new TopClientPerfDto(
+                    g.Key.ClientId, nom, init,
+                    count,
+                    g.Sum(v => v.MontantTotalHT),
+                    ttl,
+                    g.Sum(v => v.MontantPaye),
+                    g.Sum(v => v.Reste),
+                    count > 0 ? Math.Round(ttl / count, 2) : 0
+                );
+            })
+            .OrderByDescending(c => c.MontantTotal)
+            .Take(10)
+            .ToList();
+
+        var totalCA = lignes.Sum(l => l.MontantHT);
+
+        var topProduits = lignes
+            .GroupBy(l => new { l.ProduitId, l.NomProduit, l.Reference })
+            .Select(g =>
+            {
+                var montant = g.Sum(l => l.MontantHT);
+                return new TopProduitPerfDto(
+                    g.Key.ProduitId,
+                    g.Key.NomProduit,
+                    g.Key.Reference,
+                    g.Sum(l => l.Quantite),
+                    montant,
+                    totalCA > 0 ? Math.Round(montant / totalCA * 100, 1) : 0
+                );
+            })
+            .OrderByDescending(p => p.MontantHT)
+            .Take(10)
+            .ToList();
+
+        return new PerformanceCommercialeDto(
+            q.Annee,
+            ventes.Count,
+            ventes.Select(v => v.ClientId).Distinct().Count(),
+            ventes.Sum(v => v.MontantTotalHT),
+            ventes.Sum(v => v.MontantTotal),
+            topClients,
+            topProduits
+        );
+    }
+}

@@ -7,7 +7,8 @@ import {
   UtilisateurDto, CreateUtilisateurPayload, UpdateUtilisateurPayload,
   PagedList, VenteSansFacture, Charge, CategorieCharge, PaiementCharge,
   AppNotification, NotificationSummary, Devis, ConversionDevisResult,
-  PLReport, TVAReport
+  PLReport, TVAReport, BalanceAgeeReport, PerformanceCommerciale, SearchResults,
+  FacturationSettings
 } from '../models';
 import { environment } from '../../../environments/environment';
 
@@ -19,6 +20,14 @@ function normalizeList<T>(data: T[] | PagedList<T>): T[] {
     return (data as PagedList<T>).items;
   }
   return [];
+}
+
+function buildParams(obj: Record<string, any>): HttpParams {
+  let p = new HttpParams();
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined && v !== null && v !== '') p = p.set(k, String(v));
+  }
+  return p;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -37,6 +46,9 @@ export class ApiService {
   }
   updateProfile(data: { prenom: string; nom: string; telephone?: string }): Promise<User> {
     return firstValueFrom(this.http.put<User>(`${this.base}/auth/profile`, data));
+  }
+  changePassword(data: { currentPassword: string; newPassword: string }): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.base}/auth/change-password`, data));
   }
 
   // ── DASHBOARD ──
@@ -323,6 +335,55 @@ export class ApiService {
   }
   rapportPdf(type: 'pl' | 'tva', annee: number): Promise<ArrayBuffer> {
     return firstValueFrom(this.http.get(`${this.base}/reports/${type}/${annee}/pdf`, { responseType: 'arraybuffer' }));
+  }
+  rapportBalanceAgee(): Promise<BalanceAgeeReport> {
+    return firstValueFrom(this.http.get<BalanceAgeeReport>(`${this.base}/reports/balance-agee`));
+  }
+  rapportPerformance(annee: number): Promise<PerformanceCommerciale> {
+    return firstValueFrom(this.http.get<PerformanceCommerciale>(`${this.base}/reports/performance/${annee}`));
+  }
+  search(q: string, take = 5): Promise<SearchResults> {
+    return firstValueFrom(this.http.get<SearchResults>(`${this.base}/search`, { params: { q, take } }));
+  }
+
+  // ── PAGED LIST METHODS ──
+  ventesListPaged(p: { page?: number; pageSize?: number; search?: string; statut?: string; clientId?: number; dateDebut?: string; dateFin?: string } = {}): Promise<PagedList<Vente>> {
+    return firstValueFrom(this.http.get<PagedList<Vente>>(`${this.base}/ventes`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
+  }
+  venteGetDates(): Promise<string[]> {
+    return firstValueFrom(this.http.get<string[]>(`${this.base}/ventes/dates`));
+  }
+  achatsListPaged(p: { page?: number; pageSize?: number; search?: string; fournisseurId?: number; dateDebut?: string; dateFin?: string; statut?: string } = {}): Promise<PagedList<Achat>> {
+    return firstValueFrom(this.http.get<PagedList<Achat>>(`${this.base}/achats`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
+  }
+  facturesListPaged(p: { page?: number; pageSize?: number; search?: string; statut?: string; clientId?: number; dateFilter?: string } = {}): Promise<PagedList<Facture>> {
+    return firstValueFrom(this.http.get<PagedList<Facture>>(`${this.base}/factures`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
+  }
+  clientsListPaged(p: { page?: number; pageSize?: number; search?: string; type?: string } = {}): Promise<PagedList<Client>> {
+    return firstValueFrom(this.http.get<PagedList<Client>>(`${this.base}/clients`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
+  }
+  produitsListPaged(p: { page?: number; pageSize?: number; search?: string; categorieId?: number; stockFilter?: string; sortBy?: string; sortDir?: string } = {}): Promise<PagedList<Produit>> {
+    return firstValueFrom(this.http.get<PagedList<Produit>>(`${this.base}/produits`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
+  }
+  chargesListPaged(p: { page?: number; pageSize?: number; search?: string; statut?: string; categorieId?: number; dateDebut?: string; dateFin?: string } = {}): Promise<PagedList<Charge>> {
+    return firstValueFrom(this.http.get<PagedList<Charge>>(`${this.base}/charges`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
+  }
+  devisListPaged(p: { page?: number; pageSize?: number; search?: string; statut?: string; clientId?: number; dateDebut?: string; dateFin?: string } = {}): Promise<PagedList<Devis>> {
+    return firstValueFrom(this.http.get<PagedList<Devis>>(`${this.base}/devis`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
+  }
+  mouvementsListPaged(p: { page?: number; pageSize?: number; search?: string; type?: string; source?: string; produitId?: number } = {}): Promise<PagedList<MouvementStock>> {
+    return firstValueFrom(this.http.get<PagedList<MouvementStock>>(`${this.base}/mouvements-stock`, { params: buildParams({ page: 1, pageSize: 25, ...p }) }));
+  }
+  auditListPaged(p: { page?: number; pageSize?: number; search?: string; action?: string; entite?: string; sensibleOnly?: boolean } = {}): Promise<PagedList<AuditLog>> {
+    return firstValueFrom(this.http.get<PagedList<AuditLog>>(`${this.base}/logs`, { params: buildParams({ page: 1, pageSize: 25, ...p }) }));
+  }
+
+  // ── PARAMÈTRES FACTURATION ──
+  getFacturationSettings(): Promise<FacturationSettings> {
+    return firstValueFrom(this.http.get<FacturationSettings>(`${this.base}/parametres/facturation`));
+  }
+  updateFacturationSettings(data: FacturationSettings): Promise<FacturationSettings> {
+    return firstValueFrom(this.http.put<FacturationSettings>(`${this.base}/parametres/facturation`, data));
   }
 
   // ── UTILISATEURS ──

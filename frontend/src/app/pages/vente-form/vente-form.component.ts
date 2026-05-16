@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { NgClass } from '@angular/common';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
+import { SettingsService } from '../../core/services/settings.service';
 import { Client, Produit } from '../../core/models';
 import { formatNum } from '../../core/utils/format';
 
@@ -54,7 +55,7 @@ export class VenteFormComponent implements OnInit {
   formatNum = formatNum;
   Math = Math;
 
-  constructor(private api: ApiService, private toast: ToastService, public router: Router) {}
+  constructor(private api: ApiService, private toast: ToastService, public router: Router, private settings: SettingsService) {}
 
   async ngOnInit(): Promise<void> {
     const [c, p] = await Promise.all([
@@ -73,7 +74,8 @@ export class VenteFormComponent implements OnInit {
   get selectedClient(): Client | undefined { return this.clients.find(c => c.id === this.clientId); }
 
   addLigne(): void {
-    this.lignes = [...this.lignes, { produitId: 0, quantite: 1, prixUnitaire: 0, tva: 20, total: 0 }];
+    const tva = this.settings.settings.facturation.tvaParDefaut;
+    this.lignes = [...this.lignes, { produitId: 0, quantite: 1, prixUnitaire: 0, tva, total: 0 }];
   }
 
   updateLigneProduit(i: number, produitId: number): void {

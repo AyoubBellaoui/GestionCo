@@ -1,4 +1,5 @@
 using GestionCo.Api.Application.Common.Interfaces;
+using GestionCo.Api.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace GestionCo.Api.Infrastructure.Services;
@@ -9,10 +10,15 @@ public class ReferenceGenerator : IReferenceGenerator
 
     public ReferenceGenerator(IAppDbContext db) => _db = db;
 
+    private async Task<ParametresFacturation> GetParamsAsync(CancellationToken ct)
+        => await _db.ParametresFacturation.AsNoTracking().FirstOrDefaultAsync(ct)
+           ?? new ParametresFacturation();
+
     public async Task<string> GenerateProductReferenceAsync(CancellationToken ct = default)
     {
+        var pf = await GetParamsAsync(ct);
         var year = DateTime.UtcNow.Year;
-        var prefix = $"PRD-{year}-";
+        var prefix = $"{pf.PrefixeProduit}-{year}-";
 
         var lastRef = await _db.Produits
             .Where(p => p.Reference.StartsWith(prefix))
@@ -20,14 +26,14 @@ public class ReferenceGenerator : IReferenceGenerator
             .Select(p => p.Reference)
             .FirstOrDefaultAsync(ct);
 
-        var nextNum = ExtractNextNumber(lastRef, prefix, padding: 4);
-        return $"{prefix}{nextNum:D4}";
+        return $"{prefix}{ExtractNextNumber(lastRef, prefix, 4):D4}";
     }
 
     public async Task<string> GenerateSaleReferenceAsync(CancellationToken ct = default)
     {
+        var pf = await GetParamsAsync(ct);
         var year = DateTime.UtcNow.Year;
-        var prefix = $"VNT-{year}-";
+        var prefix = $"{pf.PrefixeVente}-{year}-";
 
         var lastRef = await _db.Ventes
             .Where(v => v.Reference.StartsWith(prefix))
@@ -35,14 +41,14 @@ public class ReferenceGenerator : IReferenceGenerator
             .Select(v => v.Reference)
             .FirstOrDefaultAsync(ct);
 
-        var nextNum = ExtractNextNumber(lastRef, prefix, padding: 4);
-        return $"{prefix}{nextNum:D4}";
+        return $"{prefix}{ExtractNextNumber(lastRef, prefix, 4):D4}";
     }
 
     public async Task<string> GeneratePurchaseReferenceAsync(CancellationToken ct = default)
     {
+        var pf = await GetParamsAsync(ct);
         var year = DateTime.UtcNow.Year;
-        var prefix = $"ACH-{year}-";
+        var prefix = $"{pf.PrefixeAchat}-{year}-";
 
         var lastRef = await _db.Achats
             .Where(a => a.Reference.StartsWith(prefix))
@@ -50,14 +56,14 @@ public class ReferenceGenerator : IReferenceGenerator
             .Select(a => a.Reference)
             .FirstOrDefaultAsync(ct);
 
-        var nextNum = ExtractNextNumber(lastRef, prefix, padding: 4);
-        return $"{prefix}{nextNum:D4}";
+        return $"{prefix}{ExtractNextNumber(lastRef, prefix, 4):D4}";
     }
 
     public async Task<string> GenerateInvoiceReferenceAsync(CancellationToken ct = default)
     {
+        var pf = await GetParamsAsync(ct);
         var year = DateTime.UtcNow.Year;
-        var prefix = $"FAC-{year}-";
+        var prefix = $"{pf.PrefixeFacture}-{year}-";
 
         var lastRef = await _db.Factures
             .Where(f => f.NumeroFacture.StartsWith(prefix))
@@ -65,8 +71,7 @@ public class ReferenceGenerator : IReferenceGenerator
             .Select(f => f.NumeroFacture)
             .FirstOrDefaultAsync(ct);
 
-        var nextNum = ExtractNextNumber(lastRef, prefix, padding: 3);
-        return $"{prefix}{nextNum:D3}";
+        return $"{prefix}{ExtractNextNumber(lastRef, prefix, 3):D3}";
     }
 
     public async Task<string> GenerateChargeReferenceAsync(CancellationToken ct = default)
@@ -80,8 +85,7 @@ public class ReferenceGenerator : IReferenceGenerator
             .Select(c => c.Reference)
             .FirstOrDefaultAsync(ct);
 
-        var nextNum = ExtractNextNumber(lastRef, prefix, padding: 4);
-        return $"{prefix}{nextNum:D4}";
+        return $"{prefix}{ExtractNextNumber(lastRef, prefix, 4):D4}";
     }
 
     public async Task<string> GenerateDevisReferenceAsync(CancellationToken ct = default)
@@ -95,8 +99,7 @@ public class ReferenceGenerator : IReferenceGenerator
             .Select(d => d.Reference)
             .FirstOrDefaultAsync(ct);
 
-        var nextNum = ExtractNextNumber(lastRef, prefix, padding: 4);
-        return $"{prefix}{nextNum:D4}";
+        return $"{prefix}{ExtractNextNumber(lastRef, prefix, 4):D4}";
     }
 
     private static int ExtractNextNumber(string? lastRef, string prefix, int padding)

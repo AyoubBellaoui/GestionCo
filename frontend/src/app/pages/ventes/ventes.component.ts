@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { CommonModule, NgClass } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
 import { ModalComponent } from '../../shared/modal/modal.component';
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ExportService } from '../../core/services/export.service';
@@ -16,23 +17,25 @@ type DateRange = 'today' | '7d' | '30d' | '12m' | 'all';
 @Component({
   selector: 'app-ventes',
   standalone: true,
-  imports: [CommonModule, TopbarComponent, ModalComponent, FormsModule, NgClass],
+  imports: [CommonModule, TopbarComponent, ModalComponent, PaginationComponent, FormsModule, NgClass],
   templateUrl: './ventes.component.html',
 })
 export class VentesComponent implements OnInit {
-  ventes: Vente[] = [];
+  items: Vente[] = [];
   clients: Client[] = [];
   loading = true;
   search = '';
   statusFilter = '';
   clientFilter = '';
   dateRange: DateRange = 'all';
+  selectedDate = '';
   page = 1;
   pageSize = 10;
+  total = 0;
+  stats = { ca: 0, count: 0, panier: 0, impayes: 0, nbImpayes: 0 };
+
   modalOpen = false;
   viewVente: Vente | null = null;
-  selectedDate = '';
-
   paiementMontant = 0;
   paiementMethode = 'Espece';
   paiementSaving = false;
@@ -43,25 +46,77 @@ export class VentesComponent implements OnInit {
   getAvatarClass = getAvatarClass;
   getPayStatus = getPayStatus;
   statusInfo = statusInfo;
-
   Math = Math;
 
-  constructor(private api: ApiService, private toast: ToastService, private exportSvc: ExportService, public router: Router, public auth: AuthService) {}
+  private searchTimer: any;
 
-  async ngOnInit(): Promise<void> { await this.load(); }
+  constructor(
+    private api: ApiService,
+    private toast: ToastService,
+    private exportSvc: ExportService,
+    public router: Router,
+    public auth: AuthService,
+  ) {}
 
-  exportExcel(): void { this.exportSvc.exportVentes(this.ventes); }
+  async ngOnInit(): Promise<void> {
+    await Promise.all([this.load(), this.loadStats(), this.loadClients()]);
+  }
+
+  private async loadClients(): Promise<void> {
+    try { this.clients = await this.api.clientsList(); } catch { /* ignore */ }
+  }
+
+  async loadStats(): Promise<void> {
+    const now = new Date();
+    const dateDebut = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const [monthRes, impRes] = await Promise.allSettled([
+      this.api.ventesListPaged({ page: 1, pageSize: 500, dateDebut }),
+      this.api.ventesListPaged({ page: 1, pageSize: 500, statut: 'EnAttente' }),
+    ]);
+    const month = monthRes.status === 'fulfilled' ? monthRes.value.items : [];
+    const imp   = impRes.status === 'fulfilled'   ? impRes.value.items   : [];
+    const ca    = month.reduce((s, v) => s + v.montantTotal, 0);
+    const count = month.length;
+    this.stats = {
+      ca, count,
+      panier: count > 0 ? ca / count : 0,
+      impayes: imp.reduce((s, v) => s + v.reste, 0),
+      nbImpayes: imp.length,
+    };
+  }
 
   async load(): Promise<void> {
     this.loading = true;
     try {
-      const [v, c] = await Promise.all([
-        this.api.ventesList().catch(() => []),
-        this.api.clientsList().catch(() => []),
-      ]);
-      this.ventes = v;
-      this.clients = c;
+      const ranges: Record<DateRange, number> = { today: 1, '7d': 7, '30d': 30, '12m': 365, all: 0 };
+      const days = ranges[this.dateRange];
+      let dateDebut: string | undefined;
+      let dateFin: string | undefined;
+      if (this.selectedDate) {
+        dateDebut = dateFin = this.selectedDate;
+      } else if (days > 0) {
+        dateDebut = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
+      }
+      const result = await this.api.ventesListPaged({
+        page: this.page, pageSize: this.pageSize,
+        search: this.search || undefined,
+        statut: this.statusFilter === 'Partiel' ? 'EnAttente' : (this.statusFilter || undefined),
+        clientId: this.clientFilter ? Number(this.clientFilter) : undefined,
+        dateDebut, dateFin,
+      });
+      this.items = this.statusFilter === 'Partiel'
+        ? result.items.filter(v => v.montantPaye > 0)
+        : result.items;
+      this.total = result.totalCount;
     } finally { this.loading = false; }
+  }
+
+  onPage(p: number): void { this.page = p; this.load(); }
+  onPageSize(ps: number): void { this.pageSize = ps; this.page = 1; this.load(); }
+  onFilterChange(): void { this.page = 1; this.load(); }
+  onSearchChange(): void {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => { this.page = 1; this.load(); }, 300);
   }
 
   venteStatus(v: Vente): { label: string; cls: string } {
@@ -69,88 +124,43 @@ export class VentesComponent implements OnInit {
     return statusInfo(v.statut);
   }
 
-  get filtered(): Vente[] {
-    const now = Date.now();
-    const ranges: Record<DateRange, number> = { today: 86400000, '7d': 7*86400000, '30d': 30*86400000, '12m': 365*86400000, all: Infinity };
-    const rangeMs = ranges[this.dateRange];
-    return this.ventes.filter(v => {
-      if (this.search && !(v.reference.toLowerCase().includes(this.search.toLowerCase()) || (v.nomClient || '').toLowerCase().includes(this.search.toLowerCase()))) return false;
-      if (this.statusFilter === 'Partiel') {
-        if (!(v.statut === 'EnAttente' && v.montantPaye > 0)) return false;
-      } else if (this.statusFilter && v.statut !== this.statusFilter) {
-        return false;
-      }
-      if (this.clientFilter && String(v.clientId) !== this.clientFilter) return false;
-      if (this.selectedDate) {
-        if (this.formatIsoDate(new Date(v.dateVente)) !== this.selectedDate) return false;
-      } else if (rangeMs !== Infinity && now - new Date(v.dateVente).getTime() > rangeMs) return false;
-      return true;
-    });
+  setDateRange(r: string): void { this.dateRange = r as DateRange; this.onFilterChange(); }
+
+  resetFilters(): void {
+    this.search = ''; this.statusFilter = ''; this.clientFilter = '';
+    this.dateRange = '30d'; this.selectedDate = ''; this.page = 1;
+    this.load();
   }
 
   get venteDates(): string[] {
-    return Array.from(new Set(this.ventes.map(v => this.formatIsoDate(new Date(v.dateVente))))).sort();
+    return Array.from(new Set(this.items.map(v => {
+      const d = new Date(v.dateVente);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }))).sort();
   }
 
-  get stats() {
-    const now = new Date();
-    const thisMonth = this.ventes.filter(v => { const d = new Date(v.dateVente); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); });
-    const ca = thisMonth.reduce((s, v) => s + v.montantTotal, 0);
-    const count = thisMonth.length;
-    const panier = count > 0 ? ca / count : 0;
-    const impayes = this.ventes.filter(v => v.statut === 'EnAttente').reduce((s, v) => s + v.reste, 0);
-    const nbImpayes = this.ventes.filter(v => v.statut === 'EnAttente' && v.reste > 0).length;
-    return { ca, count, panier, impayes, nbImpayes };
+  async exportExcel(): Promise<void> {
+    try {
+      const r = await this.api.ventesListPaged({ page: 1, pageSize: 2000 });
+      this.exportSvc.exportVentes(r.items);
+    } catch { this.toast.notify('Erreur export', 'error'); }
   }
-
-
-  get total(): number { return this.filtered.length; }
-  get pageCount(): number { return Math.max(1, Math.ceil(this.total / this.pageSize)); }
-  get paged(): Vente[] { return this.filtered.slice((this.page - 1) * this.pageSize, this.page * this.pageSize); }
-
-  setDateRange(r: string): void { this.dateRange = r as DateRange; this.page = 1; }
-  resetFilters(): void {
-    this.search = '';
-    this.statusFilter = '';
-    this.clientFilter = '';
-    this.dateRange = '30d';
-    this.selectedDate = '';
-    this.page = 1;
-  }
-
-  formatIsoDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
 
   openDetail(v: Vente): void {
-    this.viewVente = v;
-    this.paiementMontant = 0;
-    this.paiementMethode = 'Espece';
-    this.modalOpen = true;
+    this.viewVente = v; this.paiementMontant = 0; this.paiementMethode = 'Espece'; this.modalOpen = true;
   }
 
   async addPaiement(): Promise<void> {
     if (!this.viewVente || this.paiementMontant <= 0) return;
     this.paiementSaving = true;
     try {
-      const updated = await this.api.venteAddPaiement(this.viewVente.id, {
-        montant: this.paiementMontant,
-        methode: this.paiementMethode,
-      });
-      this.ventes = this.ventes.map(v => v.id === updated.id ? updated : v);
+      await this.api.venteAddPaiement(this.viewVente.id, { montant: this.paiementMontant, methode: this.paiementMethode });
       this.paiementMontant = 0;
       this.toast.notify('Paiement enregistré', 'success');
-      this.modalOpen = false;
-      this.viewVente = null;
-    } catch {
-      this.toast.notify('Erreur lors du paiement', 'error');
-    } finally {
-      this.paiementSaving = false;
-    }
+      this.modalOpen = false; this.viewVente = null;
+      await Promise.all([this.load(), this.loadStats()]);
+    } catch { this.toast.notify('Erreur lors du paiement', 'error'); }
+    finally { this.paiementSaving = false; }
   }
 
   async handleCancel(id: number): Promise<void> {
@@ -158,17 +168,4 @@ export class VentesComponent implements OnInit {
     try { await this.api.venteCancel(id); this.toast.notify('Vente annulée', 'success'); await this.load(); }
     catch { this.toast.notify("Impossible d'annuler la vente", 'error'); }
   }
-
-  buildPageList(): (number | '…')[] {
-    const total = this.pageCount;
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-    const pages: (number | '…')[] = [1];
-    if (this.page > 3) pages.push('…');
-    for (let i = Math.max(2, this.page - 1); i <= Math.min(total - 1, this.page + 1); i++) pages.push(i);
-    if (this.page < total - 2) pages.push('…');
-    pages.push(total);
-    return pages;
-  }
-
-  isPageNum(p: number | '…'): p is number { return p !== '…'; }
 }

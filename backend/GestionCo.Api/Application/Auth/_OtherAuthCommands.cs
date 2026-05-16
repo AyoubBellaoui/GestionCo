@@ -127,6 +127,44 @@ public class UpdateProfileHandler : IRequestHandler<UpdateProfileCommand, UserDt
     }
 }
 
+// ============ CHANGE PASSWORD ============
+public record ChangePasswordCommand(string CurrentPassword, string NewPassword) : IRequest<Unit>;
+
+public class ChangePasswordHandler : IRequestHandler<ChangePasswordCommand, Unit>
+{
+    private readonly IAppDbContext _db;
+    private readonly ICurrentUserService _current;
+    private readonly IPasswordHasher _hasher;
+    private readonly IAuditLogger _audit;
+
+    public ChangePasswordHandler(IAppDbContext db, ICurrentUserService current, IPasswordHasher hasher, IAuditLogger audit)
+    {
+        _db = db; _current = current; _hasher = hasher; _audit = audit;
+    }
+
+    public async Task<Unit> Handle(ChangePasswordCommand req, CancellationToken ct)
+    {
+        if (_current.UserId == null) throw new UnauthorizedException();
+
+        var user = await _db.Utilisateurs
+            .FirstOrDefaultAsync(u => u.Id == _current.UserId.Value, ct)
+            ?? throw new NotFoundException("Utilisateur", _current.UserId.Value);
+
+        if (!_hasher.Verify(req.CurrentPassword, user.PasswordHash))
+            throw new BusinessException("Mot de passe actuel incorrect");
+
+        if (req.NewPassword.Length < 8)
+            throw new BusinessException("Le nouveau mot de passe doit contenir au moins 8 caractères");
+
+        user.PasswordHash = _hasher.Hash(req.NewPassword);
+        await _db.SaveChangesAsync(ct);
+
+        await _audit.LogAsync(ActionLog.Update, "utilisateurs", $"Changement de mot de passe par {user.NomComplet}", user.Id, ct: ct);
+
+        return Unit.Value;
+    }
+}
+
 // ============ GET CURRENT USER ============
 public record GetCurrentUserQuery : IRequest<UserDto>;
 

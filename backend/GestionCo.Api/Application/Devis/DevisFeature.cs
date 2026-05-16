@@ -493,8 +493,8 @@ public class GetDevisHandler : IRequestHandler<GetDevisQuery, PagedList<DevisDto
 
         if (q.Statut.HasValue) query = query.Where(d => d.Statut == q.Statut);
         if (q.ClientId.HasValue) query = query.Where(d => d.ClientId == q.ClientId);
-        if (q.DateDebut.HasValue) query = query.Where(d => d.DateDevis >= q.DateDebut);
-        if (q.DateFin.HasValue) query = query.Where(d => d.DateDevis <= q.DateFin);
+        if (q.DateDebut.HasValue) query = query.Where(d => d.DateDevis >= q.DateDebut.Value.Date);
+        if (q.DateFin.HasValue) query = query.Where(d => d.DateDevis < q.DateFin.Value.Date.AddDays(1));
 
         query = query.OrderByDescending(d => d.DateDevis);
 

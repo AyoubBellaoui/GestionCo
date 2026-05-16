@@ -22,6 +22,7 @@ export class PaiementsComponent implements OnInit {
   loading = true;
 
   search = '';
+  selectedDate = '';
   methodeFilter = '';
   statutFilter = '';
 
@@ -55,12 +56,23 @@ export class PaiementsComponent implements OnInit {
 
   // ── VENTES tab ──
 
+  private venteActive(venteId: number): boolean {
+    const v = this.ventes.find(v => v.id === venteId);
+    return v?.statut !== 'Annule';
+  }
+
   get filtered(): Paiement[] {
     return this.paiements.filter(p => {
+      if (!this.venteActive(p.venteId)) return false;
       if (this.search && !(p.venteReference || '').toLowerCase().includes(this.search.toLowerCase()) &&
         !p.nomClient.toLowerCase().includes(this.search.toLowerCase())) return false;
       if (this.methodeFilter && p.methode !== this.methodeFilter) return false;
       if (this.statutFilter && p.statut !== this.statutFilter) return false;
+      if (this.selectedDate) {
+        const d = new Date(p.datePaiement);
+        const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        if (dStr !== this.selectedDate) return false;
+      }
       return true;
     });
   }
@@ -92,10 +104,11 @@ export class PaiementsComponent implements OnInit {
   }
 
   get stats() {
-    const total = this.paiements.reduce((s, p) => s + p.montant, 0);
-    const payes = this.paiements.filter(p => p.statut === 'Confirme').reduce((s, p) => s + p.montant, 0);
+    const active = this.paiements.filter(p => this.venteActive(p.venteId));
+    const total = active.reduce((s, p) => s + p.montant, 0);
+    const payes = active.filter(p => p.statut === 'Confirme').reduce((s, p) => s + p.montant, 0);
     const enAttente = this.ventes.filter(v => v.statut === 'EnAttente' && v.montantPaye === 0).length;
-    return { total, payes, enAttente, count: this.paiements.length };
+    return { total, payes, enAttente, count: active.length };
   }
 
   getVenteById(venteId: number): Vente | undefined {
@@ -115,6 +128,11 @@ export class PaiementsComponent implements OnInit {
         !p.nomFournisseur.toLowerCase().includes(this.search.toLowerCase())) return false;
       if (this.methodeFilter && p.methode !== this.methodeFilter) return false;
       if (this.statutFilter && p.statut !== this.statutFilter) return false;
+      if (this.selectedDate) {
+        const d = new Date(p.datePaiement);
+        const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        if (dStr !== this.selectedDate) return false;
+      }
       return true;
     });
   }
@@ -187,6 +205,7 @@ export class PaiementsComponent implements OnInit {
 
   resetFilters(): void {
     this.search = '';
+    this.selectedDate = '';
     this.methodeFilter = '';
     this.statutFilter = '';
   }

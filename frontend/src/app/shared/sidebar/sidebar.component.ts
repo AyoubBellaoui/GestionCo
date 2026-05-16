@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { SettingsService } from '../../core/services/settings.service';
+import { SearchService } from '../../core/services/search.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -10,7 +11,11 @@ import { SettingsService } from '../../core/services/settings.service';
   templateUrl: './sidebar.component.html',
 })
 export class SidebarComponent {
-  constructor(public auth: AuthService, public settings: SettingsService) {}
+  constructor(
+    public auth: AuthService,
+    public settings: SettingsService,
+    public search: SearchService,
+  ) {}
 
   get initials(): string {
     const user = this.auth.user;

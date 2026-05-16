@@ -368,6 +368,19 @@ public class DevisConfiguration : IEntityTypeConfiguration<Devis>
     }
 }
 
+public class ParametresFacturationConfiguration : IEntityTypeConfiguration<ParametresFacturation>
+{
+    public void Configure(EntityTypeBuilder<ParametresFacturation> b)
+    {
+        b.ToTable("parametres_facturation");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.PrefixeFacture).HasMaxLength(10).IsRequired();
+        b.Property(x => x.PrefixeVente).HasMaxLength(10).IsRequired();
+        b.Property(x => x.PrefixeAchat).HasMaxLength(10).IsRequired();
+        b.Property(x => x.PrefixeProduit).HasMaxLength(10).IsRequired();
+    }
+}
+
 public class LigneDevisConfiguration : IEntityTypeConfiguration<LigneDevis>
 {
     public void Configure(EntityTypeBuilder<LigneDevis> b)
