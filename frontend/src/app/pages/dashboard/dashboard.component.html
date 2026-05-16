@@ -2,193 +2,210 @@
 
 <div class="content">
 
-  <!-- ① ÉQUATION FINANCIÈRE -->
-  <div class="db-eq-card">
-    <div class="db-eq-header">
+  <!-- ══ SKELETON ══ -->
+  @if (loading) {
+    <div class="db2-skel-hero"></div>
+    <div class="db2-skel-kpi">
+      @for (n of [1,2,3,4,5]; track n) { <div class="db2-skel-card"></div> }
+    </div>
+    <div class="db2-skel-charts"></div>
+  }
+
+  @if (!loading) {
+
+  <!-- ① HERO FINANCIAL CARD ────────────────────────────────────── -->
+  <div class="db2-hero">
+    <div class="db2-hero-header">
       <div>
-        <div class="db-eq-title">Résumé financier · {{ currentMonth }}</div>
-        <div class="db-eq-subtitle">Revenus − Dépenses = Résultat net du mois</div>
+        <div class="db2-hero-title">Résumé financier</div>
+        <div class="db2-hero-month">{{ currentMonth }}</div>
       </div>
-      <div class="db-eq-status" [ngClass]="resultatNet >= 0 ? 'pos' : 'neg'">
+      <div class="db2-badge" [ngClass]="resultatNet >= 0 ? 'db2-badge-success' : 'db2-badge-danger'">
         {{ resultatNet >= 0 ? '✅ Bénéficiaire' : '⚠️ Déficitaire' }}
       </div>
     </div>
 
-    <div class="db-eq-body">
+    <div class="db2-hero-body">
 
       <!-- Revenus -->
-      <div class="db-eq-section">
-        <div class="db-eq-sec-label">💰 Revenus</div>
-        <div class="db-eq-sec-amount" style="color:var(--primary)">
-          {{ formatNum(revenus) }}<span> MAD</span>
-        </div>
-        <div class="stat-trend" [ngClass]="revenuTrendCls">{{ revenuTrendText }}</div>
-        <div class="db-eq-sec-details">
-          <span>🧾 {{ stats?.ventesDuMois || 0 }} vente(s) ce mois</span>
-          <span>📅 {{ formatNum(stats?.caDuJour) }} MAD aujourd'hui</span>
-        </div>
+      <div class="db2-hero-block">
+        <div class="db2-hero-block-icon">💰</div>
+        <div class="db2-hero-block-label">Revenus du mois</div>
+        <div class="db2-hero-block-amount primary">{{ formatNum(displayCA) }}<span> MAD</span></div>
+        <div class="db2-hero-trend" [ngClass]="revenuTrendCls">{{ revenuTrendText }}</div>
+        <div class="db2-hero-sub">{{ stats?.ventesDuMois || 0 }} vente(s) · {{ formatNum(stats?.caDuJour) }} MAD aujourd'hui</div>
       </div>
 
-      <div class="db-eq-op">−</div>
+      <div class="db2-hero-op">−</div>
 
       <!-- Dépenses -->
-      <div class="db-eq-section">
-        <div class="db-eq-sec-label">📉 Dépenses</div>
-        <div class="db-eq-sec-amount" style="color:var(--danger)">
-          {{ formatNum(depenses) }}<span> MAD</span>
-        </div>
-        <div class="stat-trend" [ngClass]="depensesTrendCls">{{ depensesTrendText }}</div>
-        <div class="db-eq-sec-details">
-          <span>📥 Achats : {{ formatNum(achatsDuMois) }} MAD</span>
-          <span>💸 Charges : {{ formatNum(chargesDuMois) }} MAD</span>
-        </div>
+      <div class="db2-hero-block">
+        <div class="db2-hero-block-icon">📉</div>
+        <div class="db2-hero-block-label">Dépenses du mois</div>
+        <div class="db2-hero-block-amount danger">{{ formatNum(displayDep) }}<span> MAD</span></div>
+        <div class="db2-hero-trend" [ngClass]="depensesTrendCls">{{ depensesTrendText }}</div>
+        <div class="db2-hero-sub">Achats : {{ formatNum(achatsDuMois) }} · Charges : {{ formatNum(chargesDuMois) }} MAD</div>
       </div>
 
-      <div class="db-eq-op">=</div>
+      <div class="db2-hero-op">=</div>
 
       <!-- Résultat net -->
-      <div class="db-eq-result" [ngClass]="resultatNet >= 0 ? 'pos' : 'neg'">
-        <div class="db-eq-sec-label">📈 Résultat net</div>
-        <div class="db-eq-result-amount">
-          {{ resultatNet >= 0 ? '+' : '' }}{{ formatNum(resultatNet) }}<span> MAD</span>
+      <div class="db2-hero-result" [ngClass]="resultatNet >= 0 ? 'pos' : 'neg'">
+        <div class="db2-hero-block-icon">📈</div>
+        <div class="db2-hero-block-label">Résultat net</div>
+        <div class="db2-hero-result-amount" [ngClass]="resultatNet >= 0 ? 'success' : 'danger'">
+          {{ resultatNet >= 0 ? '+' : '−' }}{{ formatNum(displayNet) }}<span> MAD</span>
         </div>
-        <div class="db-eq-marge">Marge brute {{ margeRate }}%</div>
-        <div class="db-eq-bar">
-          <div class="db-eq-bar-fill"
-            [style.width.%]="margeBarPct"
-            [style.background]="resultatNet >= 0 ? 'var(--success)' : 'var(--danger)'">
-          </div>
+        <div class="db2-marge-label">Marge brute {{ margeRate }}%</div>
+        <div class="db2-marge-bar">
+          <div class="db2-marge-fill" [style.width.%]="margeBarPct" [ngClass]="resultatNet >= 0 ? 'pos' : 'neg'"></div>
         </div>
       </div>
 
     </div>
   </div>
 
-  <!-- ② KPI SECONDAIRES -->
-  <div class="stats-row">
+  <!-- ② KPI ROW ────────────────────────────────────────────────── -->
+  <div class="db2-kpi-row">
 
-    <div class="stat-card">
-      <div class="stat-icon green">🧾</div>
-      <div>
-        <div class="stat-label">Ventes du mois</div>
-        <div class="stat-value">{{ stats?.ventesDuMois || 0 }}</div>
-        <div class="stat-trend neutral">{{ stats?.ventesDuJour || 0 }} aujourd'hui</div>
+    <div class="db2-kpi-card">
+      <div class="db2-kpi-icon" style="background:#eef0ff">🧾</div>
+      <div class="db2-kpi-body">
+        <div class="db2-kpi-label">Ventes du mois</div>
+        <div class="db2-kpi-value">{{ stats?.ventesDuMois || 0 }}</div>
+        <div class="db2-kpi-sub">{{ stats?.ventesDuJour || 0 }} aujourd'hui</div>
       </div>
     </div>
 
-    <div class="stat-card">
-      <div class="stat-icon cyan">👥</div>
-      <div>
-        <div class="stat-label">Total clients</div>
-        <div class="stat-value">{{ formatNum(stats?.totalClients) }}</div>
-        <div class="stat-trend neutral">+{{ stats?.nouveauxClientsDuMois || 0 }} ce mois</div>
+    <div class="db2-kpi-card">
+      <div class="db2-kpi-icon" style="background:#e0f2fe">👥</div>
+      <div class="db2-kpi-body">
+        <div class="db2-kpi-label">Total clients</div>
+        <div class="db2-kpi-value">{{ stats?.totalClients || 0 }}</div>
+        <div class="db2-kpi-sub">+{{ stats?.nouveauxClientsDuMois || 0 }} ce mois</div>
       </div>
     </div>
 
-    <!-- Encaissement avec mini ring -->
-    <div class="stat-card">
-      <div class="db-ring-mini">
-        <svg viewBox="0 0 52 52" width="46" height="46" style="flex-shrink:0">
+    <div class="db2-kpi-card">
+      <div class="db2-ring-wrap">
+        <svg viewBox="0 0 52 52" width="52" height="52" style="flex-shrink:0">
           <circle cx="26" cy="26" r="20" fill="none" stroke="var(--border)" stroke-width="7"/>
           <circle cx="26" cy="26" r="20" fill="none"
             [attr.stroke]="ringColor"
             stroke-width="7"
             stroke-linecap="round"
             [attr.stroke-dasharray]="miniRingDash"
-            transform="rotate(-90 26 26)"/>
+            transform="rotate(-90 26 26)"
+            style="transition:stroke-dasharray 1s ease 0.3s"/>
         </svg>
-        <div>
-          <div class="stat-label">Encaissement</div>
-          <div class="stat-value" [ngClass]="tauxEncaissement < 50 ? 'db-val-warn' : ''">{{ tauxEncaissement }}%</div>
-          <div class="stat-trend neutral">des ventes réglées</div>
+        <div class="db2-kpi-body">
+          <div class="db2-kpi-label">Encaissement</div>
+          <div class="db2-kpi-value" [ngClass]="tauxEncaissement < 50 ? 'db-val-warn' : ''">{{ tauxEncaissement }}%</div>
+          <div class="db2-kpi-sub">des ventes réglées</div>
         </div>
       </div>
     </div>
 
-    <div class="stat-card" style="flex-direction:column;align-items:stretch;gap:9px">
-      <div style="font-size:11.5px;font-weight:700;color:var(--text-muted);letter-spacing:.4px;text-transform:uppercase">⚠️ Impayés</div>
-      <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--danger-light);border-radius:8px;border-left:3px solid var(--danger)">
-        <span style="font-size:17px;flex-shrink:0">📉</span>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:11px;font-weight:700;color:var(--danger)">Débit impayé</div>
-          <div style="font-size:15px;font-weight:700;color:var(--text)">{{ formatNum(montantImpayeDebit) }} <small style="font-size:10px;font-weight:400">MAD</small></div>
-          <div style="font-size:10.5px;color:var(--text-muted)">{{ nombreAchatsImpayes }} achat(s) · {{ nombreChargesImpayees }} charge(s)</div>
-        </div>
+    <div class="db2-kpi-card">
+      <div class="db2-kpi-icon" style="background:#fef3c7">🛒</div>
+      <div class="db2-kpi-body">
+        <div class="db2-kpi-label">Panier moyen</div>
+        <div class="db2-kpi-value" style="font-size:17px">{{ formatNum(panierMoyen) }} <small style="font-size:11px;opacity:.65">MAD</small></div>
+        <div class="db2-kpi-sub">{{ totalQteVendue }} unités vendues</div>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--success-light);border-radius:8px;border-left:3px solid var(--success)">
-        <span style="font-size:17px;flex-shrink:0">💰</span>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:11px;font-weight:700;color:var(--success)">Crédit impayé</div>
-          <div style="font-size:15px;font-weight:700;color:var(--text)">{{ formatNum(montantImpayeCredit) }} <small style="font-size:10px;font-weight:400">MAD</small></div>
-          <div style="font-size:10.5px;color:var(--text-muted)">{{ nombreFacturesImpayees }} facture(s) clients</div>
-        </div>
+    </div>
+
+    <div class="db2-kpi-card db2-kpi-impayes">
+      <div class="db2-kpi-label" style="text-transform:uppercase;letter-spacing:.5px;font-size:11px;margin-bottom:8px">⚠️ Impayés</div>
+      <div class="db2-impayes-row danger">
+        <span>📉 Débit</span>
+        <strong>{{ formatNum(montantImpayeDebit) }} MAD</strong>
+      </div>
+      <div class="db2-impayes-row success">
+        <span>💰 Crédit</span>
+        <strong>{{ formatNum(montantImpayeCredit) }} MAD</strong>
       </div>
     </div>
 
   </div>
 
-  <!-- ③ GRAPHIQUES -->
-  <div class="db-charts-row">
+  <!-- ③ QUICK ACTIONS ─────────────────────────────────────────── -->
+  <div class="db2-actions">
+    <a [routerLink]="['/ventes']"    class="db2-action primary">  <span>🛒</span> Nouvelle vente</a>
+    <a [routerLink]="['/devis']"     class="db2-action info">     <span>📝</span> Nouveau devis</a>
+    <a [routerLink]="['/factures']"  class="db2-action success">  <span>🧾</span> Nouvelle facture</a>
+    <a [routerLink]="['/achats']"    class="db2-action warning">  <span>📥</span> Nouvel achat</a>
+    <a [routerLink]="['/rapports']"  class="db2-action neutral">  <span>📊</span> Voir rapports</a>
+  </div>
 
-    <!-- Évolution 6 mois -->
-    <div class="db-chart-card">
-      <div class="db-chart-head">
+  <!-- ④ CHARTS ROW ────────────────────────────────────────────── -->
+  <div class="db2-charts-grid">
+
+    <!-- Bar chart – 6 mois -->
+    <div class="db2-chart-card">
+      <div class="db2-chart-head">
         <div>
-          <div class="db-chart-title">Évolution sur 6 mois</div>
-          <div class="db-chart-sub">Revenus vs Dépenses (achats + charges)</div>
+          <div class="db2-chart-title">Évolution sur 6 mois</div>
+          <div class="db2-chart-sub">Revenus vs Dépenses (achats + charges)</div>
         </div>
-        <div class="db-legend">
-          <span class="db-legend-item">
-            <span class="db-legend-dot" style="background:var(--primary)"></span>Revenus
-          </span>
-          <span class="db-legend-item">
-            <span class="db-legend-dot" style="background:var(--danger)"></span>Dépenses
-          </span>
+        <div class="db2-legend">
+          <span class="db2-legend-item"><span class="db2-dot" style="background:linear-gradient(135deg,#818cf8,var(--primary))"></span>Revenus</span>
+          <span class="db2-legend-item"><span class="db2-dot" style="background:linear-gradient(135deg,#fca5a5,var(--danger))"></span>Dépenses</span>
         </div>
       </div>
-      <div class="db-bar-chart">
-        @for (m of months; track m.label) {
-          <div class="db-bar-col">
-            <div class="db-bars-wrap">
-              <div class="db-bar" [style.height.%]="m.caH" style="background:var(--primary)"></div>
-              <div class="db-bar" [style.height.%]="m.depH" style="background:var(--danger);opacity:.65"></div>
+      <div class="db2-bar-chart">
+        @for (m of months; track m.label; let i = $index) {
+          <div class="db2-bar-col">
+            <div class="db2-bar-tooltip">
+              <div style="color:#818cf8">CA : {{ formatNum(m.ca) }} MAD</div>
+              <div style="color:#fca5a5">Dep : {{ formatNum(m.dep) }} MAD</div>
             </div>
-            <div class="db-bar-lbl">{{ m.label }}</div>
+            <div class="db2-bars-wrap">
+              <div class="db2-bar ca" [style.height.%]="m.caH" [style.animation-delay]="(i * 80) + 'ms'"></div>
+              <div class="db2-bar dep" [style.height.%]="m.depH" [style.animation-delay]="(i * 80 + 40) + 'ms'"></div>
+            </div>
+            <div class="db2-bar-lbl">{{ m.label }}</div>
           </div>
         }
       </div>
     </div>
 
-    <!-- Donut répartition -->
-    <div class="db-chart-card">
-      <div class="db-chart-title" style="margin-bottom:16px">Répartition du mois</div>
+    <!-- Donut – répartition -->
+    <div class="db2-chart-card">
+      <div class="db2-chart-title" style="margin-bottom:16px">Répartition du mois</div>
       @if (donutSegs.length === 0) {
         <div class="db-no-data">
           <div style="font-size:32px;margin-bottom:8px">📊</div>
           <div>Aucune donnée ce mois</div>
         </div>
       } @else {
-        <div class="db-donut-wrap">
-          <svg viewBox="0 0 112 112" width="110" height="110" style="flex-shrink:0">
-            <circle cx="56" cy="56" r="42" fill="none" stroke="var(--border)" stroke-width="16"/>
+        <div class="db2-donut-wrap">
+          <div style="position:relative;flex-shrink:0">
+            <svg viewBox="0 0 112 112" width="130" height="130">
+              <circle cx="56" cy="56" r="42" fill="none" stroke="var(--border)" stroke-width="16"/>
+              @for (seg of donutSegs; track seg.label) {
+                <circle cx="56" cy="56" r="42" fill="none"
+                  [attr.stroke]="seg.color"
+                  stroke-width="16"
+                  [attr.stroke-dasharray]="seg.dasharray"
+                  [attr.stroke-dashoffset]="seg.dashoffset"
+                  transform="rotate(-90 56 56)"
+                  stroke-linecap="butt"/>
+              }
+            </svg>
+            <div class="db2-donut-center">
+              <div class="db2-donut-center-pct">{{ donutSegs[0].pct }}%</div>
+              <div class="db2-donut-center-lbl">{{ donutSegs[0].label }}</div>
+            </div>
+          </div>
+          <div class="db2-donut-legs">
             @for (seg of donutSegs; track seg.label) {
-              <circle cx="56" cy="56" r="42" fill="none"
-                [attr.stroke]="seg.color"
-                stroke-width="16"
-                [attr.stroke-dasharray]="seg.dasharray"
-                [attr.stroke-dashoffset]="seg.dashoffset"
-                transform="rotate(-90 56 56)"
-                stroke-linecap="butt"/>
-            }
-          </svg>
-          <div class="db-donut-legs">
-            @for (seg of donutSegs; track seg.label) {
-              <div class="db-donut-leg">
-                <span class="db-donut-dot" [style.background]="seg.color"></span>
-                <span class="db-donut-lbl">{{ seg.label }}</span>
-                <div class="db-donut-right">
-                  <div class="db-donut-pct">{{ seg.pct }}%</div>
-                  <div class="db-donut-amt">{{ formatNum(seg.amount) }} MAD</div>
+              <div class="db2-donut-leg">
+                <span class="db2-donut-dot" [style.background]="seg.color"></span>
+                <span class="db2-donut-lbl">{{ seg.label }}</span>
+                <div class="db2-donut-right">
+                  <div class="db2-donut-pct">{{ seg.pct }}%</div>
+                  <div class="db2-donut-amt">{{ formatNum(seg.amount) }} MAD</div>
                 </div>
               </div>
             }
@@ -199,59 +216,55 @@
 
   </div>
 
-  <!-- ④ BOTTOM : TOP CLIENTS + TOP PRODUITS / ALERTES + AUJOURD'HUI + MÉTRIQUES -->
-  <div class="db-bottom-row">
+  <!-- ⑤ BOTTOM ROW ────────────────────────────────────────────── -->
+  <div class="db2-bottom-grid">
 
-    <!-- LEFT column: top clients then top produits stacked -->
+    <!-- LEFT : top clients + top produits stacked -->
     <div style="display:flex;flex-direction:column;gap:14px">
 
-      <!-- Top clients -->
-      <div class="db-section-card">
-        <div class="db-section-head">
-          <span class="db-section-title">🏆 Top clients</span>
-          <span class="db-section-sub">Par chiffre d'affaires total</span>
+      <div class="db2-section-card">
+        <div class="db2-section-head">
+          <span class="db2-section-title">🏆 Top clients</span>
+          <span class="db2-section-sub">Par chiffre d'affaires total</span>
         </div>
         @if (topClients.length === 0) {
-          <div class="db-no-data" style="padding:20px 0">
-            <div style="font-size:28px;margin-bottom:6px">👥</div>
-            <div>Aucun client trouvé</div>
-          </div>
+          <div class="db-no-data" style="padding:20px 0"><div style="font-size:28px;margin-bottom:6px">👥</div><div>Aucun client trouvé</div></div>
         }
         @for (c of topClients; track c.nom; let i = $index) {
-          <div class="db-client-row">
-            <div class="db-client-rank">#{{ i + 1 }}</div>
-            <div [class]="'client-avatar ' + c.cls" style="width:30px;height:30px;font-size:11px;flex-shrink:0">{{ c.initiales }}</div>
-            <div class="db-client-mid">
-              <div class="db-client-name">{{ c.nom }}</div>
-              <div class="db-client-bar"><div class="db-client-fill" [style.width.%]="c.pct"></div></div>
+          <div class="db2-client-row">
+            <div class="db2-client-medal">{{ getMedal(i) }}</div>
+            <div [class]="'client-avatar ' + c.cls" style="width:32px;height:32px;font-size:12px;flex-shrink:0">{{ c.initiales }}</div>
+            <div class="db2-client-mid">
+              <div class="db2-client-name">{{ c.nom }}</div>
+              <div class="db2-client-bar">
+                <div class="db2-client-fill" [style.width.%]="c.pct" [style.background]="getBarColor(i)"></div>
+              </div>
             </div>
-            <div class="db-client-amt">{{ formatNum(c.total) }} <small>MAD</small></div>
+            <div class="db2-client-amt">{{ formatNum(c.total) }} <small>MAD</small></div>
           </div>
         }
       </div>
 
-      <!-- Top produits -->
-      <div class="db-section-card">
-        <div class="db-section-head">
-          <span class="db-section-title">📦 Top produits vendus</span>
-          <span class="db-section-sub">Par chiffre d'affaires cumulé</span>
+      <div class="db2-section-card">
+        <div class="db2-section-head">
+          <span class="db2-section-title">📦 Top produits vendus</span>
+          <span class="db2-section-sub">Par chiffre d'affaires cumulé</span>
         </div>
         @if (topProduits.length === 0) {
-          <div class="db-no-data" style="padding:20px 0">
-            <div style="font-size:28px;margin-bottom:6px">📦</div>
-            <div>Aucune vente enregistrée</div>
-          </div>
+          <div class="db-no-data" style="padding:20px 0"><div style="font-size:28px;margin-bottom:6px">📦</div><div>Aucune vente enregistrée</div></div>
         }
         @for (p of topProduits; track p.ref; let i = $index) {
-          <div class="db-client-row">
-            <div class="db-client-rank">#{{ i + 1 }}</div>
-            <div class="db-client-mid">
-              <div class="db-client-name">{{ p.nom }}</div>
-              <div class="db-client-bar"><div class="db-client-fill" [style.width.%]="p.pct"></div></div>
+          <div class="db2-client-row">
+            <div class="db2-client-medal">{{ getMedal(i) }}</div>
+            <div class="db2-client-mid">
+              <div class="db2-client-name">{{ p.nom }}</div>
+              <div class="db2-client-bar">
+                <div class="db2-client-fill" [style.width.%]="p.pct" [style.background]="getBarColor(i)"></div>
+              </div>
             </div>
             <div style="text-align:right;flex-shrink:0">
-              <div class="db-client-amt">{{ formatNum(p.ca) }} <small>MAD</small></div>
-              <div style="font-size:11px;color:var(--text-secondary)">{{ p.qte }} unité(s)</div>
+              <div class="db2-client-amt">{{ formatNum(p.ca) }} <small>MAD</small></div>
+              <div style="font-size:11px;color:var(--text-muted)">{{ p.qte }} unité(s)</div>
             </div>
           </div>
         }
@@ -259,85 +272,87 @@
 
     </div>
 
-    <!-- RIGHT column: alertes + aujourd'hui + métriques -->
-    <div class="db-side-col">
+    <!-- RIGHT : alertes + aujourd'hui + métriques -->
+    <div class="db2-right-col">
 
-      <!-- Alertes -->
-      <div class="db-section-card">
-        <div class="db-section-head">
-          <span class="db-section-title">⚠️ Alertes</span>
+      <div class="db2-section-card">
+        <div class="db2-section-head">
+          <span class="db2-section-title">⚠️ Alertes</span>
         </div>
-        <div class="db-alert-row">
-          <div class="db-alert-icon" style="background:var(--warning-light)">⚠️</div>
-          <div class="db-alert-info">
-            <div class="db-alert-name">Stock faible</div>
-            <div class="db-alert-hint">À réapprovisionner</div>
+
+        <div class="db2-alert-item" [ngClass]="(stats?.produitsStockFaible || 0) > 0 ? 'active-warn' : ''">
+          <div class="db2-alert-ic warn">⚠️</div>
+          <div class="db2-alert-info">
+            <div class="db2-alert-name">Stock faible</div>
+            <div class="db2-alert-sub">À réapprovisionner</div>
           </div>
-          <div class="db-alert-badge warn">{{ stats?.produitsStockFaible || 0 }}</div>
+          <div class="db2-alert-badge" [ngClass]="(stats?.produitsStockFaible || 0) > 0 ? 'warn' : 'ok'">{{ stats?.produitsStockFaible || 0 }}</div>
         </div>
-        <div class="db-alert-row">
-          <div class="db-alert-icon" style="background:var(--danger-light)">🚫</div>
-          <div class="db-alert-info">
-            <div class="db-alert-name">Rupture de stock</div>
-            <div class="db-alert-hint">Produits indisponibles</div>
+
+        <div class="db2-alert-item" [ngClass]="(stats?.produitsRupture || 0) > 0 ? 'active-danger' : ''">
+          <div class="db2-alert-ic danger">🚫</div>
+          <div class="db2-alert-info">
+            <div class="db2-alert-name">Rupture de stock</div>
+            <div class="db2-alert-sub">Produits indisponibles</div>
           </div>
-          <div class="db-alert-badge bad">{{ stats?.produitsRupture || 0 }}</div>
+          <div class="db2-alert-badge" [ngClass]="(stats?.produitsRupture || 0) > 0 ? 'danger' : 'ok'">{{ stats?.produitsRupture || 0 }}</div>
         </div>
-        <div class="db-alert-row" style="border-bottom:none;padding-bottom:0">
-          <div class="db-alert-icon" style="background:var(--danger-light)">📄</div>
-          <div class="db-alert-info">
-            <div class="db-alert-name">Factures impayées</div>
-            <div class="db-alert-hint">{{ formatNum(stats?.montantImpaye) }} MAD en attente</div>
+
+        <div class="db2-alert-item last" [ngClass]="(stats?.nombreFacturesImpayees || 0) > 0 ? 'active-danger' : ''">
+          <div class="db2-alert-ic danger">📄</div>
+          <div class="db2-alert-info">
+            <div class="db2-alert-name">Factures impayées</div>
+            <div class="db2-alert-sub">{{ formatNum(stats?.montantImpaye) }} MAD en attente</div>
           </div>
-          <div class="db-alert-badge bad">{{ stats?.nombreFacturesImpayees || 0 }}</div>
+          <div class="db2-alert-badge" [ngClass]="(stats?.nombreFacturesImpayees || 0) > 0 ? 'danger' : 'ok'">{{ stats?.nombreFacturesImpayees || 0 }}</div>
         </div>
       </div>
 
-      <!-- Aujourd'hui -->
-      <div class="db-section-card">
-        <div class="db-section-head">
-          <span class="db-section-title">📅 Aujourd'hui</span>
+      <div class="db2-section-card">
+        <div class="db2-section-head">
+          <span class="db2-section-title">📅 Aujourd'hui</span>
         </div>
-        <div class="db-today-row">
-          <div class="db-today-icon" style="background:var(--primary-light)">💰</div>
-          <div class="db-today-lbl">CA du jour</div>
-          <div class="db-today-val">{{ formatNum(stats?.caDuJour) }} <small>MAD</small></div>
+        <div class="db2-metric-row">
+          <div class="db2-metric-ic" style="background:var(--primary-light)">💰</div>
+          <div class="db2-metric-lbl">CA du jour</div>
+          <div class="db2-metric-val">{{ formatNum(stats?.caDuJour) }} <small>MAD</small></div>
         </div>
-        <div class="db-today-row">
-          <div class="db-today-icon" style="background:var(--success-light)">🧾</div>
-          <div class="db-today-lbl">Ventes du jour</div>
-          <div class="db-today-val">{{ stats?.ventesDuJour || 0 }}</div>
+        <div class="db2-metric-row">
+          <div class="db2-metric-ic" style="background:var(--success-light)">🧾</div>
+          <div class="db2-metric-lbl">Ventes du jour</div>
+          <div class="db2-metric-val">{{ stats?.ventesDuJour || 0 }}</div>
         </div>
-        <div class="db-today-row" style="border-bottom:none;padding-bottom:0">
-          <div class="db-today-icon" style="background:var(--info-light)">📦</div>
-          <div class="db-today-lbl">Produits catalogue</div>
-          <div class="db-today-val">{{ stats?.totalProduits || 0 }}</div>
+        <div class="db2-metric-row last">
+          <div class="db2-metric-ic" style="background:var(--info-light)">📦</div>
+          <div class="db2-metric-lbl">Produits catalogue</div>
+          <div class="db2-metric-val">{{ stats?.totalProduits || 0 }}</div>
         </div>
       </div>
 
-      <!-- Métriques ventes -->
-      <div class="db-section-card">
-        <div class="db-section-head">
-          <span class="db-section-title">🛒 Métriques ventes</span>
+      <div class="db2-section-card">
+        <div class="db2-section-head">
+          <span class="db2-section-title">🛒 Métriques ventes</span>
         </div>
-        <div class="db-today-row">
-          <div class="db-today-icon" style="background:var(--primary-light)">🛒</div>
-          <div class="db-today-lbl">Panier moyen du mois</div>
-          <div class="db-today-val">{{ formatNum(panierMoyen) }} <small>MAD</small></div>
+        <div class="db2-metric-row">
+          <div class="db2-metric-ic" style="background:var(--primary-light)">🛒</div>
+          <div class="db2-metric-lbl">Panier moyen du mois</div>
+          <div class="db2-metric-val">{{ formatNum(panierMoyen) }} <small>MAD</small></div>
         </div>
-        <div class="db-today-row">
-          <div class="db-today-icon" style="background:var(--success-light)">📦</div>
-          <div class="db-today-lbl">Unités vendues (total)</div>
-          <div class="db-today-val">{{ totalQteVendue }}</div>
+        <div class="db2-metric-row">
+          <div class="db2-metric-ic" style="background:var(--success-light)">📦</div>
+          <div class="db2-metric-lbl">Unités vendues (total)</div>
+          <div class="db2-metric-val">{{ totalQteVendue }}</div>
         </div>
-        <div class="db-today-row" style="border-bottom:none;padding-bottom:0">
-          <div class="db-today-icon" style="background:var(--warning-light)">🔁</div>
-          <div class="db-today-lbl">Taux fidélité clients</div>
-          <div class="db-today-val">{{ tauxFidelite }}<small>%</small></div>
+        <div class="db2-metric-row last">
+          <div class="db2-metric-ic" style="background:var(--warning-light)">🔁</div>
+          <div class="db2-metric-lbl">Taux fidélité clients</div>
+          <div class="db2-metric-val">{{ tauxFidelite }}<small>%</small></div>
         </div>
       </div>
 
     </div>
   </div>
+
+  } <!-- end !loading -->
 
 </div>
