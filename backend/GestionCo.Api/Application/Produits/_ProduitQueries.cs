@@ -17,6 +17,7 @@ public record GetProduitsQuery(
     int? FournisseurId = null,
     bool? StockFaibleOnly = null,
     bool? RuptureOnly = null,
+    bool? DisponibleOnly = null,
     string? SortBy = null,
     bool SortDesc = true
 ) : IRequest<PagedList<ProduitDto>>;
@@ -54,6 +55,9 @@ public class GetProduitsHandler : IRequestHandler<GetProduitsQuery, PagedList<Pr
 
         if (q.RuptureOnly == true)
             query = query.Where(p => p.QuantiteStock == 0);
+
+        if (q.DisponibleOnly == true)
+            query = query.Where(p => p.QuantiteStock > p.SeuilAlerte);
 
         // Tri
         query = (q.SortBy?.ToLower(), q.SortDesc) switch

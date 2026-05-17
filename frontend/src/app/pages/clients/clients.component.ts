@@ -19,11 +19,14 @@ import * as XLSX from 'xlsx';
 })
 export class ClientsComponent implements OnInit {
   clients: Client[] = [];
+  totalCount = 0;
   loading = true;
   search = '';
   typeFilter = '';
   page = 1;
   pageSize = 15;
+  statsData = { total: 0, actifs: 0, ca: 0, impayes: 0 };
+  private searchTimer: any;
 
   formatNum = formatNum;
   getInitials = getInitials;
@@ -31,46 +34,52 @@ export class ClientsComponent implements OnInit {
 
   constructor(private api: ApiService, private toast: ToastService, public router: Router, public auth: AuthService) {}
 
-  async ngOnInit(): Promise<void> { await this.load(); }
+  async ngOnInit(): Promise<void> { await Promise.all([this.load(), this.loadStats()]); }
 
   async load(): Promise<void> {
     this.loading = true;
-    try { this.clients = await this.api.clientsList().catch(() => []); }
-    finally { this.loading = false; }
+    try {
+      const result = await this.api.clientsListPaged({
+        page: this.page, pageSize: this.pageSize,
+        search: this.search || undefined,
+        type: this.typeFilter || undefined,
+      });
+      this.clients = result.items;
+      this.totalCount = result.totalCount;
+    } finally { this.loading = false; }
   }
 
-  get paged(): Client[] {
-    return this.filtered.slice((this.page - 1) * this.pageSize, this.page * this.pageSize);
+  async loadStats(): Promise<void> {
+    try {
+      const s = await this.api.clientsStats();
+      this.statsData = { total: s.total, actifs: s.actifs, ca: s.ca, impayes: s.impayes };
+    } catch (err) { console.error('loadStats clients error:', err); }
   }
 
-  get filtered(): Client[] {
-    return this.clients.filter(c => {
-      if (this.search && !c.nomClient.toLowerCase().includes(this.search.toLowerCase()) &&
-        !(c.email || '').toLowerCase().includes(this.search.toLowerCase()) &&
-        !(c.ice || '').includes(this.search)) return false;
-      if (this.typeFilter && c.type !== this.typeFilter) return false;
-      return true;
-    });
-  }
+  get paged(): Client[] { return this.clients; }
+  get filtered(): Client[] { return this.clients; }
 
-  get stats() {
-    return {
-      total: this.clients.length,
-      actifs: this.clients.filter(c => c.isActive).length,
-      ca: this.clients.reduce((s, c) => s + (c.totalDepense || 0), 0),
-      impayes: this.clients.reduce((s, c) => s + (c.totalImpaye || 0), 0),
-    };
+  get stats() { return this.statsData; }
+
+  onFilterChange(): void { this.page = 1; this.load(); }
+  onSearchChange(): void {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => { this.page = 1; this.load(); }, 300);
   }
+  onPage(p: number): void { this.page = p; this.load(); }
+  onPageSize(ps: number): void { this.pageSize = ps; this.page = 1; this.load(); }
 
   importRunning = false;
   importProgress = '';
+  importResult: { imported: number; failed: number; errors: { row: number; message: string }[] } | null = null;
 
   downloadClientTemplate(): void {
     const ws = XLSX.utils.aoa_to_sheet([
-      ['Nom Client', 'Type', 'Telephone', 'Email', 'Ville', 'ICE', 'RC', 'IF', 'Personne Contact'],
-      ['Société ABC', 'Entreprise', '+212600000000', 'contact@abc.ma', 'Casablanca', '002000000000000', 'RC123', 'IF456', 'Mohammed'],
-      ['Jean Dupont', 'Particulier', '+212611111111', 'jean@mail.com', 'Rabat', '', '', '', ''],
+      ['Nom Client', 'Type', 'Telephone', 'Email', 'Ville', 'Adresse', 'ICE', 'RC', 'IF', 'Personne Contact'],
+      ['Société ABC', 'Entreprise', '+212600000000', 'contact@abc.ma', 'Casablanca', '123 Rue Hassan II', '002000000000000', 'RC123', 'IF456', 'Mohammed'],
+      ['Jean Dupont', 'Particulier', '+212611111111', 'jean@mail.com', 'Rabat', '', '', '', '', ''],
     ]);
+    ws['!cols'] = [{ wch: 22 }, { wch: 12 }, { wch: 16 }, { wch: 24 }, { wch: 14 }, { wch: 24 }, { wch: 16 }, { wch: 8 }, { wch: 8 }, { wch: 18 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Clients');
     XLSX.writeFile(wb, 'modele-import-clients.xlsx');
@@ -91,29 +100,30 @@ export class ClientsComponent implements OnInit {
       const wb = XLSX.read(data);
       const rows: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
       if (rows.length === 0) { this.toast.notify('Fichier vide ou format incorrect', 'warning'); return; }
-      let ok = 0; let errors = 0;
-      for (let i = 0; i < rows.length; i++) {
-        const r = rows[i];
-        this.importProgress = `Import ${i + 1}/${rows.length}…`;
-        const nom = r['Nom Client'] || r['Nom'] || r['nom'];
-        if (!nom) { errors++; continue; }
-        try {
-          await this.api.clientCreate({
-            nomClient: String(nom),
-            type: r['Type'] || r['type'] || 'Particulier',
-            telephone: r['Telephone'] || r['Téléphone'] || r['telephone'] || '',
-            email: r['Email'] || r['email'] || '',
-            ville: r['Ville'] || r['ville'] || '',
-            ice: r['ICE'] || r['ice'] || '',
-            rc: r['RC'] || r['rc'] || '',
-            if: r['IF'] || r['if'] || '',
-            personneContact: r['Personne Contact'] || r['Contact'] || '',
-          });
-          ok++;
-        } catch { errors++; }
-      }
+      if (rows.length > 500) { this.toast.notify('Maximum 500 lignes par import', 'warning'); return; }
+
+      this.importProgress = `Envoi de ${rows.length} ligne(s)…`;
+
+      const items = rows.map(r => ({
+        nomClient: String(r['Nom Client'] || r['Nom'] || r['nom'] || ''),
+        type: r['Type'] || r['type'] || 'Particulier',
+        telephone: r['Telephone'] || r['Téléphone'] || r['telephone'] || '',
+        email: r['Email'] || r['email'] || '',
+        ville: r['Ville'] || r['ville'] || '',
+        adresse: r['Adresse'] || r['adresse'] || '',
+        iCE: r['ICE'] || r['ice'] || '',
+        rC: r['RC'] || r['rc'] || '',
+        iF: r['IF'] || r['if'] || '',
+        personneContact: r['Personne Contact'] || r['Contact'] || r['contact'] || '',
+        isActive: true,
+        creerCompte: false,
+      }));
+
+      const result = await this.api.clientBulkImport(items);
       await this.load();
-      this.toast.notify(`Import terminé : ${ok} client(s) créé(s)${errors > 0 ? ', ' + errors + ' erreur(s)' : ''}`, ok > 0 ? 'success' : 'warning');
+      this.importResult = result;
+      const msg = `Import terminé : ${result.imported} client(s) créé(s)${result.failed > 0 ? ', ' + result.failed + ' erreur(s)' : ''}`;
+      this.toast.notify(msg, result.imported > 0 ? 'success' : 'warning');
     } catch { this.toast.notify('Erreur lors de la lecture du fichier', 'error'); }
     finally { this.importRunning = false; this.importProgress = ''; (event.target as HTMLInputElement).value = ''; }
   }
@@ -130,5 +140,5 @@ export class ClientsComponent implements OnInit {
     }
   }
 
-  resetFilters(): void { this.search = ''; this.typeFilter = ''; this.page = 1; }
+  resetFilters(): void { this.search = ''; this.typeFilter = ''; this.page = 1; this.load(); }
 }

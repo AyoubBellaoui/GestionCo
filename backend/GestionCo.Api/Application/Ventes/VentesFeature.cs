@@ -103,11 +103,12 @@ public class CreateVenteHandler : IRequestHandler<CreateVenteCommand, VenteDto>
     private readonly ICurrentUserService _current;
     private readonly IAuditLogger _audit;
     private readonly INotificationService _notif;
+    private readonly IReapproService _reappro;
 
     public CreateVenteHandler(IAppDbContext db, IReferenceGenerator refGen,
-        ICurrentUserService current, IAuditLogger audit, INotificationService notif)
+        ICurrentUserService current, IAuditLogger audit, INotificationService notif, IReapproService reappro)
     {
-        _db = db; _refGen = refGen; _current = current; _audit = audit; _notif = notif;
+        _db = db; _refGen = refGen; _current = current; _audit = audit; _notif = notif; _reappro = reappro;
     }
 
     public async Task<VenteDto> Handle(CreateVenteCommand req, CancellationToken ct)
@@ -233,7 +234,11 @@ public class CreateVenteHandler : IRequestHandler<CreateVenteCommand, VenteDto>
         {
             var produit = produits.First(p => p.Id == ligne.ProduitId);
             if (produit.QuantiteStock <= produit.SeuilAlerte)
+            {
                 await _notif.CreateStockAlertAsync(produit.Id, produit.Nom, produit.QuantiteStock, produit.SeuilAlerte, ct);
+                if (produit.QuantiteReappro > 0 && produit.FournisseurId.HasValue)
+                    await _reappro.TryGenererReapproAsync(produit.Id, userId, ct);
+            }
         }
 
         return await GetVenteDetailsAsync(vente.Id, ct);

@@ -49,6 +49,8 @@ builder.Services.AddScoped<IAuditLogger, AuditLogger>();
 builder.Services.AddScoped<IPdfService, PdfService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IReapproService, ReapproService>();
+builder.Services.AddHostedService<RecurringChargesJob>();
 
 // ============ JWT AUTH ============
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()
@@ -191,6 +193,21 @@ using (var scope = app.Services.CreateScope())
         catch (Exception ex)
         {
             logger.LogWarning("⚠️  Impossible d'initialiser parametres_facturation : {Msg}", ex.Message);
+        }
+
+        // Seed par défaut pour parametres_entreprise
+        try
+        {
+            if (!await db.ParametresEntreprise.AnyAsync())
+            {
+                db.ParametresEntreprise.Add(new GestionCo.Api.Domain.Entities.ParametresEntreprise());
+                await db.SaveChangesAsync();
+                logger.LogInformation("✅ Paramètres entreprise initialisés par défaut");
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("⚠️  Impossible d'initialiser parametres_entreprise : {Msg}", ex.Message);
         }
 
         // Seed des données de démo
@@ -380,6 +397,28 @@ static async Task ApplyManualTablesAsync(AppDbContext db, ILogger logger)
             INSERT INTO [parametres_facturation] ([PrefixeFacture],[PrefixeVente],[PrefixeAchat],[PrefixeProduit],[TvaParDefaut],[DelaiPaiement],[UpdatedAt])
             VALUES ('FAC','VNT','ACH','PRD',20,30,GETUTCDATE())
             """),
+
+        ("parametres_entreprise", """
+            CREATE TABLE [parametres_entreprise] (
+                [Id]           INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                [RaisonSociale] NVARCHAR(200) NOT NULL DEFAULT 'GestionCo. SARL',
+                [Adresse]      NVARCHAR(500) NULL,
+                [Telephone]    NVARCHAR(50)  NULL,
+                [Email]        NVARCHAR(200) NULL,
+                [Ice]          NVARCHAR(50)  NULL,
+                [Rc]           NVARCHAR(100) NULL,
+                [If]           NVARCHAR(100) NULL,
+                [Patente]      NVARCHAR(100) NULL,
+                [Cnss]         NVARCHAR(100) NULL,
+                [Capital]      NVARCHAR(100) NULL,
+                [Rib]          NVARCHAR(100) NULL,
+                [Banque]       NVARCHAR(200) NULL,
+                [Swift]        NVARCHAR(20)  NULL,
+                [Logo]         NVARCHAR(2000) NULL,
+                [UpdatedAt]    DATETIME2 NOT NULL DEFAULT GETUTCDATE()
+            )
+            INSERT INTO [parametres_entreprise] ([RaisonSociale],[UpdatedAt]) VALUES ('GestionCo. SARL',GETUTCDATE())
+            """),
     };
 
     foreach (var (name, sql) in tables)
@@ -410,6 +449,7 @@ static async Task ApplyManualColumnsAsync(AppDbContext db, ILogger logger)
         ("lignes_vente",  "Remise",             "DECIMAL(5,2) NOT NULL DEFAULT 0"),
         ("lignes_achat",  "Remise",             "DECIMAL(5,2) NOT NULL DEFAULT 0"),
         ("lignes_devis",  "Remise",             "DECIMAL(5,2) NOT NULL DEFAULT 0"),
+        ("Produits",      "QuantiteReappro",    "INT NOT NULL DEFAULT 0"),
     };
 
     foreach (var (table, column, definition) in columns)

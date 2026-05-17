@@ -18,6 +18,7 @@ import { formatNum, formatDate, getPayStatus } from '../../core/utils/format';
 })
 export class ChargesComponent implements OnInit {
   charges: Charge[] = [];
+  totalCount = 0;
   categories: CategorieCharge[] = [];
   loading = true;
 
@@ -27,6 +28,8 @@ export class ChargesComponent implements OnInit {
   selectedDate = '';
   page = 1;
   pageSize = 10;
+  statsData = { totalMois: 0, count: 0, impayes: 0, nbImpayes: 0, totalGlobal: 0 };
+  private searchTimer: any;
 
   modalOpen = false;
   viewCharge: Charge | null = null;
@@ -65,20 +68,40 @@ export class ChargesComponent implements OnInit {
 
   constructor(private api: ApiService, private toast: ToastService, public router: Router) {}
 
-  async ngOnInit(): Promise<void> { await this.load(); }
+  async ngOnInit(): Promise<void> { await Promise.all([this.load(), this.loadStats(), this.loadMeta()]); }
+
+  private async loadMeta(): Promise<void> {
+    try {
+      const [cats, fournisseurs] = await Promise.all([
+        this.api.categoriesChargeList().catch(() => []),
+        this.api.fournisseursList().catch(() => []),
+      ]);
+      this.categories = cats;
+      this.fournisseurs = fournisseurs;
+    } catch {}
+  }
 
   async load(): Promise<void> {
     this.loading = true;
     try {
-      const [c, cats, fournisseurs] = await Promise.all([
-        this.api.chargesList().catch(() => []),
-        this.api.categoriesChargeList().catch(() => []),
-        this.api.fournisseursList().catch(() => []),
-      ]);
-      this.charges = c;
-      this.categories = cats;
-      this.fournisseurs = fournisseurs;
+      const result = await this.api.chargesListPaged({
+        page: this.page, pageSize: this.pageSize,
+        search: this.search || undefined,
+        statut: this.statusFilter || undefined,
+        categorieId: this.categorieFilter ? Number(this.categorieFilter) : undefined,
+        dateDebut: this.selectedDate || undefined,
+        dateFin: this.selectedDate || undefined,
+      });
+      this.charges = result.items;
+      this.totalCount = result.totalCount;
     } finally { this.loading = false; }
+  }
+
+  async loadStats(): Promise<void> {
+    try {
+      const s = await this.api.chargesStats();
+      this.statsData = { totalMois: s.totalMois, count: s.count, impayes: s.impayes, nbImpayes: s.nbImpayes, totalGlobal: s.totalGlobal };
+    } catch (err) { console.error('loadStats charges error:', err); }
   }
 
   chargeStatus(c: Charge): { label: string; cls: string } {
@@ -88,42 +111,18 @@ export class ChargesComponent implements OnInit {
     return { label: 'En attente', cls: 'pending' };
   }
 
-  get filtered(): Charge[] {
-    return this.charges.filter(c => {
-      if (this.search) {
-        const s = this.search.toLowerCase();
-        if (!c.reference.toLowerCase().includes(s) && !c.titre.toLowerCase().includes(s)) return false;
-      }
-      if (this.statusFilter && c.statut !== this.statusFilter) return false;
-      if (this.categorieFilter && String(c.categorieChargeId) !== this.categorieFilter) return false;
-      if (this.selectedDate) {
-        const d = new Date(c.dateCharge);
-        const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        if (iso !== this.selectedDate) return false;
-      }
-      return true;
-    });
-  }
+  get filtered(): Charge[] { return this.charges; }
+  get stats() { return this.statsData; }
+  get total(): number { return this.totalCount; }
+  get paged(): Charge[] { return this.charges; }
 
-  get stats() {
-    const now = new Date();
-    const thisMonth = this.charges.filter(c => {
-      const d = new Date(c.dateCharge);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    });
-    const totalMois = thisMonth.reduce((s, c) => s + c.montant, 0);
-    const count = thisMonth.length;
-    const impayes = this.charges
-      .filter(c => c.statut !== 'Paye' && c.statut !== 'Annule')
-      .reduce((s, c) => s + c.reste, 0);
-    const nbImpayes = this.charges
-      .filter(c => c.statut !== 'Paye' && c.statut !== 'Annule' && c.reste > 0).length;
-    const totalGlobal = this.charges.reduce((s, c) => s + c.montant, 0);
-    return { totalMois, count, impayes, nbImpayes, totalGlobal };
+  onSearchChange(): void {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => { this.page = 1; this.load(); }, 300);
   }
-
-  get total(): number { return this.filtered.length; }
-  get paged(): Charge[] { return this.filtered.slice((this.page - 1) * this.pageSize, this.page * this.pageSize); }
+  onFilterChange(): void { this.page = 1; this.load(); }
+  onPage(p: number): void { this.page = p; this.load(); }
+  onPageSize(ps: number): void { this.pageSize = ps; this.page = 1; this.load(); }
 
   resetFilters(): void {
     this.search = '';
@@ -131,6 +130,7 @@ export class ChargesComponent implements OnInit {
     this.categorieFilter = '';
     this.selectedDate = '';
     this.page = 1;
+    this.load();
   }
 
   openEdit(c: Charge): void {
@@ -157,7 +157,7 @@ export class ChargesComponent implements OnInit {
 
     this.editSaving = true;
     try {
-      const updated = await this.api.chargeUpdate(this.editCharge.id, {
+      await this.api.chargeUpdate(this.editCharge.id, {
         titre: this.editTitre.trim(),
         description: this.editDescription.trim() || null,
         montant: +this.editMontant,
@@ -168,10 +168,10 @@ export class ChargesComponent implements OnInit {
         estRecurrente: this.editEstRecurrente,
         periodicite: this.editEstRecurrente ? this.editPeriodicite : null,
       });
-      this.charges = this.charges.map(c => c.id === updated.id ? updated : c);
       this.editModalOpen = false;
       this.editCharge = null;
       this.toast.notify('Charge modifiée avec succès', 'success');
+      this.load();
     } catch (e: any) {
       this.toast.notify(e?.error?.message || 'Erreur lors de la modification', 'error');
     } finally {
@@ -183,8 +183,8 @@ export class ChargesComponent implements OnInit {
     if (!confirm(`Supprimer la charge « ${c.titre } » (${this.formatNum(c.montant)} MAD) ?\n\nCette action est irréversible.`)) return;
     try {
       await this.api.chargeDelete(c.id);
-      this.charges = this.charges.filter(x => x.id !== c.id);
       this.toast.notify('Charge supprimée', 'success');
+      this.load();
     } catch (e: any) {
       this.toast.notify(e?.error?.message || 'Impossible de supprimer cette charge', 'error');
     }
@@ -205,7 +205,6 @@ export class ChargesComponent implements OnInit {
         montant: this.paiementMontant,
         methode: this.paiementMethode,
       });
-      this.charges = this.charges.map(c => c.id === updated.id ? updated : c);
       this.paiementMontant = 0;
       this.toast.notify('Paiement enregistré', 'success');
       if (updated.statut === 'Paye') {
@@ -214,6 +213,7 @@ export class ChargesComponent implements OnInit {
       } else {
         this.viewCharge = updated;
       }
+      this.load();
     } catch {
       this.toast.notify('Erreur lors du paiement', 'error');
     } finally {

@@ -1,4 +1,4 @@
-<app-topbar title="Clients" [subtitle]="clients.length + ' client' + (clients.length > 1 ? 's' : '') + ' — Annuaire clients'" icon="👥">
+<app-topbar title="Clients" [subtitle]="totalCount + ' client' + (totalCount > 1 ? 's' : '') + ' — Annuaire clients'" icon="👥">
   <button class="btn btn-ghost" (click)="downloadClientTemplate()" title="Télécharger le modèle Excel">📥 Modèle</button>
   <button class="btn btn-ghost" (click)="triggerImportClients()" [disabled]="importRunning">
     {{ importRunning ? importProgress : '📤 Importer Excel' }}
@@ -18,9 +18,9 @@
   <div class="toolbar">
     <div class="search-wrapper">
       <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-      <input class="search-input" placeholder="Rechercher par nom, email, ICE..." [(ngModel)]="search" />
+      <input class="search-input" placeholder="Rechercher par nom, email, ICE..." [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
     </div>
-    <select class="filter-select" [(ngModel)]="typeFilter">
+    <select class="filter-select" [(ngModel)]="typeFilter" (ngModelChange)="onFilterChange()">
       <option value="">Tous types</option>
       <option value="Entreprise">Entreprise</option>
       <option value="Particulier">Particulier</option>
@@ -72,6 +72,50 @@
         </tbody>
       </table>
     </div>
-    <app-pagination [page]="page" [pageSize]="pageSize" [total]="filtered.length" (pageChange)="page=$event" (pageSizeChange)="pageSize=$event;page=1"></app-pagination>
+    <app-pagination [page]="page" [pageSize]="pageSize" [total]="totalCount" (pageChange)="onPage($event)" (pageSizeChange)="onPageSize($event)"></app-pagination>
   </div>
 </div>
+
+<!-- ══ MODAL RÉSULTAT IMPORT ══ -->
+@if (importResult) {
+  <div class="modal-backdrop" (click)="importResult = null">
+    <div class="modal" style="max-width:520px" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">📤 Résultat de l'import</div>
+        <button class="modal-close" (click)="importResult = null">✕</button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;gap:12px">
+          <div style="flex:1;background:var(--success-light,#f0fdf4);border:1px solid var(--success,#22c55e);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:24px;font-weight:800;color:var(--success,#22c55e)">{{ importResult.imported }}</div>
+            <div style="font-size:12px;color:var(--success,#22c55e);font-weight:600">importé(s)</div>
+          </div>
+          @if (importResult.failed > 0) {
+            <div style="flex:1;background:var(--danger-light,#fef2f2);border:1px solid var(--danger,#ef4444);border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:24px;font-weight:800;color:var(--danger,#ef4444)">{{ importResult.failed }}</div>
+              <div style="font-size:12px;color:var(--danger,#ef4444);font-weight:600">erreur(s)</div>
+            </div>
+          }
+        </div>
+        @if (importResult.errors.length > 0) {
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--text-muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:8px">Détail des erreurs</div>
+            <div style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">
+              <table class="data-table" style="margin:0">
+                <thead><tr><th style="width:70px">Ligne</th><th>Erreur</th></tr></thead>
+                <tbody>
+                  @for (e of importResult.errors; track e.row) {
+                    <tr><td style="font-family:monospace;color:var(--danger,#ef4444)">{{ e.row }}</td><td style="font-size:12.5px">{{ e.message }}</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" (click)="importResult = null">Fermer</button>
+      </div>
+    </div>
+  </div>
+}

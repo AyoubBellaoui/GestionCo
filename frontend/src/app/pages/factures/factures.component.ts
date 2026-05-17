@@ -22,6 +22,7 @@ type SortField = '' | 'numero' | 'client' | 'dateEmission' | 'montant';
 })
 export class FacturesComponent implements OnInit {
   factures: Facture[] = [];
+  totalCount = 0;
   loading = true;
   page = 1;
   pageSize = 15;
@@ -32,6 +33,9 @@ export class FacturesComponent implements OnInit {
   sortField: SortField = '';
   sortDir: 'asc' | 'desc' = 'desc';
   selectedIds = new Set<number>();
+  statsData = { totalMois: 0, totalMoisTrend: null as number | null, totalPaye: 0, payeePct: 0, enAttenteCount: 0, enAttenteMontant: 0, enRetardCount: 0, enRetardMontant: 0, tabCounts: { all: 0, payee: 0, partiel: 0, enAttente: 0, enRetard: 0, annulee: 0 } };
+  uniqueClients: string[] = [];
+  private searchTimer: any;
 
   showDetail: Facture | null = null;
   showInfoModal = false;
@@ -58,16 +62,52 @@ export class FacturesComponent implements OnInit {
 
   constructor(private api: ApiService, private toast: ToastService, public router: Router, private settings: SettingsService) {}
 
-  async ngOnInit(): Promise<void> { await this.load(); }
+  async ngOnInit(): Promise<void> { await Promise.all([this.load(), this.loadStats(), this.loadClients()]); }
+
+  private async loadClients(): Promise<void> {
+    try {
+      const clients = await this.api.clientsList();
+      this.uniqueClients = clients.map(c => c.nomClient).sort();
+    } catch (err) { console.error('loadClients factures error:', err); }
+  }
+
+  private tabToParams(): { statut?: string; estEnRetard?: boolean } {
+    switch (this.activeTab) {
+      case 'payee':     return { statut: 'Payee' };
+      case 'partiel':   return { statut: 'PartiellementPayee' };
+      case 'enAttente': return { statut: 'EnAttente' };
+      case 'enRetard':  return { estEnRetard: true };
+      case 'annulee':   return { statut: 'Annulee' };
+      default:          return {};
+    }
+  }
 
   async load(): Promise<void> {
     this.loading = true;
-    try { this.factures = await this.api.facturesList().catch(() => []); }
-    finally { this.loading = false; }
+    try {
+      const tabParams = this.tabToParams();
+      const result = await this.api.facturesListPaged({
+        page: this.page, pageSize: this.pageSize,
+        search: this.search || undefined,
+        dateFilter: this.selectedDate || undefined,
+        ...tabParams,
+      });
+      this.factures = result.items;
+      this.totalCount = result.totalCount;
+    } finally { this.loading = false; }
   }
 
-  get uniqueClients(): string[] {
-    return [...new Set(this.factures.map(f => f.nomClient))].sort();
+  async loadStats(): Promise<void> {
+    try {
+      const s = await this.api.facturesStats();
+      this.statsData = {
+        totalMois: s.totalMois, totalMoisTrend: null, totalPaye: s.totalPaye,
+        payeePct: s.payeePct,
+        enAttenteCount: s.enAttenteCount, enAttenteMontant: s.enAttenteMontant,
+        enRetardCount: s.enRetardCount, enRetardMontant: s.enRetardMontant,
+        tabCounts: s.tabCounts,
+      };
+    } catch (err) { console.error('loadStats factures error:', err); }
   }
 
   factureStatus(f: Facture): { label: string; cls: string } {
@@ -86,53 +126,16 @@ export class FacturesComponent implements OnInit {
       ((f.statut === 'EnAttente' || f.statut === 'EnRetard') && f.montantPaye > 0);
   }
 
-  private filterByTab(f: Facture): boolean {
-    switch (this.activeTab) {
-      case 'payee': return (f.statut === 'Payee' || f.statut === 'Paye') && !this.isPartiel(f);
-      case 'partiel': return this.isPartiel(f);
-      case 'enAttente': return f.statut === 'EnAttente' && !f.estEnRetard && !this.isPartiel(f);
-      case 'enRetard': return (f.estEnRetard || f.statut === 'EnRetard') && !this.isPartiel(f);
-      case 'annulee': return f.statut === 'Annulee';
-      default: return true;
-    }
+  get filtered(): Facture[] { return this.factures; }
+
+  onSearchChange(): void {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => { this.page = 1; this.load(); }, 300);
   }
 
-  private filterByDate(f: Facture): boolean {
-    if (!this.selectedDate) return true;
-    const d = new Date(f.dateEmission);
-    const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    return dStr === this.selectedDate;
-  }
-
-  get filtered(): Facture[] {
-    let result = this.factures.filter(f => {
-      if (!this.filterByTab(f)) return false;
-      if (!this.filterByDate(f)) return false;
-      if (this.search) {
-        const s = this.search.toLowerCase();
-        if (!f.numeroFacture.toLowerCase().includes(s) && !f.nomClient.toLowerCase().includes(s)) return false;
-      }
-      if (this.clientFilter && f.nomClient !== this.clientFilter) return false;
-      return true;
-    });
-
-    if (this.sortField) {
-      result = [...result].sort((a, b) => {
-        let va: any, vb: any;
-        switch (this.sortField) {
-          case 'numero': va = a.numeroFacture; vb = b.numeroFacture; break;
-          case 'client': va = a.nomClient; vb = b.nomClient; break;
-          case 'dateEmission': va = new Date(a.dateEmission).getTime(); vb = new Date(b.dateEmission).getTime(); break;
-          case 'montant': va = a.montantTotal; vb = b.montantTotal; break;
-          default: return 0;
-        }
-        const cmp = va < vb ? -1 : va > vb ? 1 : 0;
-        return this.sortDir === 'asc' ? cmp : -cmp;
-      });
-    }
-
-    return result;
-  }
+  onFilterChange(): void { this.page = 1; this.load(); }
+  onPage(p: number): void { this.page = p; this.load(); }
+  onPageSize(ps: number): void { this.pageSize = ps; this.page = 1; this.load(); }
 
   toggleSort(field: SortField): void {
     if (this.sortField === field) {
@@ -141,6 +144,8 @@ export class FacturesComponent implements OnInit {
       this.sortField = field;
       this.sortDir = 'desc';
     }
+    this.page = 1;
+    this.load();
   }
 
   sortIcon(field: SortField): string {
@@ -148,59 +153,15 @@ export class FacturesComponent implements OnInit {
     return this.sortDir === 'asc' ? '↑' : '↓';
   }
 
-  get stats() {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const endPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+  get stats() { return this.statsData; }
 
-    const factesMois = this.factures.filter(f => new Date(f.dateEmission) >= startOfMonth);
-    const factesPrevMois = this.factures.filter(f => {
-      const d = new Date(f.dateEmission);
-      return d >= startPrevMonth && d <= endPrevMonth;
-    });
-
-    const totalMois = factesMois.reduce((s, f) => s + f.montantTotal, 0);
-    const totalPrevMois = factesPrevMois.reduce((s, f) => s + f.montantTotal, 0);
-    const totalMoisTrend = totalPrevMois > 0 ? Math.round(((totalMois - totalPrevMois) / totalPrevMois) * 100) : null;
-
-    const totalPaye = this.factures.reduce((s, f) => s + f.montantPaye, 0);
-    const totalFacture = this.factures.reduce((s, f) => s + f.montantTotal, 0);
-    const payeePct = totalFacture > 0 ? Math.round((totalPaye / totalFacture) * 100) : 0;
-
-    const enAttente = this.factures.filter(f => f.statut === 'EnAttente' && !f.estEnRetard);
-    const enAttenteMontant = enAttente.reduce((s, f) => s + (f.montantTotal - f.montantPaye), 0);
-
-    const enRetard = this.factures.filter(f => f.estEnRetard || f.statut === 'EnRetard');
-    const enRetardMontant = enRetard.reduce((s, f) => s + (f.montantTotal - f.montantPaye), 0);
-
-    return {
-      totalMois, totalMoisTrend, totalPaye, payeePct,
-      enAttenteCount: enAttente.length,
-      enAttenteMontant,
-      enRetardCount: enRetard.length,
-      enRetardMontant,
-    };
-  }
-
-  get paged(): Facture[] {
-    return this.filtered.slice((this.page - 1) * this.pageSize, this.page * this.pageSize);
-  }
+  get paged(): Facture[] { return this.factures; }
 
   get filteredTotal(): number {
-    return this.filtered.reduce((s, f) => s + f.montantTotal, 0);
+    return this.factures.reduce((s, f) => s + f.montantTotal, 0);
   }
 
-  get tabCount() {
-    return {
-      all: this.factures.length,
-      payee: this.factures.filter(f => (f.statut === 'Payee' || f.statut === 'Paye') && !this.isPartiel(f)).length,
-      partiel: this.factures.filter(f => this.isPartiel(f)).length,
-      enAttente: this.factures.filter(f => f.statut === 'EnAttente' && !f.estEnRetard && !this.isPartiel(f)).length,
-      enRetard: this.factures.filter(f => (f.estEnRetard || f.statut === 'EnRetard') && !this.isPartiel(f)).length,
-      annulee: this.factures.filter(f => f.statut === 'Annulee').length,
-    };
-  }
+  get tabCount() { return this.statsData.tabCounts; }
 
   get allSelected(): boolean {
     return this.filtered.length > 0 && this.filtered.every(f => this.selectedIds.has(f.id));
@@ -340,6 +301,8 @@ export class FacturesComponent implements OnInit {
     const [field, dir] = val.split(':');
     this.sortField = (field as SortField) || '';
     this.sortDir = (dir as 'asc' | 'desc') || 'desc';
+    this.page = 1;
+    this.load();
   }
 
   resetFilters(): void {
@@ -349,5 +312,7 @@ export class FacturesComponent implements OnInit {
     this.clientFilter = '';
     this.sortField = '';
     this.selectedIds = new Set();
+    this.page = 1;
+    this.load();
   }
 }

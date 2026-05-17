@@ -227,7 +227,7 @@ public class CreateChargeHandler : IRequestHandler<CreateChargeCommand, ChargeDt
 }
 
 // ── Génération des charges récurrentes du mois ───────────────────────────────
-public record GenererChargesRecurrentesCommand : IRequest<int>;
+public record GenererChargesRecurrentesCommand(int? SystemUserId = null) : IRequest<int>;
 
 public class GenererChargesRecurrentesHandler : IRequestHandler<GenererChargesRecurrentesCommand, int>
 {
@@ -242,12 +242,12 @@ public class GenererChargesRecurrentesHandler : IRequestHandler<GenererChargesRe
         _db = db; _refGen = refGen; _current = current; _audit = audit;
     }
 
-    public async Task<int> Handle(GenererChargesRecurrentesCommand _, CancellationToken ct)
+    public async Task<int> Handle(GenererChargesRecurrentesCommand req, CancellationToken ct)
     {
         var today     = DateTime.UtcNow;
         var debutMois = new DateTime(today.Year, today.Month, 1);
         var finMois   = debutMois.AddMonths(1);
-        var userId    = _current.UserId ?? throw new UnauthorizedException();
+        var userId    = req.SystemUserId ?? _current.UserId ?? throw new UnauthorizedException();
 
         var recurrentes = await _db.Charges
             .Where(c => c.EstRecurrente && c.DateProchaine.HasValue
@@ -668,4 +668,29 @@ public static class ChargeMapper
         Periodicite   = c.Periodicite,
         DateProchaine = c.DateProchaine,
     };
+}
+
+public record ChargesStatsDto(decimal TotalMois, int Count, decimal Impayes, int NbImpayes, decimal TotalGlobal);
+public record GetChargesStatsQuery() : IRequest<ChargesStatsDto>;
+
+public class GetChargesStatsHandler(IAppDbContext db) : IRequestHandler<GetChargesStatsQuery, ChargesStatsDto>
+{
+    public async Task<ChargesStatsDto> Handle(GetChargesStatsQuery _, CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var totalMois = await db.Charges
+            .Where(c => c.DateCharge >= startOfMonth)
+            .SumAsync(c => (decimal?)c.Montant, ct) ?? 0;
+        var count = await db.Charges.CountAsync(c => c.DateCharge >= startOfMonth, ct);
+        var impayes = await db.Charges
+            .Where(c => c.Statut != StatutCharge.Paye && c.Statut != StatutCharge.Annule)
+            .SumAsync(c => (decimal?)(c.Montant - c.MontantPaye), ct) ?? 0;
+        var nbImpayes = await db.Charges
+            .CountAsync(c => c.Statut != StatutCharge.Paye && c.Statut != StatutCharge.Annule && c.MontantPaye < c.Montant, ct);
+        var totalGlobal = await db.Charges.SumAsync(c => (decimal?)c.Montant, ct) ?? 0;
+
+        return new ChargesStatsDto(totalMois, count, impayes, nbImpayes, totalGlobal);
+    }
 }

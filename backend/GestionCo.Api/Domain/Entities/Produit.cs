@@ -24,6 +24,7 @@ public class Produit : AuditableEntity
     // Stock
     public int QuantiteStock { get; set; }
     public int SeuilAlerte { get; set; } = 5;
+    public int QuantiteReappro { get; set; } = 0; // 0 = réappro auto désactivée
 
     // Relations
     public int? CategorieId { get; set; }

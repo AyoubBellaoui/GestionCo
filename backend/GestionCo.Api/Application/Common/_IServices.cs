@@ -97,3 +97,16 @@ public interface IEmailService
     Task SendDevisAsync(int devisId, string toEmail, string? message = null, EntrepriseInfoDto? info = null, CancellationToken ct = default);
     Task SendFactureAsync(int factureId, string toEmail, string? message = null, EntrepriseInfoDto? info = null, CancellationToken ct = default);
 }
+
+public class ReapproResultDto
+{
+    public bool Created { get; set; }
+    public int AchatId { get; set; }
+    public string Reference { get; set; } = string.Empty;
+    public string? Message { get; set; }
+}
+
+public interface IReapproService
+{
+    Task<ReapproResultDto> TryGenererReapproAsync(int produitId, int utilisateurId, CancellationToken ct = default);
+}

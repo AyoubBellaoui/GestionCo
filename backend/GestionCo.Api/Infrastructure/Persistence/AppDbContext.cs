@@ -43,6 +43,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<DevisEntity> Devis => Set<DevisEntity>();
     public DbSet<LigneDevisEntity> LignesDevis => Set<LigneDevisEntity>();
     public DbSet<Domain.Entities.ParametresFacturation> ParametresFacturation => Set<Domain.Entities.ParametresFacturation>();
+    public DbSet<Domain.Entities.ParametresEntreprise> ParametresEntreprise => Set<Domain.Entities.ParametresEntreprise>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

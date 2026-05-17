@@ -25,7 +25,7 @@ export class ProduitFormComponent implements OnInit {
   form: Partial<Produit> = {
     nom: '', description: '', prixHT: 0, tva: 20, prixTTC: 0,
     prixVenteHT: 0, tvaVente: 20, prixVenteTTC: 0,
-    quantiteStock: 0, seuilAlerte: 5, isActive: true,
+    quantiteStock: 0, seuilAlerte: 5, quantiteReappro: 0, isActive: true,
   };
 
   categories: Categorie[] = [];
@@ -102,7 +102,7 @@ export class ProduitFormComponent implements OnInit {
       } else {
         await this.api.produitCreate(this.form);
         this.toast.notify('Produit créé', 'success');
-        if (andNew) this.form = { nom: '', description: '', prixHT: 0, tva: 20, prixTTC: 0, prixVenteHT: 0, tvaVente: 20, prixVenteTTC: 0, quantiteStock: 0, seuilAlerte: 5, isActive: true };
+        if (andNew) this.form = { nom: '', description: '', prixHT: 0, tva: 20, prixTTC: 0, prixVenteHT: 0, tvaVente: 20, prixVenteTTC: 0, quantiteStock: 0, seuilAlerte: 5, quantiteReappro: 0, isActive: true };
         else this.router.navigate(['/produits']);
       }
     } catch { this.toast.notify("Erreur d'enregistrement", 'error'); }

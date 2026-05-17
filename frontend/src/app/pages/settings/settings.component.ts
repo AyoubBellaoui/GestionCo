@@ -81,6 +81,7 @@ export class SettingsComponent implements OnInit {
     this.activeTab = key;
     if (key === 'comptes') await this.loadComptes();
     if (key === 'facturation') await this.loadFacturationSettings();
+    if (key === 'entreprise') await this.loadEntrepriseSettings();
   }
 
   async loadFacturationSettings(): Promise<void> {
@@ -92,6 +93,28 @@ export class SettingsComponent implements OnInit {
     finally { this.factuLoading = false; }
   }
 
+  async loadEntrepriseSettings(): Promise<void> {
+    try {
+      const data = await this.api.getEntrepriseSettings();
+      this.settings.setDraftEntreprise({
+        raisonSociale: data.raisonSociale ?? this.settings.settings.entreprise.raisonSociale,
+        adresse: data.adresse ?? this.settings.settings.entreprise.adresse,
+        telephone: data.telephone ?? this.settings.settings.entreprise.telephone,
+        email: data.email ?? this.settings.settings.entreprise.email,
+        ice: data.ice ?? this.settings.settings.entreprise.ice,
+        rc: data.rc ?? this.settings.settings.entreprise.rc,
+        if: data.if ?? this.settings.settings.entreprise.if,
+        patente: data.patente ?? this.settings.settings.entreprise.patente,
+        cnss: data.cnss ?? this.settings.settings.entreprise.cnss,
+        capital: data.capital ?? this.settings.settings.entreprise.capital,
+        rib: data.rib ?? this.settings.settings.entreprise.rib,
+        banque: data.banque ?? this.settings.settings.entreprise.banque,
+        swift: data.swift ?? this.settings.settings.entreprise.swift,
+        logo: data.logo ?? this.settings.settings.entreprise.logo,
+      });
+    } catch { /* use local defaults if backend unreachable */ }
+  }
+
   setIce(value: string): void {
     this.settings.setDraftEntreprise({ ice: value.replace(/\D/g, '').slice(0, 15) });
   }
@@ -101,6 +124,13 @@ export class SettingsComponent implements OnInit {
       try {
         await this.api.updateFacturationSettings(this.settings.settings.facturation);
         this.toast.notify('Paramètres de facturation sauvegardés', 'success');
+      } catch {
+        this.toast.notify('Erreur lors de la sauvegarde', 'error');
+      }
+    } else if (this.activeTab === 'entreprise') {
+      try {
+        await this.api.updateEntrepriseSettings(this.settings.settings.entreprise as any);
+        this.toast.notify('Informations entreprise sauvegardées', 'success');
       } catch {
         this.toast.notify('Erreur lors de la sauvegarde', 'error');
       }

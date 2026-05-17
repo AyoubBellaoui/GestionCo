@@ -1,4 +1,9 @@
-<app-topbar title="Fournisseurs" [subtitle]="fournisseurs.length + ' fournisseur' + (fournisseurs.length > 1 ? 's' : '')" icon="🚚">
+<app-topbar title="Fournisseurs" [subtitle]="totalCount + ' fournisseur' + (totalCount > 1 ? 's' : '')" icon="🚚">
+  <button class="btn btn-ghost" (click)="downloadFournisseurTemplate()" title="Télécharger le modèle Excel">📥 Modèle</button>
+  <button class="btn btn-ghost" (click)="triggerImportFournisseurs()" [disabled]="importRunning">
+    {{ importRunning ? importProgress : '📤 Importer Excel' }}
+  </button>
+  <input id="import-fournisseurs" type="file" accept=".xlsx,.xls" style="display:none" (change)="onImportFournisseursFile($event)" />
   <button class="btn btn-primary" (click)="router.navigate(['/fournisseurs/nouveau'])">+ Nouveau fournisseur</button>
 </app-topbar>
 
@@ -13,10 +18,10 @@
   <div class="toolbar">
     <div class="search-wrapper">
       <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-      <input class="search-input" placeholder="Rechercher par nom, email, contact..." [(ngModel)]="search" />
+      <input class="search-input" placeholder="Rechercher par nom, email, contact..." [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
     </div>
     <div class="toolbar-divider"></div>
-    <button class="btn btn-ghost btn-sm" (click)="search=''">🔄 Réinitialiser</button>
+    <button class="btn btn-ghost btn-sm" (click)="search='';page=1;load()">🔄 Réinitialiser</button>
   </div>
 
   <div class="table-card">
@@ -57,6 +62,51 @@
           }
         </tbody>
       </table>
+    <app-pagination [page]="page" [pageSize]="pageSize" [total]="totalCount" (pageChange)="onPage($event)" (pageSizeChange)="onPageSize($event)"></app-pagination>
     </div>
   </div>
 </div>
+
+<!-- ══ MODAL RÉSULTAT IMPORT ══ -->
+@if (importResult) {
+  <div class="modal-backdrop" (click)="importResult = null">
+    <div class="modal" style="max-width:520px" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">📤 Résultat de l'import</div>
+        <button class="modal-close" (click)="importResult = null">✕</button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;gap:12px">
+          <div style="flex:1;background:var(--success-light,#f0fdf4);border:1px solid var(--success,#22c55e);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:24px;font-weight:800;color:var(--success,#22c55e)">{{ importResult.imported }}</div>
+            <div style="font-size:12px;color:var(--success,#22c55e);font-weight:600">importé(s)</div>
+          </div>
+          @if (importResult.failed > 0) {
+            <div style="flex:1;background:var(--danger-light,#fef2f2);border:1px solid var(--danger,#ef4444);border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:24px;font-weight:800;color:var(--danger,#ef4444)">{{ importResult.failed }}</div>
+              <div style="font-size:12px;color:var(--danger,#ef4444);font-weight:600">erreur(s)</div>
+            </div>
+          }
+        </div>
+        @if (importResult.errors.length > 0) {
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--text-muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:8px">Détail des erreurs</div>
+            <div style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">
+              <table class="data-table" style="margin:0">
+                <thead><tr><th style="width:70px">Ligne</th><th>Erreur</th></tr></thead>
+                <tbody>
+                  @for (e of importResult.errors; track e.row) {
+                    <tr><td style="font-family:monospace;color:var(--danger,#ef4444)">{{ e.row }}</td><td style="font-size:12.5px">{{ e.message }}</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" (click)="importResult = null">Fermer</button>
+      </div>
+    </div>
+  </div>
+}

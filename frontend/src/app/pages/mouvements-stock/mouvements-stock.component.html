@@ -1,4 +1,4 @@
-<app-topbar title="Mouvements de stock" [subtitle]="mouvements.length + ' mouvement' + (mouvements.length > 1 ? 's' : '')" icon="📈">
+<app-topbar title="Mouvements de stock" [subtitle]="totalCount + ' mouvement' + (totalCount > 1 ? 's' : '')" icon="📈">
 </app-topbar>
 
 <div class="content">
@@ -12,10 +12,10 @@
   <div class="toolbar">
     <div class="search-wrapper">
       <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-      <input class="search-input" placeholder="Rechercher par produit, référence..." [(ngModel)]="search" />
+      <input class="search-input" placeholder="Rechercher par produit, référence..." [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
     </div>
-    <input type="date" class="form-input" style="width:200px" [(ngModel)]="selectedDate" />
-    <select class="filter-select" [(ngModel)]="typeFilter">
+    <input type="date" class="form-input" style="width:200px" [(ngModel)]="selectedDate" (ngModelChange)="onFilterChange()" />
+    <select class="filter-select" [(ngModel)]="typeFilter" (ngModelChange)="onFilterChange()">
       <option value="">Tous types</option>
       <option value="Entree">Entrée</option>
       <option value="Sortie">Sortie</option>
@@ -58,6 +58,6 @@
         </tbody>
       </table>
     </div>
-    <app-pagination [page]="page" [pageSize]="pageSize" [total]="filtered.length" (pageChange)="page=$event" (pageSizeChange)="pageSize=$event;page=1"></app-pagination>
+    <app-pagination [page]="page" [pageSize]="pageSize" [total]="totalCount" (pageChange)="onPage($event)" (pageSizeChange)="onPageSize($event)"></app-pagination>
   </div>
 </div>

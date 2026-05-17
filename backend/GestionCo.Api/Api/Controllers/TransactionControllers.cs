@@ -120,6 +120,10 @@ public class FacturesController : ControllerBase
     public async Task<IActionResult> GetAll([FromQuery] GetFacturesQuery q, CancellationToken ct)
         => Ok(await _mediator.Send(q, ct));
 
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetFacturesStatsQuery(), ct));
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
         => Ok(await _mediator.Send(new GetFactureByIdQuery(id), ct));
@@ -170,6 +174,10 @@ public class ChargesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] GetChargesQuery q, CancellationToken ct)
         => Ok(await _mediator.Send(q, ct));
+
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetChargesStatsQuery(), ct));
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
@@ -291,6 +299,10 @@ public class DevisController(IMediator mediator, IConfiguration config) : Contro
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] GetDevisQuery q, CancellationToken ct)
         => Ok(await mediator.Send(q, ct));
+
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats(CancellationToken ct)
+        => Ok(await mediator.Send(new GetDevisStatsQuery(), ct));
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)

@@ -606,3 +606,25 @@ internal static class LoadDtoHelper
         return DevisMapper.ToDto(d, DateTime.UtcNow);
     }
 }
+
+public record DevisStatsDto(int Total, int Acceptes, int Convertis, decimal MontantPotentiel, int TauxAcceptation);
+public record GetDevisStatsQuery() : IRequest<DevisStatsDto>;
+
+public class GetDevisStatsHandler(IAppDbContext db) : IRequestHandler<GetDevisStatsQuery, DevisStatsDto>
+{
+    public async Task<DevisStatsDto> Handle(GetDevisStatsQuery _, CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var total    = await db.Devis.CountAsync(d => d.DateDevis >= startOfMonth, ct);
+        var acceptes = await db.Devis.CountAsync(d => d.DateDevis >= startOfMonth && d.Statut == StatutDevis.Accepte, ct);
+        var convertis = await db.Devis.CountAsync(d => d.Statut == StatutDevis.Converti, ct);
+        var montantPotentiel = await db.Devis
+            .Where(d => d.Statut == StatutDevis.Envoye || d.Statut == StatutDevis.Brouillon)
+            .SumAsync(d => (decimal?)d.MontantTotal, ct) ?? 0;
+        var tauxAcceptation = total > 0 ? (int)Math.Round((double)acceptes / total * 100) : 0;
+
+        return new DevisStatsDto(total, acceptes, convertis, montantPotentiel, tauxAcceptation);
+    }
+}

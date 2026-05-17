@@ -8,7 +8,8 @@ import {
   PagedList, VenteSansFacture, Charge, CategorieCharge, PaiementCharge,
   AppNotification, NotificationSummary, Devis, ConversionDevisResult,
   PLReport, TVAReport, BalanceAgeeReport, PerformanceCommerciale, SearchResults,
-  FacturationSettings
+  FacturationSettings, ClientsStats, FournisseursStats, FacturesStats, DevisStats,
+  ChargesStats, MouvementsStats, EntrepriseSettings
 } from '../models';
 import { environment } from '../../../environments/environment';
 
@@ -112,6 +113,12 @@ export class ApiService {
   produitCreate(data: any): Promise<Produit> {
     return firstValueFrom(this.http.post<Produit>(`${this.base}/produits`, data));
   }
+  produitBulkImport(items: any[]): Promise<{ imported: number; failed: number; errors: { row: number; message: string }[] }> {
+    return firstValueFrom(this.http.post<any>(`${this.base}/produits/import`, items));
+  }
+  produitGenererReappro(id: number): Promise<{ created: boolean; achatId: number; reference: string; message?: string }> {
+    return firstValueFrom(this.http.post<any>(`${this.base}/produits/${id}/reappro`, {}));
+  }
   produitUpdate(id: number, data: any): Promise<Produit> {
     return firstValueFrom(this.http.put<Produit>(`${this.base}/produits/${id}`, data));
   }
@@ -132,6 +139,9 @@ export class ApiService {
   clientCreate(data: any): Promise<Client> {
     return firstValueFrom(this.http.post<Client>(`${this.base}/clients`, data));
   }
+  clientBulkImport(items: any[]): Promise<{ imported: number; failed: number; errors: { row: number; message: string }[] }> {
+    return firstValueFrom(this.http.post<any>(`${this.base}/clients/import`, items));
+  }
   clientUpdate(id: number, data: any): Promise<Client> {
     return firstValueFrom(this.http.put<Client>(`${this.base}/clients/${id}`, data));
   }
@@ -151,6 +161,9 @@ export class ApiService {
   }
   fournisseurCreate(data: any): Promise<Fournisseur> {
     return firstValueFrom(this.http.post<Fournisseur>(`${this.base}/fournisseurs`, data));
+  }
+  fournisseurBulkImport(items: any[]): Promise<{ imported: number; failed: number; errors: { row: number; message: string }[] }> {
+    return firstValueFrom(this.http.post<any>(`${this.base}/fournisseurs/import`, items));
   }
   fournisseurUpdate(id: number, data: any): Promise<Fournisseur> {
     return firstValueFrom(this.http.put<Fournisseur>(`${this.base}/fournisseurs/${id}`, data));
@@ -359,14 +372,20 @@ export class ApiService {
   achatsListPaged(p: { page?: number; pageSize?: number; search?: string; fournisseurId?: number; dateDebut?: string; dateFin?: string; statut?: string } = {}): Promise<PagedList<Achat>> {
     return firstValueFrom(this.http.get<PagedList<Achat>>(`${this.base}/achats`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
   }
-  facturesListPaged(p: { page?: number; pageSize?: number; search?: string; statut?: string; clientId?: number; dateFilter?: string } = {}): Promise<PagedList<Facture>> {
+  facturesListPaged(p: { page?: number; pageSize?: number; search?: string; statut?: string; clientId?: number; dateFilter?: string; estEnRetard?: boolean } = {}): Promise<PagedList<Facture>> {
     return firstValueFrom(this.http.get<PagedList<Facture>>(`${this.base}/factures`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
   }
   clientsListPaged(p: { page?: number; pageSize?: number; search?: string; type?: string } = {}): Promise<PagedList<Client>> {
     return firstValueFrom(this.http.get<PagedList<Client>>(`${this.base}/clients`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
   }
-  produitsListPaged(p: { page?: number; pageSize?: number; search?: string; categorieId?: number; stockFilter?: string; sortBy?: string; sortDir?: string } = {}): Promise<PagedList<Produit>> {
+  produitsListPaged(p: { page?: number; pageSize?: number; search?: string; categorieId?: number; stockFaibleOnly?: boolean; ruptureOnly?: boolean; disponibleOnly?: boolean; sortBy?: string; sortDesc?: boolean } = {}): Promise<PagedList<Produit>> {
     return firstValueFrom(this.http.get<PagedList<Produit>>(`${this.base}/produits`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
+  }
+  produitsStats(): Promise<{ totalProduits: number; produitsActifs: number; produitsStockFaible: number; produitsRupture: number; valeurTotaleStock: number }> {
+    return firstValueFrom(this.http.get<any>(`${this.base}/produits/stats`));
+  }
+  fournisseursListPaged(p: { page?: number; pageSize?: number; search?: string } = {}): Promise<PagedList<Fournisseur>> {
+    return firstValueFrom(this.http.get<PagedList<Fournisseur>>(`${this.base}/fournisseurs`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
   }
   chargesListPaged(p: { page?: number; pageSize?: number; search?: string; statut?: string; categorieId?: number; dateDebut?: string; dateFin?: string } = {}): Promise<PagedList<Charge>> {
     return firstValueFrom(this.http.get<PagedList<Charge>>(`${this.base}/charges`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
@@ -374,7 +393,7 @@ export class ApiService {
   devisListPaged(p: { page?: number; pageSize?: number; search?: string; statut?: string; clientId?: number; dateDebut?: string; dateFin?: string } = {}): Promise<PagedList<Devis>> {
     return firstValueFrom(this.http.get<PagedList<Devis>>(`${this.base}/devis`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
   }
-  mouvementsListPaged(p: { page?: number; pageSize?: number; search?: string; type?: string; source?: string; produitId?: number } = {}): Promise<PagedList<MouvementStock>> {
+  mouvementsListPaged(p: { page?: number; pageSize?: number; search?: string; type?: string; source?: string; produitId?: number; dateDebut?: string; dateFin?: string } = {}): Promise<PagedList<MouvementStock>> {
     return firstValueFrom(this.http.get<PagedList<MouvementStock>>(`${this.base}/mouvements-stock`, { params: buildParams({ page: 1, pageSize: 25, ...p }) }));
   }
   auditListPaged(p: { page?: number; pageSize?: number; search?: string; action?: string; entite?: string; sensibleOnly?: boolean } = {}): Promise<PagedList<AuditLog>> {
@@ -387,6 +406,34 @@ export class ApiService {
   }
   updateFacturationSettings(data: FacturationSettings): Promise<FacturationSettings> {
     return firstValueFrom(this.http.put<FacturationSettings>(`${this.base}/parametres/facturation`, data));
+  }
+
+  // ── PARAMÈTRES ENTREPRISE ──
+  getEntrepriseSettings(): Promise<EntrepriseSettings> {
+    return firstValueFrom(this.http.get<EntrepriseSettings>(`${this.base}/parametres/entreprise`));
+  }
+  updateEntrepriseSettings(data: EntrepriseSettings): Promise<EntrepriseSettings> {
+    return firstValueFrom(this.http.put<EntrepriseSettings>(`${this.base}/parametres/entreprise`, data));
+  }
+
+  // ── STATS ──
+  clientsStats(): Promise<ClientsStats> {
+    return firstValueFrom(this.http.get<ClientsStats>(`${this.base}/clients/stats`));
+  }
+  fournisseursStats(): Promise<FournisseursStats> {
+    return firstValueFrom(this.http.get<FournisseursStats>(`${this.base}/fournisseurs/stats`));
+  }
+  facturesStats(): Promise<FacturesStats> {
+    return firstValueFrom(this.http.get<FacturesStats>(`${this.base}/factures/stats`));
+  }
+  devisStats(): Promise<DevisStats> {
+    return firstValueFrom(this.http.get<DevisStats>(`${this.base}/devis/stats`));
+  }
+  chargesStats(): Promise<ChargesStats> {
+    return firstValueFrom(this.http.get<ChargesStats>(`${this.base}/charges/stats`));
+  }
+  mouvementsStats(): Promise<MouvementsStats> {
+    return firstValueFrom(this.http.get<MouvementsStats>(`${this.base}/mouvements-stock/stats`));
   }
 
   // ── UTILISATEURS ──

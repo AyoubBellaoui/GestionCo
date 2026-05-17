@@ -17,7 +17,7 @@ public class PagedList<T>
     {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 10;
-        if (pageSize > 200) pageSize = 200;
+        if (pageSize > 10000) pageSize = 10000;
 
         var total = await source.CountAsync(ct);
         var items = await source.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
@@ -32,6 +32,19 @@ public class PagedList<T>
     }
 }
 
+public class BulkImportResultDto
+{
+    public int Imported { get; set; }
+    public int Failed { get; set; }
+    public List<BulkImportRowError> Errors { get; set; } = new();
+}
+
+public class BulkImportRowError
+{
+    public int Row { get; set; }
+    public string Message { get; set; } = string.Empty;
+}
+
 public class PaginationParams
 {
     private int _pageSize = 10;
@@ -40,7 +53,7 @@ public class PaginationParams
     public int PageSize
     {
         get => _pageSize;
-        set => _pageSize = value > 200 ? 200 : value < 1 ? 10 : value;
+        set => _pageSize = value > 10000 ? 10000 : value < 1 ? 10 : value;
     }
     public string? Search { get; set; }
     public string? SortBy { get; set; }

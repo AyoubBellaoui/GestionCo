@@ -15,49 +15,49 @@ import { formatNum, formatDate } from '../../core/utils/format';
 })
 export class MouvementsStockComponent implements OnInit {
   mouvements: MouvementStock[] = [];
+  totalCount = 0;
   loading = true;
   search = '';
   selectedDate = '';
   typeFilter = '';
   page = 1;
   pageSize = 25;
+  statsData = { entrees: 0, sorties: 0, ajustements: 0, total: 0 };
+  private searchTimer: any;
 
   formatNum = formatNum;
   formatDate = formatDate;
 
   constructor(private api: ApiService) {}
 
-  async ngOnInit(): Promise<void> {
-    try { this.mouvements = await this.api.mouvementsList().catch(() => []); }
-    finally { this.loading = false; }
+  async ngOnInit(): Promise<void> { await Promise.all([this.load(), this.loadStats()]); }
+
+  async load(): Promise<void> {
+    this.loading = true;
+    try {
+      const result = await this.api.mouvementsListPaged({
+        page: this.page, pageSize: this.pageSize,
+        search: this.search || undefined,
+        type: this.typeFilter || undefined,
+        dateDebut: this.selectedDate || undefined,
+        dateFin: this.selectedDate || undefined,
+      });
+      this.mouvements = result.items;
+      this.totalCount = result.totalCount;
+    } finally { this.loading = false; }
   }
 
-  get paged(): MouvementStock[] {
-    return this.filtered.slice((this.page - 1) * this.pageSize, this.page * this.pageSize);
+  async loadStats(): Promise<void> {
+    try {
+      const s = await this.api.mouvementsStats();
+      this.statsData = { entrees: s.entrees, sorties: s.sorties, ajustements: 0, total: s.total };
+    } catch (err) { console.error('loadStats mouvements error:', err); }
   }
 
-  get filtered(): MouvementStock[] {
-    return this.mouvements.filter(m => {
-      if (this.search && !m.nomProduit.toLowerCase().includes(this.search.toLowerCase()) &&
-        !m.referenceProduit.toLowerCase().includes(this.search.toLowerCase())) return false;
-      if (this.typeFilter && m.type !== this.typeFilter) return false;
-      if (this.selectedDate) {
-        const d = new Date(m.dateMouvement);
-        const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        if (dStr !== this.selectedDate) return false;
-      }
-      return true;
-    });
-  }
+  get paged(): MouvementStock[] { return this.mouvements; }
+  get filtered(): MouvementStock[] { return this.mouvements; }
 
-  get stats() {
-    return {
-      entrees: this.mouvements.filter(m => m.type === 'Entree').length,
-      sorties: this.mouvements.filter(m => m.type === 'Sortie').length,
-      ajustements: this.mouvements.filter(m => m.type === 'Ajustement').length,
-      total: this.mouvements.length,
-    };
-  }
+  get stats() { return this.statsData; }
 
   typeInfo(type: string): { label: string; cls: string; icon: string } {
     const map: Record<string, { label: string; cls: string; icon: string }> = {
@@ -74,7 +74,15 @@ export class MouvementsStockComponent implements OnInit {
     return type === 'Entree' || type === 'AchatFournisseur';
   }
 
+  onSearchChange(): void {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => { this.page = 1; this.load(); }, 300);
+  }
+  onFilterChange(): void { this.page = 1; this.load(); }
+  onPage(p: number): void { this.page = p; this.load(); }
+  onPageSize(ps: number): void { this.pageSize = ps; this.page = 1; this.load(); }
+
   Math = Math;
 
-  resetFilters(): void { this.search = ''; this.selectedDate = ''; this.typeFilter = ''; this.page = 1; }
+  resetFilters(): void { this.search = ''; this.selectedDate = ''; this.typeFilter = ''; this.page = 1; this.load(); }
 }

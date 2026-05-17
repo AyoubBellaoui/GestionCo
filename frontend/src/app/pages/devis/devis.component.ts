@@ -18,6 +18,7 @@ import { SettingsService } from '../../core/services/settings.service';
 })
 export class DevisComponent implements OnInit {
   devisList: Devis[] = [];
+  totalCount = 0;
   clients: Client[] = [];
   loading = true;
   search = '';
@@ -26,6 +27,8 @@ export class DevisComponent implements OnInit {
   selectedDate = '';
   page = 1;
   pageSize = 10;
+  statsData = { total: 0, acceptes: 0, convertis: 0, montantPotentiel: 0, tauxAcceptation: 0 };
+  private searchTimer: any;
 
   formatNum = formatNum;
   formatDate = formatDate;
@@ -34,18 +37,33 @@ export class DevisComponent implements OnInit {
 
   constructor(private api: ApiService, private toast: ToastService, public router: Router, private settings: SettingsService) {}
 
-  async ngOnInit(): Promise<void> { await this.load(); }
+  async ngOnInit(): Promise<void> { await Promise.all([this.load(), this.loadStats(), this.loadClients()]); }
+
+  private async loadClients(): Promise<void> {
+    try { this.clients = await this.api.clientsList().catch(() => []); } catch {}
+  }
 
   async load(): Promise<void> {
     this.loading = true;
     try {
-      const [d, c] = await Promise.all([
-        this.api.devisList().catch(() => []),
-        this.api.clientsList().catch(() => []),
-      ]);
-      this.devisList = d;
-      this.clients = c;
+      const result = await this.api.devisListPaged({
+        page: this.page, pageSize: this.pageSize,
+        search: this.search || undefined,
+        statut: this.statusFilter || undefined,
+        clientId: this.clientFilter ? Number(this.clientFilter) : undefined,
+        dateDebut: this.selectedDate || undefined,
+        dateFin: this.selectedDate || undefined,
+      });
+      this.devisList = result.items;
+      this.totalCount = result.totalCount;
     } finally { this.loading = false; }
+  }
+
+  async loadStats(): Promise<void> {
+    try {
+      const s = await this.api.devisStats();
+      this.statsData = { total: s.total, acceptes: s.acceptes, convertis: s.convertis, montantPotentiel: s.montantPotentiel, tauxAcceptation: s.tauxAcceptation };
+    } catch (err) { console.error('loadStats devis error:', err); }
   }
 
   statutInfo(d: Devis): { label: string; cls: string } {
@@ -61,64 +79,44 @@ export class DevisComponent implements OnInit {
     }
   }
 
-  get filtered(): Devis[] {
-    return this.devisList.filter(d => {
-      if (this.search && !(d.reference.toLowerCase().includes(this.search.toLowerCase()) || d.nomClient.toLowerCase().includes(this.search.toLowerCase()))) return false;
-      if (this.statusFilter === 'Expire') {
-        if (!d.estExpire && d.statut !== 'Expire') return false;
-      } else if (this.statusFilter && d.statut !== this.statusFilter) return false;
-      if (this.clientFilter && String(d.clientId) !== this.clientFilter) return false;
-      if (this.selectedDate) {
-        const dd = new Date(d.dateDevis);
-        const dStr = `${dd.getFullYear()}-${String(dd.getMonth()+1).padStart(2,'0')}-${String(dd.getDate()).padStart(2,'0')}`;
-        if (dStr !== this.selectedDate) return false;
-      }
-      return true;
-    });
+  get filtered(): Devis[] { return this.devisList; }
+  get stats() { return this.statsData; }
+  get totalFiltered(): number { return this.totalCount; }
+  get paged(): Devis[] { return this.devisList; }
+
+  onSearchChange(): void {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => { this.page = 1; this.load(); }, 300);
   }
+  onFilterChange(): void { this.page = 1; this.load(); }
+  onPage(p: number): void { this.page = p; this.load(); }
+  onPageSize(ps: number): void { this.pageSize = ps; this.page = 1; this.load(); }
 
-  get stats() {
-    const now = new Date();
-    const mo = this.devisList.filter(d => {
-      const dd = new Date(d.dateDevis);
-      return dd.getMonth() === now.getMonth() && dd.getFullYear() === now.getFullYear();
-    });
-    const total = mo.length;
-    const acceptes = mo.filter(d => d.statut === 'Accepte').length;
-    const convertis = this.devisList.filter(d => d.statut === 'Converti').length;
-    const montantPotentiel = this.devisList.filter(d => d.statut === 'Envoye' || d.statut === 'Brouillon').reduce((s, d) => s + d.montantTotal, 0);
-    const tauxAcceptation = total > 0 ? Math.round((acceptes / total) * 100) : 0;
-    return { total, acceptes, convertis, montantPotentiel, tauxAcceptation };
-  }
-
-  get totalFiltered(): number { return this.filtered.length; }
-  get paged(): Devis[] { return this.filtered.slice((this.page - 1) * this.pageSize, this.page * this.pageSize); }
-
-  resetFilters(): void { this.search = ''; this.statusFilter = ''; this.clientFilter = ''; this.selectedDate = ''; this.page = 1; }
+  resetFilters(): void { this.search = ''; this.statusFilter = ''; this.clientFilter = ''; this.selectedDate = ''; this.page = 1; this.load(); }
 
   async marquerEnvoye(d: Devis): Promise<void> {
     try {
-      const updated = await this.api.devisUpdateStatut(d.id, 'Envoye');
-      this.devisList = this.devisList.map(x => x.id === updated.id ? updated : x);
+      await this.api.devisUpdateStatut(d.id, 'Envoye');
       this.toast.notify('Devis marqué comme envoyé', 'success');
+      this.load();
     } catch { this.toast.notify('Erreur lors de la mise à jour', 'error'); }
   }
 
   async accepter(d: Devis): Promise<void> {
     if (!confirm(`Marquer le devis ${d.reference} comme accepté ?`)) return;
     try {
-      const updated = await this.api.devisUpdateStatut(d.id, 'Accepte');
-      this.devisList = this.devisList.map(x => x.id === updated.id ? updated : x);
+      await this.api.devisUpdateStatut(d.id, 'Accepte');
       this.toast.notify('Devis accepté', 'success');
+      this.load();
     } catch { this.toast.notify('Erreur lors de la mise à jour', 'error'); }
   }
 
   async refuser(d: Devis): Promise<void> {
     if (!confirm(`Marquer le devis ${d.reference} comme refusé ?`)) return;
     try {
-      const updated = await this.api.devisUpdateStatut(d.id, 'Refuse');
-      this.devisList = this.devisList.map(x => x.id === updated.id ? updated : x);
+      await this.api.devisUpdateStatut(d.id, 'Refuse');
       this.toast.notify('Devis refusé', 'info');
+      this.load();
     } catch { this.toast.notify('Erreur lors de la mise à jour', 'error'); }
   }
 
@@ -138,8 +136,8 @@ export class DevisComponent implements OnInit {
     if (!confirm(`Supprimer le devis ${d.reference} ?`)) return;
     try {
       await this.api.devisDelete(d.id);
-      this.devisList = this.devisList.filter(x => x.id !== d.id);
       this.toast.notify('Devis supprimé', 'success');
+      this.load();
     } catch { this.toast.notify('Erreur lors de la suppression', 'error'); }
   }
 

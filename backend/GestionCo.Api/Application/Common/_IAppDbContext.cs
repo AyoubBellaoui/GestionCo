@@ -28,6 +28,7 @@ public interface IAppDbContext
     DbSet<DevisEntity> Devis { get; }
     DbSet<LigneDevisEntity> LignesDevis { get; }
     DbSet<ParametresFacturation> ParametresFacturation { get; }
+    DbSet<ParametresEntreprise> ParametresEntreprise { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

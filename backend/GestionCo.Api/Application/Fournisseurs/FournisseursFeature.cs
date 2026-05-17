@@ -7,6 +7,7 @@ using GestionCo.Api.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
+
 namespace GestionCo.Api.Application.Fournisseurs;
 
 public class FournisseurDto
@@ -147,6 +148,63 @@ public class DeleteFournisseurHandler : IRequestHandler<DeleteFournisseurCommand
     }
 }
 
+// ============ BULK IMPORT ============
+public record BulkImportFournisseursCommand(List<CreateFournisseurDto> Items) : IRequest<BulkImportResultDto>;
+
+public class BulkImportFournisseursHandler : IRequestHandler<BulkImportFournisseursCommand, BulkImportResultDto>
+{
+    private readonly IAppDbContext _db;
+    private readonly IAuditLogger _audit;
+
+    public BulkImportFournisseursHandler(IAppDbContext db, IAuditLogger audit) { _db = db; _audit = audit; }
+
+    public async Task<BulkImportResultDto> Handle(BulkImportFournisseursCommand req, CancellationToken ct)
+    {
+        var result = new BulkImportResultDto();
+        if (req.Items.Count == 0) return result;
+        if (req.Items.Count > 500) throw new BusinessException("Maximum 500 lignes par import");
+
+        var toAdd = new List<Fournisseur>();
+
+        for (int i = 0; i < req.Items.Count; i++)
+        {
+            var dto = req.Items[i];
+            var row = i + 2;
+
+            if (string.IsNullOrWhiteSpace(dto.Nom))
+            { result.Errors.Add(new BulkImportRowError { Row = row, Message = "Nom requis" }); continue; }
+            if (dto.Nom.Length > 200)
+            { result.Errors.Add(new BulkImportRowError { Row = row, Message = "Nom trop long (max 200 caractères)" }); continue; }
+            if (string.IsNullOrWhiteSpace(dto.Telephone))
+            { result.Errors.Add(new BulkImportRowError { Row = row, Message = "Téléphone requis" }); continue; }
+
+            toAdd.Add(new Fournisseur
+            {
+                Nom = dto.Nom.Trim(),
+                Icone = string.IsNullOrWhiteSpace(dto.Icone) ? "📦" : dto.Icone,
+                Telephone = dto.Telephone.Trim(),
+                Email = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email.Trim().ToLower(),
+                Adresse = dto.Adresse?.Trim(),
+                SiteWeb = dto.SiteWeb?.Trim(),
+                PersonneContact = dto.PersonneContact?.Trim(),
+                IsActive = true,
+            });
+        }
+
+        if (toAdd.Count > 0)
+        {
+            _db.Fournisseurs.AddRange(toAdd);
+            await _db.SaveChangesAsync(ct);
+            await _audit.LogAsync(ActionLog.Create, "fournisseurs",
+                $"Import massif : {toAdd.Count} fournisseur(s) créé(s)", ct: ct);
+        }
+
+        result.Imported = toAdd.Count;
+        result.Failed = result.Errors.Count;
+        return result;
+    }
+}
+
 // ============ QUERIES ============
 public record GetFournisseursQuery(
     int Page = 1, int PageSize = 10,
@@ -232,4 +290,19 @@ public static class FournisseurMapper
         PersonneContact = f.PersonneContact,
         IsActive = f.IsActive, CreatedAt = f.CreatedAt
     };
+}
+
+public record FournisseursStatsDto(int Total, int Produits, int Commandes, decimal Achats);
+public record GetFournisseursStatsQuery() : IRequest<FournisseursStatsDto>;
+
+public class GetFournisseursStatsHandler(IAppDbContext db) : IRequestHandler<GetFournisseursStatsQuery, FournisseursStatsDto>
+{
+    public async Task<FournisseursStatsDto> Handle(GetFournisseursStatsQuery _, CancellationToken ct)
+    {
+        var total     = await db.Fournisseurs.CountAsync(ct);
+        var produits  = await db.Produits.CountAsync(p => p.FournisseurId != null, ct);
+        var commandes = await db.Achats.CountAsync(ct);
+        var achats    = await db.Achats.SumAsync(a => (decimal?)a.MontantTotal, ct) ?? 0;
+        return new FournisseursStatsDto(total, produits, commandes, achats);
+    }
 }

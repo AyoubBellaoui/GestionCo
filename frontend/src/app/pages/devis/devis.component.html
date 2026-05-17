@@ -14,7 +14,7 @@
       <div>
         <div class="stat-label">Devis ce mois</div>
         <div class="stat-value">{{ stats.total }}</div>
-        <div class="stat-trend neutral">{{ devisList.length }} au total</div>
+        <div class="stat-trend neutral">{{ totalCount }} au total</div>
       </div>
     </div>
     <div class="stat-card">
@@ -49,9 +49,9 @@
       <span class="search-icon">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </span>
-      <input class="search-input" placeholder="Référence, client…" [(ngModel)]="search" (ngModelChange)="page=1" />
+      <input class="search-input" placeholder="Référence, client…" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
     </div>
-    <select class="filter-select" [(ngModel)]="statusFilter" (ngModelChange)="page=1">
+    <select class="filter-select" [(ngModel)]="statusFilter" (ngModelChange)="onFilterChange()">
       <option value="">Tous les statuts</option>
       <option value="Brouillon">Brouillon</option>
       <option value="Envoye">Envoyé</option>
@@ -60,11 +60,11 @@
       <option value="Expire">Expiré</option>
       <option value="Converti">Converti</option>
     </select>
-    <select class="filter-select" [(ngModel)]="clientFilter" (ngModelChange)="page=1">
+    <select class="filter-select" [(ngModel)]="clientFilter" (ngModelChange)="onFilterChange()">
       <option value="">Tous les clients</option>
       @for (c of clients; track c.id) { <option [value]="c.id">{{ c.nomClient }}</option> }
     </select>
-    <input type="date" class="form-input" style="width:200px" [(ngModel)]="selectedDate" (ngModelChange)="page=1" />
+    <input type="date" class="form-input" style="width:200px" [(ngModel)]="selectedDate" (ngModelChange)="onFilterChange()" />
     <div class="toolbar-divider"></div>
     <button class="btn btn-ghost btn-sm" (click)="resetFilters()">🔄 Réinitialiser</button>
   </div>
@@ -166,7 +166,7 @@
       </table>
     </div>
 
-    <app-pagination [page]="page" [pageSize]="pageSize" [total]="totalFiltered" (pageChange)="page=$event" (pageSizeChange)="pageSize=$event;page=1"></app-pagination>
+    <app-pagination [page]="page" [pageSize]="pageSize" [total]="totalFiltered" (pageChange)="onPage($event)" (pageSizeChange)="onPageSize($event)"></app-pagination>
   </div>
 
 </div>

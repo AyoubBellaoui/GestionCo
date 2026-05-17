@@ -385,6 +385,29 @@ public class ParametresFacturationConfiguration : IEntityTypeConfiguration<Param
     }
 }
 
+public class ParametresEntrepriseConfiguration : IEntityTypeConfiguration<ParametresEntreprise>
+{
+    public void Configure(EntityTypeBuilder<ParametresEntreprise> b)
+    {
+        b.ToTable("parametres_entreprise");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.RaisonSociale).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Adresse).HasMaxLength(500);
+        b.Property(x => x.Telephone).HasMaxLength(50);
+        b.Property(x => x.Email).HasMaxLength(200);
+        b.Property(x => x.Ice).HasMaxLength(50);
+        b.Property(x => x.Rc).HasMaxLength(100);
+        b.Property(x => x.If).HasMaxLength(100);
+        b.Property(x => x.Patente).HasMaxLength(100);
+        b.Property(x => x.Cnss).HasMaxLength(100);
+        b.Property(x => x.Capital).HasMaxLength(100);
+        b.Property(x => x.Rib).HasMaxLength(100);
+        b.Property(x => x.Banque).HasMaxLength(200);
+        b.Property(x => x.Swift).HasMaxLength(20);
+        b.Property(x => x.Logo).HasMaxLength(2000);
+    }
+}
+
 public class LigneDevisConfiguration : IEntityTypeConfiguration<LigneDevis>
 {
     public void Configure(EntityTypeBuilder<LigneDevis> b)

@@ -74,6 +74,7 @@ export interface Produit {
   prixVenteTTC: number;
   quantiteStock: number;
   seuilAlerte: number;
+  quantiteReappro: number;
   isStockFaible: boolean;
   isRupture: boolean;
   categorieId?: number;
@@ -634,3 +635,29 @@ export interface PagedList<T> {
   page: number;
   pageSize: number;
 }
+
+// ============ STATS DTOs ============
+export interface ClientsStats { total: number; actifs: number; ca: number; impayes: number; }
+export interface FournisseursStats { total: number; produits: number; commandes: number; achats: number; }
+export interface FacturesTabCounts { all: number; payee: number; partiel: number; enAttente: number; enRetard: number; annulee: number; }
+export interface FacturesStats { totalMois: number; totalPaye: number; payeePct: number; enAttenteCount: number; enAttenteMontant: number; enRetardCount: number; enRetardMontant: number; tabCounts: FacturesTabCounts; }
+export interface DevisStats { total: number; acceptes: number; convertis: number; montantPotentiel: number; tauxAcceptation: number; }
+export interface ChargesStats { totalMois: number; count: number; impayes: number; nbImpayes: number; totalGlobal: number; }
+export interface MouvementsStats { total: number; entrees: number; sorties: number; }
+
+export type EntrepriseSettings = {
+  raisonSociale: string;
+  adresse?: string;
+  telephone?: string;
+  email?: string;
+  ice?: string;
+  rc?: string;
+  if?: string;
+  patente?: string;
+  cnss?: string;
+  capital?: string;
+  rib?: string;
+  banque?: string;
+  swift?: string;
+  logo?: string;
+};

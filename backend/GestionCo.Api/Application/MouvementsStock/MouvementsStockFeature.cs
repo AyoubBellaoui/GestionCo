@@ -56,10 +56,11 @@ public class CreateAjustementStockHandler : IRequestHandler<CreateAjustementStoc
     private readonly IAppDbContext _db;
     private readonly ICurrentUserService _current;
     private readonly IAuditLogger _audit;
+    private readonly IReapproService _reappro;
 
-    public CreateAjustementStockHandler(IAppDbContext db, ICurrentUserService current, IAuditLogger audit)
+    public CreateAjustementStockHandler(IAppDbContext db, ICurrentUserService current, IAuditLogger audit, IReapproService reappro)
     {
-        _db = db; _current = current; _audit = audit;
+        _db = db; _current = current; _audit = audit; _reappro = reappro;
     }
 
     public async Task<MouvementStockDto> Handle(CreateAjustementStockCommand req, CancellationToken ct)
@@ -98,6 +99,13 @@ public class CreateAjustementStockHandler : IRequestHandler<CreateAjustementStoc
         _db.MouvementsStock.Add(mouvement);
         await _db.SaveChangesAsync(ct);
 
+        if (dto.Type == TypeMouvementStock.Sortie &&
+            produit.QuantiteStock <= produit.SeuilAlerte &&
+            produit.QuantiteReappro > 0 && produit.FournisseurId.HasValue)
+        {
+            await _reappro.TryGenererReapproAsync(produit.Id, userId, ct);
+        }
+
         await _audit.LogAsync(
             ActionLog.Sensitive, "mouvements_stock",
             $"Ajustement manuel {(dto.Type == TypeMouvementStock.Entree ? "+" : "-")}{dto.Quantite} sur {produit.Nom} — Raison: {dto.Raison}",
@@ -123,7 +131,9 @@ public record GetMouvementsStockQuery(
     string? Search = null,
     TypeMouvementStock? Type = null,
     SourceMouvementStock? Source = null,
-    int? ProduitId = null
+    int? ProduitId = null,
+    DateTime? DateDebut = null,
+    DateTime? DateFin = null
 ) : IRequest<PagedList<MouvementStockDto>>;
 
 public class GetMouvementsStockHandler : IRequestHandler<GetMouvementsStockQuery, PagedList<MouvementStockDto>>
@@ -145,6 +155,8 @@ public class GetMouvementsStockHandler : IRequestHandler<GetMouvementsStockQuery
         if (q.Type.HasValue) query = query.Where(m => m.Type == q.Type);
         if (q.Source.HasValue) query = query.Where(m => m.Source == q.Source);
         if (q.ProduitId.HasValue) query = query.Where(m => m.ProduitId == q.ProduitId);
+        if (q.DateDebut.HasValue) query = query.Where(m => m.DateMouvement >= q.DateDebut.Value.Date);
+        if (q.DateFin.HasValue) query = query.Where(m => m.DateMouvement < q.DateFin.Value.Date.AddDays(1));
 
         query = query.OrderByDescending(m => m.DateMouvement);
 
@@ -174,4 +186,18 @@ public static class MouvementStockMapper
         Raison = m.Raison, Commentaire = m.Commentaire,
         DateMouvement = m.DateMouvement
     };
+}
+
+public record MouvementsStatsDto(int Total, int Entrees, int Sorties);
+public record GetMouvementsStatsQuery() : IRequest<MouvementsStatsDto>;
+
+public class GetMouvementsStatsHandler(IAppDbContext db) : IRequestHandler<GetMouvementsStatsQuery, MouvementsStatsDto>
+{
+    public async Task<MouvementsStatsDto> Handle(GetMouvementsStatsQuery _, CancellationToken ct)
+    {
+        var total   = await db.MouvementsStock.CountAsync(ct);
+        var entrees = await db.MouvementsStock.CountAsync(m => m.Type == TypeMouvementStock.Entree, ct);
+        var sorties = await db.MouvementsStock.CountAsync(m => m.Type == TypeMouvementStock.Sortie, ct);
+        return new MouvementsStatsDto(total, entrees, sorties);
+    }
 }

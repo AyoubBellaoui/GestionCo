@@ -8,7 +8,7 @@ import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ExportService } from '../../core/services/export.service';
 import { AuthService } from '../../core/services/auth.service';
-import { Produit } from '../../core/models';
+import { Produit, Categorie } from '../../core/models';
 import { formatNum } from '../../core/utils/format';
 import * as XLSX from 'xlsx';
 
@@ -20,12 +20,16 @@ import * as XLSX from 'xlsx';
 })
 export class ProduitsComponent implements OnInit {
   produits: Produit[] = [];
+  categories: Categorie[] = [];
+  totalCount = 0;
   loading = true;
   search = '';
   categorieFilter = '';
   stockFilter = '';
   page = 1;
   pageSize = 15;
+  statsData = { total: 0, valeur: 0, faible: 0, rupture: 0 };
+  private searchTimer: any;
 
   // Detail modal
   detailModal = false;
@@ -43,14 +47,16 @@ export class ProduitsComponent implements OnInit {
 
   importProgress = '';
   importRunning = false;
+  importResult: { imported: number; failed: number; errors: { row: number; message: string }[] } | null = null;
 
   exportExcel(): void { this.exportSvc.exportProduits(this.produits); }
 
   downloadTemplate(): void {
     const ws = XLSX.utils.aoa_to_sheet([
-      ['Nom', 'Reference', 'Description', 'Prix Achat HT', 'Prix Vente HT', 'TVA Vente (%)', 'Stock', 'Seuil Alerte'],
-      ['Exemple Produit', 'PRD-001', 'Description optionnelle', 100, 150, 20, 10, 3],
+      ['Nom', 'Description', 'Prix Achat HT', 'TVA (%)', 'Prix Vente HT', 'TVA Vente (%)', 'Stock', 'Seuil Alerte'],
+      ['Exemple Produit', 'Description optionnelle', 100, 20, 150, 20, 10, 3],
     ]);
+    ws['!cols'] = [{ wch: 25 }, { wch: 30 }, { wch: 14 }, { wch: 8 }, { wch: 14 }, { wch: 14 }, { wch: 8 }, { wch: 12 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Produits');
     XLSX.writeFile(wb, 'modele-import-produits.xlsx');
@@ -71,68 +77,82 @@ export class ProduitsComponent implements OnInit {
       const wb = XLSX.read(data);
       const rows: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
       if (rows.length === 0) { this.toast.notify('Fichier vide ou format incorrect', 'warning'); return; }
-      let ok = 0; let errors = 0;
-      for (let i = 0; i < rows.length; i++) {
-        const r = rows[i];
-        this.importProgress = `Import ${i + 1}/${rows.length}…`;
-        const nom = r['Nom'] || r['nom'] || r['NOM'];
-        if (!nom) { errors++; continue; }
-        try {
-          await this.api.produitCreate({
-            nom: String(nom),
-            reference: r['Reference'] || r['Référence'] || r['reference'] || undefined,
-            description: r['Description'] || r['description'] || '',
-            prixHT: +(r['Prix Achat HT'] || r['Prix HT'] || r['prixHT'] || 0),
-            prixVenteHT: +(r['Prix Vente HT'] || r['prixVenteHT'] || 0),
-            tva: +(r['TVA (%)'] || r['TVA'] || r['tva'] || 20),
-            tvaVente: +(r['TVA Vente (%)'] || r['TVA Vente'] || r['tvaVente'] || 20),
-            quantiteStock: +(r['Stock'] || r['stock'] || r['quantiteStock'] || 0),
-            seuilAlerte: +(r['Seuil Alerte'] || r['seuilAlerte'] || 5),
-          });
-          ok++;
-        } catch { errors++; }
-      }
+      if (rows.length > 500) { this.toast.notify('Maximum 500 lignes par import', 'warning'); return; }
+
+      this.importProgress = `Envoi de ${rows.length} ligne(s)…`;
+
+      const items = rows.map(r => ({
+        nom: String(r['Nom'] || r['nom'] || r['NOM'] || ''),
+        description: r['Description'] || r['description'] || '',
+        prixHT: +(r['Prix Achat HT'] || r['Prix HT'] || r['prixHT'] || 0),
+        tva: +(r['TVA (%)'] || r['TVA'] || r['tva'] || 20),
+        prixVenteHT: +(r['Prix Vente HT'] || r['prixVenteHT'] || 0),
+        tvaVente: +(r['TVA Vente (%)'] || r['TVA Vente'] || r['tvaVente'] || 20),
+        quantiteStock: +(r['Stock'] || r['stock'] || r['quantiteStock'] || 0),
+        seuilAlerte: +(r['Seuil Alerte'] || r['seuilAlerte'] || 5),
+        isActive: true,
+      }));
+
+      const result = await this.api.produitBulkImport(items);
       await this.load();
-      this.toast.notify(`Import terminé : ${ok} produit(s) créé(s)${errors > 0 ? ', ' + errors + ' erreur(s)' : ''}`, ok > 0 ? 'success' : 'warning');
+      this.importResult = result;
+      const msg = `Import terminé : ${result.imported} produit(s) créé(s)${result.failed > 0 ? ', ' + result.failed + ' erreur(s)' : ''}`;
+      this.toast.notify(msg, result.imported > 0 ? 'success' : 'warning');
     } catch { this.toast.notify('Erreur lors de la lecture du fichier', 'error'); }
     finally { this.importRunning = false; this.importProgress = ''; (event.target as HTMLInputElement).value = ''; }
   }
 
-  async ngOnInit(): Promise<void> { await this.load(); }
+  async ngOnInit(): Promise<void> {
+    const [, , cats] = await Promise.all([
+      this.load(),
+      this.loadStats(),
+      this.api.categoriesList().catch(() => []),
+    ]);
+    this.categories = cats;
+  }
 
   async load(): Promise<void> {
     this.loading = true;
-    try { this.produits = await this.api.produitsList().catch(() => []); }
-    finally { this.loading = false; }
+    try {
+      const result = await this.api.produitsListPaged({
+        page: this.page, pageSize: this.pageSize,
+        search: this.search || undefined,
+        categorieId: this.categorieFilter ? +this.categorieFilter : undefined,
+        stockFaibleOnly: this.stockFilter === 'low' ? true : undefined,
+        ruptureOnly: this.stockFilter === 'out' ? true : undefined,
+        disponibleOnly: this.stockFilter === 'ok' ? true : undefined,
+      });
+      this.produits = result.items;
+      this.totalCount = result.totalCount;
+    } finally { this.loading = false; }
   }
 
-  get categories(): string[] {
-    return Array.from(new Set(this.produits.map(p => p.categorieNom).filter(Boolean))) as string[];
+  async loadStats(): Promise<void> {
+    try {
+      const s = await this.api.produitsStats();
+      this.statsData = { total: s.totalProduits, valeur: s.valeurTotaleStock, faible: s.produitsStockFaible, rupture: s.produitsRupture };
+    } catch {}
   }
 
-  get paged(): Produit[] {
-    return this.filtered.slice((this.page - 1) * this.pageSize, this.page * this.pageSize);
-  }
-
-  get filtered(): Produit[] {
-    return this.produits.filter(p => {
-      if (this.search && !p.reference?.toLowerCase().includes(this.search.toLowerCase()) && !p.nom.toLowerCase().includes(this.search.toLowerCase())) return false;
-      if (this.categorieFilter && p.categorieNom !== this.categorieFilter) return false;
-      if (this.stockFilter === 'low' && p.quantiteStock > p.seuilAlerte) return false;
-      if (this.stockFilter === 'out' && p.quantiteStock > 0) return false;
-      if (this.stockFilter === 'ok' && p.quantiteStock <= p.seuilAlerte) return false;
-      return true;
-    });
-  }
+  get paged(): Produit[] { return this.produits; }
+  get filtered(): Produit[] { return this.produits; }
 
   get stats() {
     return {
-      total: this.produits.length,
-      valeur: this.produits.reduce((s, p) => s + p.quantiteStock * p.prixHT, 0),
-      faible: this.produits.filter(p => p.isStockFaible).length,
-      rupture: this.produits.filter(p => p.isRupture).length,
+      total: this.statsData.total,
+      valeur: this.statsData.valeur,
+      faible: this.statsData.faible,
+      rupture: this.statsData.rupture,
     };
   }
+
+  onFilterChange(): void { this.page = 1; this.load(); }
+  onSearchChange(): void {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => { this.page = 1; this.load(); }, 300);
+  }
+  onPage(p: number): void { this.page = p; this.load(); }
+  onPageSize(ps: number): void { this.pageSize = ps; this.page = 1; this.load(); }
 
   stockStatus(p: Produit): { cls: string; label: string } {
     if (p.isRupture) return { cls: 'low', label: 'Rupture' };
@@ -210,5 +230,21 @@ export class ProduitsComponent implements OnInit {
     finally { this.ajustSaving = false; }
   }
 
-  resetFilters(): void { this.search = ''; this.categorieFilter = ''; this.stockFilter = ''; this.page = 1; }
+  resetFilters(): void { this.search = ''; this.categorieFilter = ''; this.stockFilter = ''; this.page = 1; this.load(); }
+
+  reapproLoading = new Set<number>();
+
+  async genererReappro(p: Produit): Promise<void> {
+    if (this.reapproLoading.has(p.id)) return;
+    this.reapproLoading.add(p.id);
+    try {
+      const result = await this.api.produitGenererReappro(p.id);
+      if (result.created) {
+        this.toast.notify(`Bon de commande ${result.reference} créé pour ${p.nom}`, 'success');
+      } else {
+        this.toast.notify(result.message || 'Réapprovisionnement déjà en cours', 'info');
+      }
+    } catch { this.toast.notify('Erreur lors du réapprovisionnement', 'error'); }
+    finally { this.reapproLoading.delete(p.id); }
+  }
 }

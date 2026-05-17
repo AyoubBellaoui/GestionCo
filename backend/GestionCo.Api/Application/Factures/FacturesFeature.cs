@@ -34,7 +34,10 @@ public record GetFacturesQuery(
     int Page = 1, int PageSize = 10,
     string? Search = null,
     StatutFacture? Statut = null,
-    int? ClientId = null
+    int? ClientId = null,
+    bool? EstEnRetard = null,
+    string? ClientNom = null,
+    string? DateFilter = null
 ) : IRequest<PagedList<FactureDto>>;
 
 public class GetFacturesHandler : IRequestHandler<GetFacturesQuery, PagedList<FactureDto>>
@@ -74,6 +77,15 @@ public class GetFacturesHandler : IRequestHandler<GetFacturesQuery, PagedList<Fa
 
         if (q.Statut.HasValue) query = query.Where(f => f.Statut == q.Statut);
         if (q.ClientId.HasValue) query = query.Where(f => f.Vente.ClientId == q.ClientId);
+        if (!string.IsNullOrWhiteSpace(q.ClientNom)) query = query.Where(f => f.Vente.Client.NomClient.ToLower().Contains(q.ClientNom.ToLower()));
+        if (!string.IsNullOrWhiteSpace(q.DateFilter) && DateTime.TryParse(q.DateFilter, out var dateFrom))
+            query = query.Where(f => f.DateEmission >= dateFrom.Date && f.DateEmission < dateFrom.Date.AddDays(1));
+        if (q.EstEnRetard == true)
+        {
+            var now = DateTime.UtcNow;
+            query = query.Where(f => f.DateEcheance < now &&
+                f.Statut != StatutFacture.Payee && f.Statut != StatutFacture.Annulee);
+        }
 
         query = query.OrderByDescending(f => f.DateEmission);
 
@@ -268,5 +280,55 @@ public static class FactureMapper
             DateEnvoiEmail = f.DateEnvoiEmail,
             JoursEcheance = (f.DateEcheance - DateTime.UtcNow).Days
         };
+    }
+}
+
+public record FacturesTabCountsDto(int All, int Payee, int Partiel, int EnAttente, int EnRetard, int Annulee);
+public record FacturesStatsDto(decimal TotalMois, decimal TotalPaye, int PayeePct, int EnAttenteCount, decimal EnAttenteMontant, int EnRetardCount, decimal EnRetardMontant, FacturesTabCountsDto TabCounts);
+public record GetFacturesStatsQuery() : IRequest<FacturesStatsDto>;
+
+public class GetFacturesStatsHandler(IAppDbContext db) : IRequestHandler<GetFacturesStatsQuery, FacturesStatsDto>
+{
+    public async Task<FacturesStatsDto> Handle(GetFacturesStatsQuery _, CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var totalMois = await db.Factures
+            .Where(f => f.DateEmission >= startOfMonth)
+            .SumAsync(f => (decimal?)f.Vente.MontantTotal, ct) ?? 0;
+
+        var totalPaye = await db.Factures
+            .SumAsync(f => (decimal?)f.Vente.MontantPaye, ct) ?? 0;
+
+        var totalFacture = await db.Factures
+            .SumAsync(f => (decimal?)f.Vente.MontantTotal, ct) ?? 0;
+
+        var payeePct = totalFacture > 0 ? (int)Math.Round((totalPaye / totalFacture) * 100) : 0;
+
+        var enAttenteCount = await db.Factures
+            .CountAsync(f => f.Statut == StatutFacture.EnAttente && f.DateEcheance >= now, ct);
+
+        var enAttenteMontant = await db.Factures
+            .Where(f => f.Statut == StatutFacture.EnAttente && f.DateEcheance >= now)
+            .SumAsync(f => (decimal?)(f.Vente.MontantTotal - f.Vente.MontantPaye), ct) ?? 0;
+
+        var enRetardCount = await db.Factures
+            .CountAsync(f => f.DateEcheance < now && f.Statut != StatutFacture.Payee && f.Statut != StatutFacture.Annulee, ct);
+
+        var enRetardMontant = await db.Factures
+            .Where(f => f.DateEcheance < now && f.Statut != StatutFacture.Payee && f.Statut != StatutFacture.Annulee)
+            .SumAsync(f => (decimal?)(f.Vente.MontantTotal - f.Vente.MontantPaye), ct) ?? 0;
+
+        var tabCounts = new FacturesTabCountsDto(
+            All:       await db.Factures.CountAsync(ct),
+            Payee:     await db.Factures.CountAsync(f => f.Statut == StatutFacture.Payee, ct),
+            Partiel:   await db.Factures.CountAsync(f => f.Statut == StatutFacture.PartiellementPayee, ct),
+            EnAttente: enAttenteCount,
+            EnRetard:  enRetardCount,
+            Annulee:   await db.Factures.CountAsync(f => f.Statut == StatutFacture.Annulee, ct)
+        );
+
+        return new FacturesStatsDto(totalMois, totalPaye, payeePct, enAttenteCount, enAttenteMontant, enRetardCount, enRetardMontant, tabCounts);
     }
 }

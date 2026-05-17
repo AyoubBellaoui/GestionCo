@@ -1,6 +1,7 @@
 using FluentValidation;
 using GestionCo.Api.Application.Common.Exceptions;
 using GestionCo.Api.Application.Common.Interfaces;
+using GestionCo.Api.Application.Common.Models;
 using GestionCo.Api.Application.Produits.DTOs;
 using GestionCo.Api.Domain.Entities;
 using GestionCo.Api.Domain.Enums;
@@ -57,6 +58,7 @@ public class CreateProduitHandler : IRequestHandler<CreateProduitCommand, Produi
             PrixVenteTTC = Math.Round(dto.PrixVenteHT * (1 + dto.TVAVente / 100), 2),
             QuantiteStock = dto.QuantiteStock,
             SeuilAlerte = dto.SeuilAlerte,
+            QuantiteReappro = dto.QuantiteReappro,
             CategorieId = dto.CategorieId,
             FournisseurId = dto.FournisseurId,
             IsActive = dto.IsActive
@@ -109,6 +111,114 @@ public class CreateProduitHandler : IRequestHandler<CreateProduitCommand, Produi
     }
 }
 
+// ============ BULK IMPORT ============
+public record BulkImportProduitsCommand(List<CreateProduitDto> Items) : IRequest<BulkImportResultDto>;
+
+public class BulkImportProduitsHandler : IRequestHandler<BulkImportProduitsCommand, BulkImportResultDto>
+{
+    private readonly IAppDbContext _db;
+    private readonly IAuditLogger _audit;
+    private readonly ICurrentUserService _current;
+
+    public BulkImportProduitsHandler(IAppDbContext db, IAuditLogger audit, ICurrentUserService current)
+    {
+        _db = db; _audit = audit; _current = current;
+    }
+
+    public async Task<BulkImportResultDto> Handle(BulkImportProduitsCommand req, CancellationToken ct)
+    {
+        var result = new BulkImportResultDto();
+        if (req.Items.Count == 0) return result;
+        if (req.Items.Count > 500) throw new BusinessException("Maximum 500 lignes par import");
+
+        var pf = await _db.ParametresFacturation.AsNoTracking().FirstOrDefaultAsync(ct)
+                 ?? new ParametresFacturation();
+        var year = DateTime.UtcNow.Year;
+        var prefix = $"{pf.PrefixeProduit}-{year}-";
+
+        var lastRef = await _db.Produits
+            .Where(p => p.Reference.StartsWith(prefix))
+            .OrderByDescending(p => p.Reference)
+            .Select(p => p.Reference)
+            .FirstOrDefaultAsync(ct);
+
+        var nextNum = string.IsNullOrEmpty(lastRef) ? 1
+            : int.TryParse(lastRef[prefix.Length..], out var n) ? n + 1 : 1;
+
+        var toAdd = new List<Produit>();
+
+        for (int i = 0; i < req.Items.Count; i++)
+        {
+            var dto = req.Items[i];
+            var row = i + 2;
+
+            if (string.IsNullOrWhiteSpace(dto.Nom))
+            { result.Errors.Add(new BulkImportRowError { Row = row, Message = "Nom requis" }); continue; }
+            if (dto.Nom.Length > 200)
+            { result.Errors.Add(new BulkImportRowError { Row = row, Message = "Nom trop long (max 200 caractères)" }); continue; }
+            if (dto.PrixHT < 0)
+            { result.Errors.Add(new BulkImportRowError { Row = row, Message = "Prix HT invalide" }); continue; }
+
+            var tva = dto.TVA == 0 ? 20m : dto.TVA;
+            var tvaVente = dto.TVAVente == 0 ? 20m : dto.TVAVente;
+
+            toAdd.Add(new Produit
+            {
+                Reference = $"{prefix}{nextNum++:D4}",
+                CodeBarre = GenerateBarcode(),
+                Nom = dto.Nom.Trim(),
+                Description = dto.Description?.Trim(),
+                PrixHT = dto.PrixHT,
+                TVA = tva,
+                PrixTTC = Math.Round(dto.PrixHT * (1 + tva / 100), 2),
+                PrixVenteHT = dto.PrixVenteHT,
+                TVAVente = tvaVente,
+                PrixVenteTTC = Math.Round(dto.PrixVenteHT * (1 + tvaVente / 100), 2),
+                QuantiteStock = dto.QuantiteStock,
+                SeuilAlerte = dto.SeuilAlerte > 0 ? dto.SeuilAlerte : 5,
+                QuantiteReappro = dto.QuantiteReappro,
+                IsActive = dto.IsActive,
+            });
+        }
+
+        if (toAdd.Count > 0)
+        {
+            _db.Produits.AddRange(toAdd);
+            await _db.SaveChangesAsync(ct);
+
+            if (_current.UserId.HasValue)
+            {
+                foreach (var p in toAdd.Where(p => p.QuantiteStock > 0))
+                {
+                    _db.MouvementsStock.Add(new MouvementStock
+                    {
+                        ProduitId = p.Id,
+                        Type = TypeMouvementStock.Entree,
+                        Quantite = p.QuantiteStock,
+                        StockAvant = 0,
+                        StockApres = p.QuantiteStock,
+                        Source = SourceMouvementStock.Manuel,
+                        UtilisateurId = _current.UserId.Value,
+                        Raison = "Stock initial — import",
+                        DateMouvement = DateTime.UtcNow
+                    });
+                }
+                await _db.SaveChangesAsync(ct);
+            }
+
+            await _audit.LogAsync(ActionLog.Create, "produits",
+                $"Import massif : {toAdd.Count} produit(s) créé(s)", ct: ct);
+        }
+
+        result.Imported = toAdd.Count;
+        result.Failed = result.Errors.Count;
+        return result;
+    }
+
+    private static string GenerateBarcode()
+        => "611" + DateTime.UtcNow.Year.ToString()[2..] + Random.Shared.Next(1000000, 9999999);
+}
+
 // ============ UPDATE ============
 public record UpdateProduitCommand(UpdateProduitDto Dto) : IRequest<ProduitDto>;
 
@@ -152,6 +262,7 @@ public class UpdateProduitHandler : IRequestHandler<UpdateProduitCommand, Produi
         produit.TVAVente = dto.TVAVente;
         produit.PrixVenteTTC = Math.Round(dto.PrixVenteHT * (1 + dto.TVAVente / 100), 2);
         produit.SeuilAlerte = dto.SeuilAlerte;
+        produit.QuantiteReappro = dto.QuantiteReappro;
         produit.CategorieId = dto.CategorieId;
         produit.FournisseurId = dto.FournisseurId;
         produit.IsActive = dto.IsActive;
@@ -213,6 +324,29 @@ public class DeleteProduitHandler : IRequestHandler<DeleteProduitCommand, Unit>
     }
 }
 
+// ============ RÉAPPRO ============
+public record GenererReapproCommand(int ProduitId) : IRequest<ReapproResultDto>;
+
+public class GenererReapproHandler : IRequestHandler<GenererReapproCommand, ReapproResultDto>
+{
+    private readonly IReapproService _reappro;
+    private readonly ICurrentUserService _current;
+
+    public GenererReapproHandler(IReapproService reappro, ICurrentUserService current)
+    {
+        _reappro = reappro; _current = current;
+    }
+
+    public async Task<ReapproResultDto> Handle(GenererReapproCommand req, CancellationToken ct)
+    {
+        var userId = _current.UserId ?? throw new UnauthorizedException();
+        var result = await _reappro.TryGenererReapproAsync(req.ProduitId, userId, ct);
+        if (!result.Created && result.AchatId == 0)
+            throw new BusinessException(result.Message ?? "Réapprovisionnement impossible");
+        return result;
+    }
+}
+
 // ============ MAPPER ============
 public static class ProduitMapper
 {
@@ -232,6 +366,7 @@ public static class ProduitMapper
         PrixVenteTTC = p.PrixVenteTTC,
         QuantiteStock = p.QuantiteStock,
         SeuilAlerte = p.SeuilAlerte,
+        QuantiteReappro = p.QuantiteReappro,
         IsStockFaible = p.IsStockFaible,
         IsRupture = p.IsRupture,
         CategorieId = p.CategorieId,

@@ -212,6 +212,67 @@ public class DeleteClientHandler : IRequestHandler<DeleteClientCommand, Unit>
     }
 }
 
+// ============ BULK IMPORT ============
+public record BulkImportClientsCommand(List<CreateClientDto> Items) : IRequest<BulkImportResultDto>;
+
+public class BulkImportClientsHandler : IRequestHandler<BulkImportClientsCommand, BulkImportResultDto>
+{
+    private readonly IAppDbContext _db;
+    private readonly IAuditLogger _audit;
+
+    public BulkImportClientsHandler(IAppDbContext db, IAuditLogger audit) { _db = db; _audit = audit; }
+
+    public async Task<BulkImportResultDto> Handle(BulkImportClientsCommand req, CancellationToken ct)
+    {
+        var result = new BulkImportResultDto();
+        if (req.Items.Count == 0) return result;
+        if (req.Items.Count > 500) throw new BusinessException("Maximum 500 lignes par import");
+
+        var toAdd = new List<Client>();
+
+        for (int i = 0; i < req.Items.Count; i++)
+        {
+            var dto = req.Items[i];
+            var row = i + 2;
+
+            if (string.IsNullOrWhiteSpace(dto.NomClient))
+            { result.Errors.Add(new BulkImportRowError { Row = row, Message = "Nom client requis" }); continue; }
+            if (dto.NomClient.Length > 200)
+            { result.Errors.Add(new BulkImportRowError { Row = row, Message = "Nom trop long (max 200 caractères)" }); continue; }
+            if (dto.Type == TypeClient.Entreprise && !string.IsNullOrWhiteSpace(dto.ICE) && dto.ICE.Length != 15)
+            { result.Errors.Add(new BulkImportRowError { Row = row, Message = "ICE doit contenir exactement 15 chiffres" }); continue; }
+
+            toAdd.Add(new Client
+            {
+                NomClient = dto.NomClient.Trim(),
+                Type = dto.Type,
+                ICE = dto.ICE?.Trim(),
+                RC = dto.RC?.Trim(),
+                IF = dto.IF?.Trim(),
+                Adresse = dto.Adresse?.Trim(),
+                Ville = dto.Ville?.Trim(),
+                Telephone = dto.Telephone?.Trim(),
+                Email = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email.Trim().ToLower(),
+                PersonneContact = dto.PersonneContact?.Trim(),
+                IsActive = true,
+                SourceAcquisition = dto.SourceAcquisition?.Trim(),
+            });
+        }
+
+        if (toAdd.Count > 0)
+        {
+            _db.Clients.AddRange(toAdd);
+            await _db.SaveChangesAsync(ct);
+            await _audit.LogAsync(ActionLog.Create, "clients",
+                $"Import massif : {toAdd.Count} client(s) créé(s)", ct: ct);
+        }
+
+        result.Imported = toAdd.Count;
+        result.Failed = result.Errors.Count;
+        return result;
+    }
+}
+
 // ============ QUERIES ============
 public record GetClientsQuery(
     int Page = 1, int PageSize = 10,
@@ -309,4 +370,23 @@ public static class ClientMapper
         IsActive = c.IsActive, SourceAcquisition = c.SourceAcquisition,
         Initiales = c.Initiales, CreatedAt = c.CreatedAt, UtilisateurId = c.UtilisateurId
     };
+}
+
+public record ClientsStatsDto(int Total, int Actifs, decimal CA, decimal Impayes);
+public record GetClientsStatsQuery() : IRequest<ClientsStatsDto>;
+
+public class GetClientsStatsHandler(IAppDbContext db) : IRequestHandler<GetClientsStatsQuery, ClientsStatsDto>
+{
+    public async Task<ClientsStatsDto> Handle(GetClientsStatsQuery _, CancellationToken ct)
+    {
+        var total  = await db.Clients.CountAsync(ct);
+        var actifs = await db.Clients.CountAsync(c => c.IsActive, ct);
+        var ca = await db.Ventes
+            .Where(v => v.Statut != StatutVente.Annule)
+            .SumAsync(v => (decimal?)v.MontantTotal, ct) ?? 0;
+        var impayes = await db.Factures
+            .Where(f => f.Statut != StatutFacture.Payee && f.Statut != StatutFacture.Annulee)
+            .SumAsync(f => (decimal?)(f.Vente.MontantTotal - f.Vente.MontantPaye), ct) ?? 0;
+        return new ClientsStatsDto(total, actifs, ca, impayes);
+    }
 }

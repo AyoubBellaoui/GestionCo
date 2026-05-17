@@ -1,4 +1,4 @@
-<app-topbar title="Produits" [subtitle]="produits.length + ' produit' + (produits.length > 1 ? 's' : '') + ' — Catalogue et stock'" icon="📦">
+<app-topbar title="Produits" [subtitle]="totalCount + ' produit' + (totalCount > 1 ? 's' : '') + ' — Catalogue et stock'" icon="📦">
   <button class="btn btn-ghost" (click)="exportExcel()" title="Exporter en Excel">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
     Exporter Excel
@@ -22,13 +22,13 @@
   <div class="toolbar">
     <div class="search-wrapper">
       <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-      <input class="search-input" placeholder="Rechercher par référence, nom…" [(ngModel)]="search" />
+      <input class="search-input" placeholder="Rechercher par référence, nom…" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
     </div>
-    <select class="filter-select" [(ngModel)]="categorieFilter">
+    <select class="filter-select" [(ngModel)]="categorieFilter" (ngModelChange)="onFilterChange()">
       <option value="">Toutes catégories</option>
-      @for (c of categories; track c) { <option [value]="c">{{ c }}</option> }
+      @for (c of categories; track c.id) { <option [value]="c.id">{{ c.icone || '📂' }} {{ c.nom }}</option> }
     </select>
-    <select class="filter-select" [(ngModel)]="stockFilter">
+    <select class="filter-select" [(ngModel)]="stockFilter" (ngModelChange)="onFilterChange()">
       <option value="">Tous stocks</option>
       <option value="ok">Disponible</option>
       <option value="low">Stock faible</option>
@@ -78,6 +78,15 @@
                 <button class="btn-icon" title="Ajuster le stock" (click)="openAjust(p)" style="color:var(--primary)">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 </button>
+                @if (p.quantiteReappro > 0 && p.fournisseurId && (p.isStockFaible || p.isRupture)) {
+                  <button class="btn-icon" title="Générer bon de commande réappro" (click)="genererReappro(p)" [disabled]="reapproLoading.has(p.id)" style="color:var(--warning)">
+                    @if (reapproLoading.has(p.id)) {
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                    } @else {
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.69"/></svg>
+                    }
+                  </button>
+                }
                 <button class="btn-icon primary" title="Modifier" (click)="router.navigate(['/produits', p.id, 'modifier'])">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
@@ -92,7 +101,7 @@
         </tbody>
       </table>
     </div>
-    <app-pagination [page]="page" [pageSize]="pageSize" [total]="filtered.length" (pageChange)="page=$event" (pageSizeChange)="pageSize=$event;page=1"></app-pagination>
+    <app-pagination [page]="page" [pageSize]="pageSize" [total]="totalCount" (pageChange)="onPage($event)" (pageSizeChange)="onPageSize($event)"></app-pagination>
   </div>
 </div>
 
@@ -239,6 +248,50 @@
       <div class="modal-footer">
         <button class="btn btn-ghost" (click)="closeDetail()">Fermer</button>
         <button class="btn btn-primary" (click)="editDetail()">✏️ Modifier</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══ MODAL RÉSULTAT IMPORT ══ -->
+@if (importResult) {
+  <div class="modal-backdrop" (click)="importResult = null">
+    <div class="modal" style="max-width:520px" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">📤 Résultat de l'import</div>
+        <button class="modal-close" (click)="importResult = null">✕</button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;gap:12px">
+          <div style="flex:1;background:var(--success-light,#f0fdf4);border:1px solid var(--success,#22c55e);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:24px;font-weight:800;color:var(--success,#22c55e)">{{ importResult.imported }}</div>
+            <div style="font-size:12px;color:var(--success,#22c55e);font-weight:600">importé(s)</div>
+          </div>
+          @if (importResult.failed > 0) {
+            <div style="flex:1;background:var(--danger-light,#fef2f2);border:1px solid var(--danger,#ef4444);border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:24px;font-weight:800;color:var(--danger,#ef4444)">{{ importResult.failed }}</div>
+              <div style="font-size:12px;color:var(--danger,#ef4444);font-weight:600">erreur(s)</div>
+            </div>
+          }
+        </div>
+        @if (importResult.errors.length > 0) {
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--text-muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:8px">Détail des erreurs</div>
+            <div style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">
+              <table class="data-table" style="margin:0">
+                <thead><tr><th style="width:70px">Ligne</th><th>Erreur</th></tr></thead>
+                <tbody>
+                  @for (e of importResult.errors; track e.row) {
+                    <tr><td style="font-family:monospace;color:var(--danger,#ef4444)">{{ e.row }}</td><td style="font-size:12.5px">{{ e.message }}</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" (click)="importResult = null">Fermer</button>
       </div>
     </div>
   </div>

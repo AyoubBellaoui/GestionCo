@@ -16,6 +16,7 @@ public class ProduitDto
     public decimal PrixVenteTTC { get; set; }
     public int QuantiteStock { get; set; }
     public int SeuilAlerte { get; set; }
+    public int QuantiteReappro { get; set; }
     public bool IsStockFaible { get; set; }
     public bool IsRupture { get; set; }
     public int? CategorieId { get; set; }
@@ -38,6 +39,7 @@ public class CreateProduitDto
     public decimal TVAVente { get; set; } = 20;
     public int QuantiteStock { get; set; }
     public int SeuilAlerte { get; set; } = 5;
+    public int QuantiteReappro { get; set; } = 0;
     public int? CategorieId { get; set; }
     public int? FournisseurId { get; set; }
     public bool IsActive { get; set; } = true;

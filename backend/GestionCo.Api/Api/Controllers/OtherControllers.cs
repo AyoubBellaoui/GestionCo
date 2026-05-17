@@ -22,6 +22,10 @@ public class MouvementsStockController : ControllerBase
     public async Task<IActionResult> GetAll([FromQuery] GetMouvementsStockQuery q, CancellationToken ct)
         => Ok(await _mediator.Send(q, ct));
 
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetMouvementsStatsQuery(), ct));
+
     [HttpPost("ajustement")]
     [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> CreateAjustement([FromBody] AjustementStockDto dto, CancellationToken ct)
@@ -128,4 +132,13 @@ public class ParametresController(IMediator mediator) : ControllerBase
     [HttpPut("facturation")]
     public async Task<IActionResult> UpdateFacturation([FromBody] FacturationSettingsDto dto, CancellationToken ct)
         => Ok(await mediator.Send(new UpdateFacturationSettingsCommand(dto), ct));
+
+    [HttpGet("entreprise")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetEntreprise(CancellationToken ct)
+        => Ok(await mediator.Send(new GetEntrepriseSettingsQuery(), ct));
+
+    [HttpPut("entreprise")]
+    public async Task<IActionResult> UpdateEntreprise([FromBody] EntrepriseSettingsDto dto, CancellationToken ct)
+        => Ok(await mediator.Send(new UpdateEntrepriseSettingsCommand(dto), ct));
 }

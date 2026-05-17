@@ -8,6 +8,7 @@ using GestionCo.Api.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
 
 namespace GestionCo.Api.Api.Controllers;
 
@@ -42,6 +43,14 @@ public class ProduitsController : ControllerBase
         return Ok(await _mediator.Send(new UpdateProduitCommand(dto), ct));
     }
 
+    [HttpPost("import")]
+    public async Task<IActionResult> BulkImport([FromBody] List<CreateProduitDto> items, CancellationToken ct)
+        => Ok(await _mediator.Send(new BulkImportProduitsCommand(items ?? new()), ct));
+
+    [HttpPost("{id}/reappro")]
+    public async Task<IActionResult> GenererReappro(int id, CancellationToken ct)
+        => Ok(await _mediator.Send(new GenererReapproCommand(id), ct));
+
     [HttpDelete("{id}")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
@@ -63,6 +72,10 @@ public class ClientsController : ControllerBase
     public async Task<IActionResult> GetAll([FromQuery] GetClientsQuery q, CancellationToken ct)
         => Ok(await _mediator.Send(q, ct));
 
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetClientsStatsQuery(), ct));
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
         => Ok(await _mediator.Send(new GetClientByIdQuery(id), ct));
@@ -77,6 +90,10 @@ public class ClientsController : ControllerBase
         dto.Id = id;
         return Ok(await _mediator.Send(new UpdateClientCommand(dto), ct));
     }
+
+    [HttpPost("import")]
+    public async Task<IActionResult> BulkImport([FromBody] List<CreateClientDto> items, CancellationToken ct)
+        => Ok(await _mediator.Send(new BulkImportClientsCommand(items ?? new()), ct));
 
     [HttpDelete("{id}")]
     [Authorize(Policy = "AdminOnly")]
@@ -99,6 +116,10 @@ public class FournisseursController : ControllerBase
     public async Task<IActionResult> GetAll([FromQuery] GetFournisseursQuery q, CancellationToken ct)
         => Ok(await _mediator.Send(q, ct));
 
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetFournisseursStatsQuery(), ct));
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
         => Ok(await _mediator.Send(new GetFournisseurByIdQuery(id), ct));
@@ -113,6 +134,10 @@ public class FournisseursController : ControllerBase
         dto.Id = id;
         return Ok(await _mediator.Send(new UpdateFournisseurCommand(dto), ct));
     }
+
+    [HttpPost("import")]
+    public async Task<IActionResult> BulkImport([FromBody] List<CreateFournisseurDto> items, CancellationToken ct)
+        => Ok(await _mediator.Send(new BulkImportFournisseursCommand(items ?? new()), ct));
 
     [HttpDelete("{id}")]
     [Authorize(Policy = "AdminOnly")]
