@@ -77,13 +77,36 @@ public class AddPaiementVenteDto
     public string? Notes { get; set; }
 }
 
+public class UpdateVenteDto
+{
+    public int ClientId { get; set; }
+    public DateTime? DateEcheance { get; set; }
+    public List<CreateLigneVenteDto> Lignes { get; set; } = new();
+}
+
 // ============ COMMANDS ============
 public record CreateVenteCommand(CreateVenteDto Dto) : IRequest<VenteDto>;
+public record UpdateVenteCommand(int Id, UpdateVenteDto Dto) : IRequest<VenteDto>;
 public record AddPaiementVenteCommand(AddPaiementVenteDto Dto) : IRequest<VenteDto>;
 
 public class CreateVenteValidator : AbstractValidator<CreateVenteCommand>
 {
     public CreateVenteValidator()
+    {
+        RuleFor(x => x.Dto.ClientId).GreaterThan(0).WithMessage("Client requis");
+        RuleFor(x => x.Dto.Lignes).NotEmpty().WithMessage("Au moins une ligne de vente requise");
+        RuleForEach(x => x.Dto.Lignes).ChildRules(l =>
+        {
+            l.RuleFor(x => x.ProduitId).GreaterThan(0);
+            l.RuleFor(x => x.Quantite).GreaterThan(0);
+            l.RuleFor(x => x.PrixUnitaire).GreaterThanOrEqualTo(0);
+        });
+    }
+}
+
+public class UpdateVenteValidator : AbstractValidator<UpdateVenteCommand>
+{
+    public UpdateVenteValidator()
     {
         RuleFor(x => x.Dto.ClientId).GreaterThan(0).WithMessage("Client requis");
         RuleFor(x => x.Dto.Lignes).NotEmpty().WithMessage("Au moins une ligne de vente requise");
@@ -240,6 +263,149 @@ public class CreateVenteHandler : IRequestHandler<CreateVenteCommand, VenteDto>
                     await _reappro.TryGenererReapproAsync(produit.Id, userId, ct);
             }
         }
+
+        return await GetVenteDetailsAsync(vente.Id, ct);
+    }
+
+    private async Task<VenteDto> GetVenteDetailsAsync(int id, CancellationToken ct)
+    {
+        var v = await _db.Ventes
+            .Include(v => v.Client).Include(v => v.Utilisateur)
+            .Include(v => v.Lignes).ThenInclude(l => l.Produit)
+            .Include(v => v.Facture)
+            .FirstAsync(v => v.Id == id, ct);
+        return VenteMapper.ToDto(v);
+    }
+}
+
+// ============ MODIFIER VENTE ============
+public class UpdateVenteHandler : IRequestHandler<UpdateVenteCommand, VenteDto>
+{
+    private readonly IAppDbContext _db;
+    private readonly ICurrentUserService _current;
+    private readonly IAuditLogger _audit;
+
+    public UpdateVenteHandler(IAppDbContext db, ICurrentUserService current, IAuditLogger audit)
+    {
+        _db = db; _current = current; _audit = audit;
+    }
+
+    public async Task<VenteDto> Handle(UpdateVenteCommand req, CancellationToken ct)
+    {
+        var dto = req.Dto;
+        var userId = _current.UserId ?? throw new UnauthorizedException();
+        var now = DateTime.UtcNow;
+
+        var vente = await _db.Ventes
+            .Include(v => v.Lignes)
+            .Include(v => v.Facture)
+            .Include(v => v.Client)
+            .FirstOrDefaultAsync(v => v.Id == req.Id, ct)
+            ?? throw new NotFoundException("Vente", req.Id);
+
+        if (vente.Statut == StatutVente.Annule)
+            throw new BusinessException("Cette vente est annulée et ne peut pas être modifiée");
+
+        var client = await _db.Clients.FirstOrDefaultAsync(c => c.Id == dto.ClientId, ct)
+            ?? throw new NotFoundException("Client", dto.ClientId);
+
+        // Collect all affected produit IDs
+        var allProduitIds = vente.Lignes.Select(l => l.ProduitId)
+            .Concat(dto.Lignes.Select(l => l.ProduitId))
+            .Distinct().ToList();
+        var produits = await _db.Produits.Where(p => allProduitIds.Contains(p.Id)).ToListAsync(ct);
+
+        // Restore stock for old lines
+        foreach (var ligne in vente.Lignes)
+        {
+            var produit = produits.FirstOrDefault(p => p.Id == ligne.ProduitId)
+                ?? throw new NotFoundException("Produit", ligne.ProduitId);
+            var stockAvant = produit.QuantiteStock;
+            produit.QuantiteStock += ligne.Quantite;
+            _db.MouvementsStock.Add(new MouvementStock
+            {
+                ProduitId = produit.Id,
+                Type = TypeMouvementStock.Entree,
+                Quantite = ligne.Quantite,
+                StockAvant = stockAvant,
+                StockApres = produit.QuantiteStock,
+                Source = SourceMouvementStock.ModificationVente,
+                ReferenceId = vente.Id,
+                ReferenceText = vente.Reference,
+                UtilisateurId = userId,
+                Raison = "Modification vente — restauration stock",
+                DateMouvement = now
+            });
+        }
+
+        // Validate new stock
+        foreach (var ligne in dto.Lignes)
+        {
+            var produit = produits.FirstOrDefault(p => p.Id == ligne.ProduitId)
+                ?? throw new NotFoundException("Produit", ligne.ProduitId);
+            if (produit.QuantiteStock < ligne.Quantite)
+                throw new BusinessException(
+                    $"Stock insuffisant pour '{produit.Nom}'. Stock disponible : {produit.QuantiteStock}, demandé : {ligne.Quantite}");
+        }
+
+        // Replace lines
+        _db.LignesVente.RemoveRange(vente.Lignes);
+        vente.Lignes = dto.Lignes.Select(l => new LigneVente
+        {
+            ProduitId = l.ProduitId,
+            Quantite = l.Quantite,
+            PrixUnitaire = l.PrixUnitaire,
+            Remise = l.Remise,
+            TVA = l.TVA
+        }).ToList();
+
+        // Decrement stock for new lines
+        foreach (var ligne in vente.Lignes)
+        {
+            var produit = produits.First(p => p.Id == ligne.ProduitId);
+            var stockAvant = produit.QuantiteStock;
+            produit.QuantiteStock -= ligne.Quantite;
+            _db.MouvementsStock.Add(new MouvementStock
+            {
+                ProduitId = produit.Id,
+                Type = TypeMouvementStock.Sortie,
+                Quantite = ligne.Quantite,
+                StockAvant = stockAvant,
+                StockApres = produit.QuantiteStock,
+                Source = SourceMouvementStock.ModificationVente,
+                ReferenceId = vente.Id,
+                ReferenceText = vente.Reference,
+                UtilisateurId = userId,
+                Raison = "Modification vente — nouveau stock",
+                DateMouvement = now
+            });
+        }
+
+        // Update vente
+        vente.ClientId = dto.ClientId;
+        if (dto.DateEcheance.HasValue) vente.DateEcheance = dto.DateEcheance;
+        vente.MontantTotalHT = vente.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (1 - l.Remise / 100));
+        vente.MontantTVA = vente.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (1 - l.Remise / 100) * (l.TVA / 100));
+        vente.MontantTotal = vente.MontantTotalHT + vente.MontantTVA;
+
+        if (vente.MontantPaye >= vente.MontantTotal && vente.MontantTotal > 0)
+            vente.Statut = StatutVente.Paye;
+        else if (vente.Statut == StatutVente.Paye)
+            vente.Statut = StatutVente.EnAttente;
+
+        if (vente.Facture != null)
+        {
+            vente.Facture.Statut = vente.Statut == StatutVente.Paye ? StatutFacture.Payee
+                : (vente.MontantPaye > 0 ? StatutFacture.PartiellementPayee : StatutFacture.EnAttente);
+            if (dto.DateEcheance.HasValue)
+                vente.Facture.DateEcheance = dto.DateEcheance.Value;
+        }
+
+        await _db.SaveChangesAsync(ct);
+
+        await _audit.LogAsync(ActionLog.Update, "ventes",
+            $"Vente modifiée : {vente.Reference} pour {client.NomClient} ({vente.MontantTotal:N2} MAD)",
+            vente.Id, vente.Reference, ct: ct);
 
         return await GetVenteDetailsAsync(vente.Id, ct);
     }

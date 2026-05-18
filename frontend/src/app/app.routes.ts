@@ -16,6 +16,7 @@ export const routes: Routes = [
       { path: 'devis/:id/modifier', loadComponent: () => import('./pages/devis-form/devis-form.component').then(m => m.DevisFormComponent) },
       { path: 'ventes', loadComponent: () => import('./pages/ventes/ventes.component').then(m => m.VentesComponent) },
       { path: 'ventes/nouvelle', loadComponent: () => import('./pages/vente-form/vente-form.component').then(m => m.VenteFormComponent) },
+      { path: 'ventes/:id/modifier', loadComponent: () => import('./pages/vente-form/vente-form.component').then(m => m.VenteFormComponent) },
       { path: 'achats', loadComponent: () => import('./pages/achats/achats.component').then(m => m.AchatsComponent) },
       { path: 'achats/nouveau', loadComponent: () => import('./pages/achat-form/achat-form.component').then(m => m.AchatFormComponent) },
       { path: 'produits', loadComponent: () => import('./pages/produits/produits.component').then(m => m.ProduitsComponent) },

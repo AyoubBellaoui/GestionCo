@@ -57,7 +57,8 @@ public enum SourceMouvementStock
     Achat = 1,
     Vente = 2,
     Manuel = 3,
-    AnnulationVente = 4
+    AnnulationVente = 4,
+    ModificationVente = 5
 }
 
 public enum TypeClient

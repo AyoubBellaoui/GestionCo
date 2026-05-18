@@ -4,15 +4,15 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
     </button>
     <div>
-      <h1>Nouvelle vente</h1>
-      <div class="breadcrumb"><span class="breadcrumb-link" (click)="router.navigate(['/ventes'])">Ventes</span><span class="breadcrumb-sep">/</span><span>Nouvelle</span></div>
+      <h1>{{ pageTitle }}</h1>
+      <div class="breadcrumb"><span class="breadcrumb-link" (click)="router.navigate(['/ventes'])">Ventes</span><span class="breadcrumb-sep">/</span><span>{{ isEdit ? 'Modifier' : 'Nouvelle' }}</span></div>
     </div>
   </div>
   <div class="topbar-right">
     <button class="btn btn-ghost" (click)="router.navigate(['/ventes'])">Annuler</button>
     <button class="btn btn-primary" (click)="save()" [disabled]="saving">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      {{ saving ? 'Enregistrement…' : 'Enregistrer la vente' }}
+      {{ saving ? 'Enregistrement…' : (isEdit ? 'Enregistrer les modifications' : 'Enregistrer la vente') }}
     </button>
   </div>
 </div>
@@ -74,12 +74,12 @@
                 @for (l of lignes; track $index) {
                   <tr>
                     <td>
-                      <select class="form-select" style="height:34px;font-size:13px" [value]="l.produitId"
+                      <select class="form-select" style="height:34px;font-size:13px"
                               (change)="updateLigneProduit($index, +$any($event.target).value)"
                               [class.invalid]="submitted && l.produitId === 0">
-                        <option [value]="0">— Produit —</option>
+                        <option [value]="0" [selected]="l.produitId === 0">— Produit —</option>
                         @for (p of produits; track p.id) {
-                          <option [value]="p.id" [disabled]="p.quantiteStock === 0">{{ p.reference }} — {{ p.nom }}{{ p.quantiteStock === 0 ? ' (Rupture)' : p.isStockFaible ? ' (⚠️ ' + p.quantiteStock + ' en stock)' : ' (' + p.quantiteStock + ' en stock)' }}</option>
+                          <option [value]="p.id" [selected]="p.id === l.produitId" [disabled]="p.quantiteStock === 0 && p.id !== l.produitId">{{ p.reference }} — {{ p.nom }}{{ p.quantiteStock === 0 ? ' (Rupture)' : p.isStockFaible ? ' (⚠️ ' + p.quantiteStock + ' en stock)' : ' (' + p.quantiteStock + ' en stock)' }}</option>
                         }
                       </select>
                       @if (submitted && l.produitId === 0) {
@@ -88,8 +88,8 @@
                     </td>
                     <td>
                       <div class="input-group">
-                        <input type="number" [min]="1" [max]="l.stockDisponible" class="form-input with-suffix"
-                               [value]="l.quantite" (change)="updateLigneQty($index, +$any($event.target).value)"
+                        <input type="number" [min]="1" class="form-input with-suffix"
+                               [value]="l.quantite" (input)="updateLigneQty($index, +$any($event.target).value)"
                                [class.invalid]="submitted && l.quantite < 1" />
                         <span class="input-suffix" style="font-size:11px;padding:0 8px" [style.color]="l.stockDisponible===0 ? 'var(--danger)' : (l.stockDisponible!==undefined && l.quantite>=l.stockDisponible!) ? 'var(--warning)' : 'var(--text-muted)'">
                           {{ l.produitId !== 0 && l.stockDisponible !== undefined ? (l.stockDisponible === 0 ? '⚠️' : '/'+l.stockDisponible) : '' }}
@@ -123,8 +123,11 @@
                       </div>
                     </td>
                     <td>
-                      <select class="form-select" style="height:34px;font-size:13px" [value]="l.tva" (change)="updateLigneTva($index, +$any($event.target).value)">
-                        <option [value]="0">0%</option><option [value]="7">7%</option><option [value]="14">14%</option><option [value]="20">20%</option>
+                      <select class="form-select" style="height:34px;font-size:13px" (change)="updateLigneTva($index, +$any($event.target).value)">
+                        <option [value]="0" [selected]="l.tva === 0">0%</option>
+                        <option [value]="7" [selected]="l.tva === 7">7%</option>
+                        <option [value]="14" [selected]="l.tva === 14">14%</option>
+                        <option [value]="20" [selected]="l.tva === 20">20%</option>
                       </select>
                     </td>
                     <td style="text-align:right;font-weight:700">
@@ -155,6 +158,7 @@
 
     <!-- Sidebar -->
     <aside class="form-sidebar">
+      @if (!isEdit) {
       <div class="form-card">
         <div class="form-section-title">💳 Paiement initial</div>
         <div class="form-section-sub" style="margin-bottom:14px">Montant encaissé à la création</div>
@@ -200,6 +204,24 @@
           </div>
         }
       </div>
+      }
+
+      @if (isEdit) {
+      <div class="form-card">
+        <div class="form-section-title">📅 Date d'échéance</div>
+        <div class="form-section-sub" style="margin-bottom:14px">Modifier la date d'échéance de la vente</div>
+        <div class="form-group">
+          <input type="date" class="form-input" [(ngModel)]="dateEcheance" />
+          <div class="form-help">
+            @if (dateEcheance) {
+              <span style="color:var(--primary)">📅 Solde attendu le {{ dateEcheance }}</span>
+            } @else {
+              Laisser vide pour conserver la date actuelle
+            }
+          </div>
+        </div>
+      </div>
+      }
 
       <div class="form-card">
         <div class="form-section-title">📋 Résumé</div>

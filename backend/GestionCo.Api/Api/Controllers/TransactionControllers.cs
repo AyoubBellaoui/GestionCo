@@ -41,6 +41,11 @@ public class VentesController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateVenteDto dto, CancellationToken ct)
         => Ok(await _mediator.Send(new CreateVenteCommand(dto), ct));
 
+    [HttpPut("{id}")]
+    [Authorize(Policy = "AdminOrManager")]
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateVenteDto dto, CancellationToken ct)
+        => Ok(await _mediator.Send(new UpdateVenteCommand(id, dto), ct));
+
     [HttpPost("{id}/paiements")]
     public async Task<IActionResult> AddPaiement(int id, [FromBody] AddPaiementVenteDto dto, CancellationToken ct)
     {

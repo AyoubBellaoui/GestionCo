@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { NgClass } from '@angular/common';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -39,6 +39,7 @@ interface LigneForm {
   templateUrl: './vente-form.component.html',
 })
 export class VenteFormComponent implements OnInit {
+  editId: number | null = null;
   clients: Client[] = [];
   produits: Produit[] = [];
   loadingData = true;
@@ -50,6 +51,9 @@ export class VenteFormComponent implements OnInit {
   saving = false;
   submitted = false;
 
+  get isEdit(): boolean { return this.editId !== null; }
+  get pageTitle(): string { return this.isEdit ? 'Modifier la vente' : 'Nouvelle vente'; }
+
   newClientModalOpen = false;
   newClientSaving = false;
   readonly sourcesAcquisition = ['Facebook', 'Instagram', 'WhatsApp', 'Email', 'Recommandation', 'Site web', 'Salon / Événement', 'Autre'];
@@ -58,9 +62,12 @@ export class VenteFormComponent implements OnInit {
   formatNum = formatNum;
   Math = Math;
 
-  constructor(private api: ApiService, private toast: ToastService, public router: Router, private settings: SettingsService) {}
+  constructor(private api: ApiService, private toast: ToastService, public router: Router, private settings: SettingsService, private route: ActivatedRoute) {}
 
   async ngOnInit(): Promise<void> {
+    const idParam = this.route.snapshot.paramMap.get('id');
+    if (idParam) this.editId = +idParam;
+
     const [c, p] = await Promise.all([
       this.api.clientsList().catch(() => []),
       this.api.produitsList().catch(() => []),
@@ -68,25 +75,48 @@ export class VenteFormComponent implements OnInit {
     this.clients = c;
     this.produits = p;
 
-    const dup: Vente | undefined = history.state?.duplicate;
-    if (dup?.lignes?.length) {
-      this.clientId = dup.clientId;
-      this.lignes = dup.lignes.map(l => {
-        const prod = p.find(x => x.id === l.produitId);
-        return {
-          produitId: l.produitId,
-          nomProduit: l.nomProduit,
-          referenceProduit: l.referenceProduit,
-          quantite: l.quantite,
-          prixUnitaire: l.prixUnitaire,
-          remise: l.remise ?? 0,
-          prixReference: prod?.prixTTC,
-          tva: l.tva,
-          total: l.total,
-          stockDisponible: prod?.quantiteStock,
-        };
-      });
-      this.onClientChange();
+    if (this.editId) {
+      try {
+        const vente = await this.api.venteGet(this.editId);
+        this.clientId = vente.clientId;
+        this.dateEcheance = vente.dateEcheance ? vente.dateEcheance.substring(0, 10) : '';
+        this.lignes = vente.lignes.map(l => {
+          const prod = p.find(x => x.id === l.produitId);
+          return {
+            produitId: l.produitId,
+            nomProduit: l.nomProduit,
+            referenceProduit: l.referenceProduit,
+            quantite: l.quantite,
+            prixUnitaire: l.prixUnitaire,
+            remise: l.remise ?? 0,
+            prixReference: prod?.prixTTC,
+            tva: l.tva,
+            total: l.total,
+            stockDisponible: prod ? prod.quantiteStock + l.quantite : undefined,
+          };
+        });
+      } catch { this.toast.notify('Erreur lors du chargement de la vente', 'error'); }
+    } else {
+      const dup: Vente | undefined = history.state?.duplicate;
+      if (dup?.lignes?.length) {
+        this.clientId = dup.clientId;
+        this.lignes = dup.lignes.map(l => {
+          const prod = p.find(x => x.id === l.produitId);
+          return {
+            produitId: l.produitId,
+            nomProduit: l.nomProduit,
+            referenceProduit: l.referenceProduit,
+            quantite: l.quantite,
+            prixUnitaire: l.prixUnitaire,
+            remise: l.remise ?? 0,
+            prixReference: prod?.prixTTC,
+            tva: l.tva,
+            total: l.total,
+            stockDisponible: prod?.quantiteStock,
+          };
+        });
+        this.onClientChange();
+      }
     }
 
     this.loadingData = false;
@@ -132,6 +162,7 @@ export class VenteFormComponent implements OnInit {
   }
 
   updateLigneQty(i: number, quantite: number): void {
+    if (!quantite || isNaN(quantite)) return;
     const l = { ...this.lignes[i], quantite };
     if (l.stockDisponible !== undefined) l.quantite = Math.max(1, Math.min(l.quantite, l.stockDisponible));
     l.total = this.calcTotal(l);
@@ -196,19 +227,28 @@ export class VenteFormComponent implements OnInit {
     if (this.lignes.some(l => l.produitId === 0)) { this.toast.notify('Sélectionnez un produit pour chaque ligne', 'warning'); return; }
     if (this.lignes.some(l => l.prixUnitaire <= 0)) { this.toast.notify('Le prix de vente doit être > 0 sur chaque ligne', 'warning'); return; }
     if (this.lignes.some(l => l.quantite < 1)) { this.toast.notify('La quantité doit être ≥ 1 sur chaque ligne', 'warning'); return; }
-    if (this.lignes.some(l => l.stockDisponible === 0)) { this.toast.notify('Un produit est en rupture de stock', 'warning'); return; }
+    if (!this.isEdit && this.lignes.some(l => l.stockDisponible === 0)) { this.toast.notify('Un produit est en rupture de stock', 'warning'); return; }
     this.saving = true;
     try {
-      await this.api.venteCreate({
-        clientId: this.clientId,
-        lignes: this.lignes,
-        paiementInitial: this.paiementInitial,
-        methodePaiementInitial: this.paiementInitial > 0 ? this.methodePaiement : undefined,
-        dateEcheance: this.dateEcheance || undefined,
-      });
-      this.toast.notify('Vente créée avec succès', 'success');
+      if (this.isEdit) {
+        await this.api.venteUpdate(this.editId!, {
+          clientId: this.clientId,
+          lignes: this.lignes.map(l => ({ produitId: l.produitId, quantite: l.quantite, prixUnitaire: l.prixUnitaire, remise: l.remise, tva: l.tva })),
+          dateEcheance: this.dateEcheance || undefined,
+        });
+        this.toast.notify('Vente modifiée avec succès', 'success');
+      } else {
+        await this.api.venteCreate({
+          clientId: this.clientId,
+          lignes: this.lignes,
+          paiementInitial: this.paiementInitial,
+          methodePaiementInitial: this.paiementInitial > 0 ? this.methodePaiement : undefined,
+          dateEcheance: this.dateEcheance || undefined,
+        });
+        this.toast.notify('Vente créée avec succès', 'success');
+      }
       this.router.navigate(['/ventes']);
-    } catch { this.toast.notify('Erreur lors de la création', 'error'); }
+    } catch { this.toast.notify(this.isEdit ? 'Erreur lors de la modification' : 'Erreur lors de la création', 'error'); }
     finally { this.saving = false; }
   }
 }

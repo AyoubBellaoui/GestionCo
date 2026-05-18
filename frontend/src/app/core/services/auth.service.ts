@@ -14,6 +14,7 @@ export class AuthService {
   get loading(): boolean { return this.loadingSubject.value; }
   get isAdmin(): boolean { return this.userSubject.value?.role === 'Admin'; }
   get isGestionnaire(): boolean { return this.userSubject.value?.role === 'Gestionnaire'; }
+  get isAdminOrManager(): boolean { return this.isAdmin || this.isGestionnaire; }
 
   constructor() { this.init(); }
 
