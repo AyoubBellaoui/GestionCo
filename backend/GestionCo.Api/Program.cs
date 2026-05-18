@@ -52,6 +52,7 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IReapproService, ReapproService>();
 builder.Services.AddHostedService<RecurringChargesJob>();
 builder.Services.AddHostedService<VenteEcheanceJob>();
+builder.Services.AddMemoryCache();
 
 // ============ JWT AUTH ============
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()

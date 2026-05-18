@@ -2,6 +2,7 @@ using GestionCo.Api.Application.Common.Interfaces;
 using GestionCo.Api.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace GestionCo.Api.Application.Dashboard;
 
@@ -251,11 +252,18 @@ public class DashboardHandlers :
 
 public class GetFullDashboardHandler : IRequestHandler<GetFullDashboardQuery, FullDashboardDto>
 {
+    private const string CacheKey = "dashboard:full";
+    private static readonly TimeSpan CacheDuration = TimeSpan.FromSeconds(30);
+
     private readonly IAppDbContext _db;
-    public GetFullDashboardHandler(IAppDbContext db) => _db = db;
+    private readonly IMemoryCache _cache;
+    public GetFullDashboardHandler(IAppDbContext db, IMemoryCache cache) { _db = db; _cache = cache; }
 
     public async Task<FullDashboardDto> Handle(GetFullDashboardQuery _, CancellationToken ct)
     {
+        if (_cache.TryGetValue(CacheKey, out FullDashboardDto? cached) && cached is not null)
+            return cached;
+
         var now      = DateTime.UtcNow;
         var debutM   = new DateTime(now.Year, now.Month, 1);
         var debutJ   = now.Date;
@@ -398,7 +406,7 @@ public class GetFullDashboardHandler : IRequestHandler<GetFullDashboardQuery, Fu
             })
             .ToListAsync(ct);
 
-        return new FullDashboardDto
+        var result = new FullDashboardDto
         {
             CaDuMois = caM, CaDuJour = caJ, VentesDuMois = nbVM, VentesDuJour = nbVJ,
             TotalClients = nbClients, NouveauxClientsDuMois = newClients,
@@ -414,5 +422,8 @@ public class GetFullDashboardHandler : IRequestHandler<GetFullDashboardQuery, Fu
             Last6Months = bars, DonutItems = donut,
             TopClients = topClients, TopProduits = topProduits, StockAlertes = alertes,
         };
+
+        _cache.Set(CacheKey, result, CacheDuration);
+        return result;
     }
 }

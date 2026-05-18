@@ -53,6 +53,7 @@ public class GetFacturesHandler : IRequestHandler<GetFacturesQuery, PagedList<Fa
     public async Task<PagedList<FactureDto>> Handle(GetFacturesQuery q, CancellationToken ct)
     {
         var query = _db.Factures
+            .AsNoTracking()
             .Include(f => f.Vente).ThenInclude(v => v.Client)
             .AsQueryable();
 
@@ -110,6 +111,7 @@ public class GetFactureByIdHandler : IRequestHandler<GetFactureByIdQuery, Factur
     public async Task<FactureDto> Handle(GetFactureByIdQuery q, CancellationToken ct)
     {
         var f = await _db.Factures
+            .AsNoTracking()
             .Include(f => f.Vente).ThenInclude(v => v.Client)
             .FirstOrDefaultAsync(f => f.Id == q.Id, ct)
             ?? throw new NotFoundException("Facture", q.Id);

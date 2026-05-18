@@ -15,6 +15,16 @@ import { environment } from '../../../environments/environment';
 
 const LIST_PARAMS = new HttpParams().set('page', '1').set('pageSize', '200');
 
+const REF_TTL = 5 * 60 * 1000; // 5 minutes
+type RefKey = 'clients' | 'fournisseurs' | 'categories' | 'categoriesCharge';
+const _refCache = new Map<RefKey, { data: unknown; exp: number }>();
+function refCached<T>(key: RefKey, fetcher: () => Promise<T>): Promise<T> {
+  const hit = _refCache.get(key);
+  if (hit && Date.now() < hit.exp) return Promise.resolve(hit.data as T);
+  return fetcher().then(data => { _refCache.set(key, { data, exp: Date.now() + REF_TTL }); return data; });
+}
+function invalidateRef(...keys: RefKey[]): void { keys.forEach(k => _refCache.delete(k)); }
+
 function normalizeList<T>(data: T[] | PagedList<T>): T[] {
   if (Array.isArray(data)) return data;
   if (data && typeof data === 'object' && Array.isArray((data as PagedList<T>).items)) {
@@ -128,62 +138,71 @@ export class ApiService {
 
   // ── CLIENTS ──
   clientsList(): Promise<Client[]> {
-    return firstValueFrom(
+    return refCached('clients', () => firstValueFrom(
       this.http.get<Client[] | PagedList<Client>>(`${this.base}/clients`, { params: LIST_PARAMS })
         .pipe(map(normalizeList))
-    );
+    ));
   }
   clientGet(id: number): Promise<Client> {
     return firstValueFrom(this.http.get<Client>(`${this.base}/clients/${id}`));
   }
   clientCreate(data: any): Promise<Client> {
-    return firstValueFrom(this.http.post<Client>(`${this.base}/clients`, data));
+    return firstValueFrom(this.http.post<Client>(`${this.base}/clients`, data))
+      .then(r => { invalidateRef('clients'); return r; });
   }
   clientBulkImport(items: any[]): Promise<{ imported: number; failed: number; errors: { row: number; message: string }[] }> {
     return firstValueFrom(this.http.post<any>(`${this.base}/clients/import`, items));
   }
   clientUpdate(id: number, data: any): Promise<Client> {
-    return firstValueFrom(this.http.put<Client>(`${this.base}/clients/${id}`, data));
+    return firstValueFrom(this.http.put<Client>(`${this.base}/clients/${id}`, data))
+      .then(r => { invalidateRef('clients'); return r; });
   }
   clientDelete(id: number): Promise<void> {
-    return firstValueFrom(this.http.delete<void>(`${this.base}/clients/${id}`));
+    return firstValueFrom(this.http.delete<void>(`${this.base}/clients/${id}`))
+      .then(r => { invalidateRef('clients'); return r; });
   }
 
   // ── FOURNISSEURS ──
   fournisseursList(): Promise<Fournisseur[]> {
-    return firstValueFrom(
+    return refCached('fournisseurs', () => firstValueFrom(
       this.http.get<Fournisseur[] | PagedList<Fournisseur>>(`${this.base}/fournisseurs`, { params: LIST_PARAMS })
         .pipe(map(normalizeList))
-    );
+    ));
   }
   fournisseurGet(id: number): Promise<Fournisseur> {
     return firstValueFrom(this.http.get<Fournisseur>(`${this.base}/fournisseurs/${id}`));
   }
   fournisseurCreate(data: any): Promise<Fournisseur> {
-    return firstValueFrom(this.http.post<Fournisseur>(`${this.base}/fournisseurs`, data));
+    return firstValueFrom(this.http.post<Fournisseur>(`${this.base}/fournisseurs`, data))
+      .then(r => { invalidateRef('fournisseurs'); return r; });
   }
   fournisseurBulkImport(items: any[]): Promise<{ imported: number; failed: number; errors: { row: number; message: string }[] }> {
     return firstValueFrom(this.http.post<any>(`${this.base}/fournisseurs/import`, items));
   }
   fournisseurUpdate(id: number, data: any): Promise<Fournisseur> {
-    return firstValueFrom(this.http.put<Fournisseur>(`${this.base}/fournisseurs/${id}`, data));
+    return firstValueFrom(this.http.put<Fournisseur>(`${this.base}/fournisseurs/${id}`, data))
+      .then(r => { invalidateRef('fournisseurs'); return r; });
   }
   fournisseurDelete(id: number): Promise<void> {
-    return firstValueFrom(this.http.delete<void>(`${this.base}/fournisseurs/${id}`));
+    return firstValueFrom(this.http.delete<void>(`${this.base}/fournisseurs/${id}`))
+      .then(r => { invalidateRef('fournisseurs'); return r; });
   }
 
   // ── CATEGORIES ──
   categoriesList(): Promise<Categorie[]> {
-    return firstValueFrom(this.http.get<Categorie[]>(`${this.base}/categories`));
+    return refCached('categories', () => firstValueFrom(this.http.get<Categorie[]>(`${this.base}/categories`)));
   }
   categorieCreate(data: { nom: string; description?: string; icone?: string }): Promise<Categorie> {
-    return firstValueFrom(this.http.post<Categorie>(`${this.base}/categories`, data));
+    return firstValueFrom(this.http.post<Categorie>(`${this.base}/categories`, data))
+      .then(r => { invalidateRef('categories'); return r; });
   }
   categorieUpdate(id: number, data: { nom: string; description?: string; icone?: string }): Promise<Categorie> {
-    return firstValueFrom(this.http.put<Categorie>(`${this.base}/categories/${id}`, data));
+    return firstValueFrom(this.http.put<Categorie>(`${this.base}/categories/${id}`, data))
+      .then(r => { invalidateRef('categories'); return r; });
   }
   categorieDelete(id: number): Promise<void> {
-    return firstValueFrom(this.http.delete<void>(`${this.base}/categories/${id}`));
+    return firstValueFrom(this.http.delete<void>(`${this.base}/categories/${id}`))
+      .then(r => { invalidateRef('categories'); return r; });
   }
 
   // ── PAIEMENTS ──
@@ -266,13 +285,15 @@ export class ApiService {
 
   // ── CATEGORIES CHARGE ──
   categoriesChargeList(): Promise<CategorieCharge[]> {
-    return firstValueFrom(this.http.get<CategorieCharge[]>(`${this.base}/categories-charge`));
+    return refCached('categoriesCharge', () => firstValueFrom(this.http.get<CategorieCharge[]>(`${this.base}/categories-charge`)));
   }
   categorieChargeCreate(data: { nom: string; icone?: string }): Promise<CategorieCharge> {
-    return firstValueFrom(this.http.post<CategorieCharge>(`${this.base}/categories-charge`, data));
+    return firstValueFrom(this.http.post<CategorieCharge>(`${this.base}/categories-charge`, data))
+      .then(r => { invalidateRef('categoriesCharge'); return r; });
   }
   categorieChargeDelete(id: number): Promise<void> {
-    return firstValueFrom(this.http.delete<void>(`${this.base}/categories-charge/${id}`));
+    return firstValueFrom(this.http.delete<void>(`${this.base}/categories-charge/${id}`))
+      .then(r => { invalidateRef('categoriesCharge'); return r; });
   }
 
   // ── NOTIFICATIONS ──

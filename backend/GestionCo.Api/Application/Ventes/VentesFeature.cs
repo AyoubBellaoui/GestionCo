@@ -446,6 +446,7 @@ public class GetVentesHandler : IRequestHandler<GetVentesQuery, PagedList<VenteD
     public async Task<PagedList<VenteDto>> Handle(GetVentesQuery q, CancellationToken ct)
     {
         var query = _db.Ventes
+            .AsNoTracking()
             .Include(v => v.Client)
             .Include(v => v.Utilisateur)
             .Include(v => v.Lignes).ThenInclude(l => l.Produit)
@@ -500,6 +501,7 @@ public class GetVenteByIdHandler : IRequestHandler<GetVenteByIdQuery, VenteDto>
     public async Task<VenteDto> Handle(GetVenteByIdQuery q, CancellationToken ct)
     {
         var vente = await _db.Ventes
+            .AsNoTracking()
             .Include(v => v.Client).Include(v => v.Utilisateur)
             .Include(v => v.Lignes).ThenInclude(l => l.Produit)
             .Include(v => v.Facture)

@@ -67,22 +67,16 @@ export class VentesComponent implements OnInit {
   }
 
   async loadStats(): Promise<void> {
-    const now = new Date();
-    const dateDebut = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-    const [monthRes, impRes] = await Promise.allSettled([
-      this.api.ventesListPaged({ page: 1, pageSize: 500, dateDebut }),
-      this.api.ventesListPaged({ page: 1, pageSize: 500, statut: 'EnAttente' }),
-    ]);
-    const month = monthRes.status === 'fulfilled' ? monthRes.value.items : [];
-    const imp   = impRes.status === 'fulfilled'   ? impRes.value.items   : [];
-    const ca    = month.reduce((s, v) => s + v.montantTotal, 0);
-    const count = month.length;
-    this.stats = {
-      ca, count,
-      panier: count > 0 ? ca / count : 0,
-      impayes: imp.reduce((s, v) => s + v.reste, 0),
-      nbImpayes: imp.length,
-    };
+    try {
+      const s = await this.api.dashboardStats();
+      this.stats = {
+        ca: s.caDuMois,
+        count: s.ventesDuMois,
+        panier: s.ventesDuMois > 0 ? s.caDuMois / s.ventesDuMois : 0,
+        impayes: s.montantImpaye,
+        nbImpayes: s.nombreFacturesImpayees,
+      };
+    } catch { /* ignore */ }
   }
 
   async load(): Promise<void> {

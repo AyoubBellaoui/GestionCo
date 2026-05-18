@@ -295,6 +295,7 @@ public class GetAchatsHandler : IRequestHandler<GetAchatsQuery, PagedList<AchatD
     public async Task<PagedList<AchatDto>> Handle(GetAchatsQuery q, CancellationToken ct)
     {
         var query = _db.Achats
+            .AsNoTracking()
             .Include(a => a.Fournisseur)
             .Include(a => a.Utilisateur)
             .Include(a => a.Lignes).ThenInclude(l => l.Produit)
@@ -336,6 +337,7 @@ public class GetAchatByIdHandler : IRequestHandler<GetAchatByIdQuery, AchatDto>
     public async Task<AchatDto> Handle(GetAchatByIdQuery q, CancellationToken ct)
     {
         var a = await _db.Achats
+            .AsNoTracking()
             .Include(a => a.Fournisseur).Include(a => a.Utilisateur)
             .Include(a => a.Lignes).ThenInclude(l => l.Produit)
             .Include(a => a.PaiementsAchat)
@@ -379,6 +381,7 @@ public class GetPaiementsAchatHandler : IRequestHandler<GetPaiementsAchatQuery, 
     public async Task<PagedList<PaiementAchatDto>> Handle(GetPaiementsAchatQuery q, CancellationToken ct)
     {
         var query = _db.PaiementsAchat
+            .AsNoTracking()
             .Include(p => p.Achat).ThenInclude(a => a.Fournisseur)
             .AsQueryable();
 
