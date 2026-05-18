@@ -4,9 +4,38 @@
 
 <div class="content">
   <div class="stats-row">
-    <div class="stat-card"><div class="stat-icon blue">📂</div><div><div class="stat-label">Total catégories</div><div class="stat-value">{{ formatNum(stats.total) }}</div><div class="stat-trend neutral">Classification</div></div></div>
-    <div class="stat-card"><div class="stat-icon green">✅</div><div><div class="stat-label">Avec produits</div><div class="stat-value">{{ formatNum(stats.avecProduits) }}</div><div class="stat-trend neutral">Actives</div></div></div>
-    <div class="stat-card"><div class="stat-icon cyan">📦</div><div><div class="stat-label">Total produits</div><div class="stat-value">{{ formatNum(stats.totalProduits) }}</div><div class="stat-trend neutral">Classés</div></div></div>
+    <div class="stat-card">
+      <div class="stat-icon blue">📂</div>
+      <div>
+        <div class="stat-label">Total catégories</div>
+        <div class="stat-value">{{ stats.total }}</div>
+        <div class="stat-trend neutral">Classification</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green">✅</div>
+      <div>
+        <div class="stat-label">Avec produits</div>
+        <div class="stat-value">{{ stats.avecProduits }}</div>
+        <div class="stat-trend neutral">{{ stats.total > 0 ? (stats.avecProduits / stats.total * 100 | number:'1.0-0') : 0 }}% du total</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon cyan">📦</div>
+      <div>
+        <div class="stat-label">Total produits</div>
+        <div class="stat-value">{{ stats.totalProduits }}</div>
+        <div class="stat-trend neutral">Moy. {{ stats.moyenne }} / catégorie</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div [class]="'stat-icon ' + (stats.sansProduitsCount > 0 ? 'orange' : 'green')">{{ stats.sansProduitsCount > 0 ? '⚠️' : '✅' }}</div>
+      <div>
+        <div class="stat-label">Catégories vides</div>
+        <div class="stat-value" [style.color]="stats.sansProduitsCount > 0 ? 'var(--warning)' : 'var(--success)'">{{ stats.sansProduitsCount }}</div>
+        <div class="stat-trend neutral">{{ stats.sansProduitsCount === 0 ? 'Toutes remplies' : 'Sans produits associés' }}</div>
+      </div>
+    </div>
   </div>
 
   <div class="toolbar">

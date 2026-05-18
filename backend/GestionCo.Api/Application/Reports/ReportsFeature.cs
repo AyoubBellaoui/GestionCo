@@ -28,7 +28,12 @@ public record PLReportDto(
     decimal TotalCoutAchat,
     decimal TotalChargesOp,
     decimal TotalResultatBrut,
-    decimal TotalResultatNet
+    decimal TotalResultatNet,
+    decimal MontantImpayeCredit,
+    int     NombreFacturesImpayees,
+    decimal MontantImpayeDebit,
+    int     NombreAchatsImpayes,
+    int     NombreChargesImpayees
 );
 
 public record TVAMoisDto(
@@ -93,6 +98,20 @@ public class GetPLReportHandler : IRequestHandler<GetPLReportQuery, PLReportDto>
             return new PLMoisDto(m, noms[m], revHT, revTVA, revTTC, cout, op, brut, net);
         }).ToList();
 
+        var impayeCredit = await _db.Ventes
+            .Where(v => v.Statut == StatutVente.EnAttente)
+            .SumAsync(v => (decimal?)(v.MontantTotal - v.MontantPaye) ?? 0, ct);
+        var nbFacturesImpayees = await _db.Factures
+            .CountAsync(f => f.Statut == StatutFacture.EnAttente || f.Statut == StatutFacture.EnRetard, ct);
+        var impayeAchats = await _db.Achats
+            .Where(a => a.Statut == StatutAchat.EnAttente || a.Statut == StatutAchat.Partiel)
+            .SumAsync(a => (decimal?)(a.MontantTotal - a.MontantPaye) ?? 0, ct);
+        var impayeCharges = await _db.Charges
+            .Where(c => c.Statut == StatutCharge.EnAttente || c.Statut == StatutCharge.Partiel)
+            .SumAsync(c => (decimal?)(c.Montant - c.MontantPaye) ?? 0, ct);
+        var nbAchatsImpay  = await _db.Achats.CountAsync(a => a.Statut == StatutAchat.EnAttente || a.Statut == StatutAchat.Partiel, ct);
+        var nbChargesImpay = await _db.Charges.CountAsync(c => c.Statut == StatutCharge.EnAttente || c.Statut == StatutCharge.Partiel, ct);
+
         return new PLReportDto(
             annee, moisList,
             moisList.Sum(m => m.RevenuHT),
@@ -101,7 +120,12 @@ public class GetPLReportHandler : IRequestHandler<GetPLReportQuery, PLReportDto>
             moisList.Sum(m => m.CoutAchat),
             moisList.Sum(m => m.ChargesOp),
             moisList.Sum(m => m.ResultatBrut),
-            moisList.Sum(m => m.ResultatNet)
+            moisList.Sum(m => m.ResultatNet),
+            impayeCredit,
+            nbFacturesImpayees,
+            impayeAchats + impayeCharges,
+            nbAchatsImpay,
+            nbChargesImpay
         );
     }
 }

@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NgClass } from '@angular/common';
+import { NgClass, DecimalPipe } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
 import { ModalComponent } from '../../shared/modal/modal.component';
 import { ApiService } from '../../core/services/api.service';
@@ -14,7 +14,7 @@ const ICONES = ['📦', '💻', '📱', '🪑', '⚡', '🎨', '🔧', '🛠️'
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [TopbarComponent, ModalComponent, FormsModule, NgClass],
+  imports: [TopbarComponent, ModalComponent, FormsModule, NgClass, DecimalPipe],
   templateUrl: './categories.component.html',
 })
 export class CategoriesComponent implements OnInit {
@@ -45,11 +45,12 @@ export class CategoriesComponent implements OnInit {
   }
 
   get stats() {
-    return {
-      total: this.categories.length,
-      avecProduits: this.categories.filter(c => (c.nombreProduits || 0) > 0).length,
-      totalProduits: this.categories.reduce((s, c) => s + (c.nombreProduits || 0), 0),
-    };
+    const total = this.categories.length;
+    const avecProduits = this.categories.filter(c => (c.nombreProduits || 0) > 0).length;
+    const totalProduits = this.categories.reduce((s, c) => s + (c.nombreProduits || 0), 0);
+    const sansProduitsCount = total - avecProduits;
+    const moyenne = total > 0 ? Math.round((totalProduits / total) * 10) / 10 : 0;
+    return { total, avecProduits, totalProduits, sansProduitsCount, moyenne };
   }
 
   openCreate(): void {

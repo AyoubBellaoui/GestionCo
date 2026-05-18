@@ -25,6 +25,7 @@ public class ClientDto
     public string? PersonneContact { get; set; }
     public bool IsActive { get; set; }
     public string? SourceAcquisition { get; set; }
+    public int? DelaiPaiement { get; set; }
     public string Initiales { get; set; } = "??";
     public int NombreCommandes { get; set; }
     public decimal TotalDepense { get; set; }
@@ -47,6 +48,7 @@ public class CreateClientDto
     public string? PersonneContact { get; set; }
     public bool IsActive { get; set; } = true;
     public string? SourceAcquisition { get; set; }
+    public int? DelaiPaiement { get; set; }
     public bool CreerCompte { get; set; } = false;
     public string? MotDePasse { get; set; }
 }
@@ -127,6 +129,7 @@ public class CreateClientHandler : IRequestHandler<CreateClientCommand, ClientDt
             PersonneContact = dto.PersonneContact?.Trim(),
             IsActive = dto.IsActive,
             SourceAcquisition = dto.SourceAcquisition?.Trim(),
+            DelaiPaiement = dto.DelaiPaiement > 0 ? dto.DelaiPaiement : null,
             UtilisateurId = user?.Id
         };
 
@@ -173,6 +176,7 @@ public class UpdateClientHandler : IRequestHandler<UpdateClientCommand, ClientDt
         client.PersonneContact = dto.PersonneContact?.Trim();
         client.IsActive = dto.IsActive;
         client.SourceAcquisition = dto.SourceAcquisition?.Trim();
+        client.DelaiPaiement = dto.DelaiPaiement > 0 ? dto.DelaiPaiement : null;
 
         await _db.SaveChangesAsync(ct);
 
@@ -368,6 +372,7 @@ public static class ClientMapper
         Adresse = c.Adresse, Ville = c.Ville, Telephone = c.Telephone,
         Email = c.Email, PersonneContact = c.PersonneContact,
         IsActive = c.IsActive, SourceAcquisition = c.SourceAcquisition,
+        DelaiPaiement = c.DelaiPaiement,
         Initiales = c.Initiales, CreatedAt = c.CreatedAt, UtilisateurId = c.UtilisateurId
     };
 }

@@ -9,6 +9,7 @@ import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { Facture, VenteSansFacture } from '../../core/models';
+import * as XLSX from 'xlsx';
 import { formatNum, formatDate, getInitials, getAvatarClass, getPayStatus } from '../../core/utils/format';
 
 type Tab = 'all' | 'payee' | 'partiel' | 'enAttente' | 'enRetard' | 'annulee';
@@ -182,21 +183,23 @@ export class FacturesComponent implements OnInit {
     this.selectedIds = new Set(this.selectedIds);
   }
 
-  exportCsv(): void {
-    const rows = [['N° Facture', 'Client', 'ICE', 'Date Emission', 'Date Echeance', 'Montant Total', 'Montant Payé', 'Statut']];
-    this.filtered.forEach(f => {
-      rows.push([
-        f.numeroFacture, f.nomClient, f.clientICE || '',
-        f.dateEmission.split('T')[0], f.dateEcheance.split('T')[0],
-        String(f.montantTotal), String(f.montantPaye), f.statutLibelle,
-      ]);
-    });
-    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'factures.csv'; a.click();
-    URL.revokeObjectURL(url);
-    this.toast.notify('Export CSV téléchargé', 'success');
+  exportExcel(): void {
+    const rows = this.filtered.map(f => ({
+      'N° Facture':     f.numeroFacture,
+      'Client':         f.nomClient,
+      'ICE':            f.clientICE || '',
+      'Date Émission':  f.dateEmission.split('T')[0],
+      'Date Échéance':  f.dateEcheance.split('T')[0],
+      'Montant Total':  f.montantTotal,
+      'Montant Payé':   f.montantPaye,
+      'Reste Dû':       f.montantTotal - f.montantPaye,
+      'Statut':         f.statutLibelle,
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Factures');
+    XLSX.writeFile(wb, `factures-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    this.toast.notify('Export Excel téléchargé', 'success');
   }
 
   async downloadSelected(): Promise<void> {

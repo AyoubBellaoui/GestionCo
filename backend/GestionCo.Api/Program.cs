@@ -51,6 +51,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IReapproService, ReapproService>();
 builder.Services.AddHostedService<RecurringChargesJob>();
+builder.Services.AddHostedService<VenteEcheanceJob>();
 
 // ============ JWT AUTH ============
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()
@@ -446,6 +447,7 @@ static async Task ApplyManualColumnsAsync(AppDbContext db, ILogger logger)
     var columns = new[]
     {
         ("Clients",       "SourceAcquisition", "NVARCHAR(100) NULL"),
+        ("Clients",       "DelaiPaiement",     "INT NULL"),
         ("lignes_vente",  "Remise",             "DECIMAL(5,2) NOT NULL DEFAULT 0"),
         ("lignes_achat",  "Remise",             "DECIMAL(5,2) NOT NULL DEFAULT 0"),
         ("lignes_devis",  "Remise",             "DECIMAL(5,2) NOT NULL DEFAULT 0"),

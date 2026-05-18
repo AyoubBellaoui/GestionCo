@@ -110,6 +110,7 @@ export interface Client {
   personneContact?: string;
   isActive: boolean;
   sourceAcquisition?: string;
+  delaiPaiement?: number;
   initiales: string;
   nombreCommandes: number;
   totalDepense: number;
@@ -531,6 +532,11 @@ export interface PLReport {
   totalChargesOp: number;
   totalResultatBrut: number;
   totalResultatNet: number;
+  montantImpayeCredit: number;
+  nombreFacturesImpayees: number;
+  montantImpayeDebit: number;
+  nombreAchatsImpayes: number;
+  nombreChargesImpayees: number;
 }
 
 export interface TVAMois {

@@ -24,6 +24,7 @@ export class ClientFormComponent implements OnInit {
   form: Partial<Client> = {
     nomClient: '', type: 'Entreprise', ice: '', rc: '', adresse: '', ville: '',
     telephone: '', email: '', personneContact: '', isActive: true, sourceAcquisition: '',
+    delaiPaiement: undefined,
   };
 
   readonly sourcesAcquisition = ['Facebook', 'Instagram', 'WhatsApp', 'Email', 'Recommandation', 'Site web', 'Salon / Événement', 'Autre'];
@@ -67,7 +68,7 @@ export class ClientFormComponent implements OnInit {
       } else {
         await this.api.clientCreate(this.form);
         this.toast.notify('Client créé avec succès', 'success');
-        if (andNew) this.form = { nomClient: '', type: 'Entreprise', ice: '', rc: '', adresse: '', ville: '', telephone: '', email: '', personneContact: '', isActive: true, sourceAcquisition: '' };
+        if (andNew) this.form = { nomClient: '', type: 'Entreprise', ice: '', rc: '', adresse: '', ville: '', telephone: '', email: '', personneContact: '', isActive: true, sourceAcquisition: '', delaiPaiement: undefined };
         else this.router.navigate(['/clients']);
       }
     } catch { this.toast.notify("Erreur d'enregistrement", 'error'); }

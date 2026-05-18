@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { NgClass, DecimalPipe, DatePipe } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
 import { ApiService } from '../../core/services/api.service';
-import { PLReport, TVAReport, BalanceAgeeReport, BalanceAgeeClient, PerformanceCommerciale } from '../../core/models';
+import { PLReport, TVAReport, BalanceAgeeReport, BalanceAgeeClient, PerformanceCommerciale, FullDashboard } from '../../core/models';
 import { formatNum } from '../../core/utils/format';
 import * as XLSX from 'xlsx';
 
@@ -26,6 +26,7 @@ export class RapportsComponent implements OnInit {
   cfMois = new Date().getMonth() + 1;
   balanceAgee: BalanceAgeeReport | null = null;
   performance: PerformanceCommerciale | null = null;
+  dashStats: FullDashboard | null = null;
   loading = false;
 
   readonly moisLabels = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
@@ -42,18 +43,20 @@ export class RapportsComponent implements OnInit {
   async load(): Promise<void> {
     this.loading = true;
     try {
-      const [pl, tva, cf, balance, perf] = await Promise.allSettled([
+      const [pl, tva, cf, balance, perf, dash] = await Promise.allSettled([
         this.api.rapportPL(this.annee),
         this.api.rapportTVA(this.annee),
         this.api.rapportCashFlow(this.annee, this.cfMois),
         this.api.rapportBalanceAgee(),
         this.api.rapportPerformance(this.annee),
+        this.api.dashboardFull(),
       ]);
       if (pl.status       === 'fulfilled') this.plReport    = pl.value;
       if (tva.status      === 'fulfilled') this.tvaReport   = tva.value;
       if (cf.status       === 'fulfilled') this.cashFlow    = cf.value;
       if (balance.status  === 'fulfilled') this.balanceAgee = balance.value;
       if (perf.status     === 'fulfilled') this.performance = perf.value;
+      if (dash.status     === 'fulfilled') this.dashStats   = dash.value;
     } finally { this.loading = false; }
   }
 
@@ -131,9 +134,17 @@ export class RapportsComponent implements OnInit {
         'Résultat Brut':      this.plReport.totalResultatBrut,
         'Résultat Net':       this.plReport.totalResultatNet,
       });
-      const ws = XLSX.utils.json_to_sheet(rows);
+      const wspl = XLSX.utils.json_to_sheet(rows);
+      const impayesRows = [
+        { 'Type': 'Crédit impayé (ventes & factures)',  'Montant (MAD)': this.plReport.montantImpayeCredit, 'Nombre': this.plReport.nombreFacturesImpayees,  'Détail': 'Factures non encaissées' },
+        { 'Type': 'Débit impayé (achats)',               'Montant (MAD)': '',                                'Nombre': this.plReport.nombreAchatsImpayes,    'Détail': 'Achats non réglés' },
+        { 'Type': 'Débit impayé (charges)',              'Montant (MAD)': '',                                'Nombre': this.plReport.nombreChargesImpayees,  'Détail': 'Charges non réglées' },
+        { 'Type': 'TOTAL Débit impayé',                  'Montant (MAD)': this.plReport.montantImpayeDebit,  'Nombre': this.plReport.nombreAchatsImpayes + this.plReport.nombreChargesImpayees, 'Détail': '' },
+      ];
+      const wsImpay = XLSX.utils.json_to_sheet(impayesRows);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, `P&L ${this.annee}`);
+      XLSX.utils.book_append_sheet(wb, wspl,    `P&L ${this.annee}`);
+      XLSX.utils.book_append_sheet(wb, wsImpay, 'Impayés');
       XLSX.writeFile(wb, `rapport-pl-${this.annee}.xlsx`);
 
     } else if (this.tab === 'tva' && this.tvaReport) {

@@ -140,6 +140,32 @@
         </div>
       </div>
 
+      <!-- Conditions de paiement -->
+      <div class="form-card">
+        <div class="form-card-header"><h3>💳 Conditions de paiement</h3></div>
+        <div class="form-card-body">
+          <div class="form-grid">
+            <div class="form-field full">
+              <label class="label">Délai de paiement <span style="color:var(--text-muted);font-weight:400">(optionnel — remplace le délai global)</span></label>
+              <div style="display:flex;align-items:center;gap:10px">
+                <input type="number" min="0" max="365" class="form-input" style="max-width:120px"
+                       [value]="form.delaiPaiement ?? ''"
+                       (input)="form.delaiPaiement = $any($event.target).value ? +$any($event.target).value : undefined"
+                       placeholder="ex: 60" />
+                <span style="font-size:13px;color:var(--text-secondary)">jours</span>
+              </div>
+              <div class="field-hint">
+                @if (form.delaiPaiement && form.delaiPaiement > 0) {
+                  <span style="color:var(--success)">✓ Échéance à {{ form.delaiPaiement }} jours après la vente</span>
+                } @else {
+                  Laisser vide pour utiliser le délai global des paramètres
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Statut -->
       <div class="form-card">
         <div class="form-card-header"><h3>⚡ Statut du compte</h3></div>

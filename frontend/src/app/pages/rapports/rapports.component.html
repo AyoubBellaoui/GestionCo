@@ -93,6 +93,48 @@
         </div>
       </div>
 
+      <!-- Impayés summary -->
+      @if (dashStats) {
+        <div class="table-card" style="margin-top:16px;padding:16px 20px">
+          <div style="font-weight:600;font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+            <span style="color:var(--warning)">⚠️</span> Impayés en cours
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+
+            <!-- Crédit impayé (factures clients) -->
+            <div style="background:var(--surface2);border-radius:10px;padding:14px 16px;border-left:3px solid var(--success)">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:6px">💰 Crédit impayé</div>
+              <div style="font-size:20px;font-weight:700;color:var(--success)">{{ formatNum(dashStats.montantImpaye) }} <small style="font-size:13px;font-weight:400">MAD</small></div>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:6px">Ventes & factures non encaissées</div>
+              <div style="margin-top:8px;display:flex;gap:16px">
+                <div style="font-size:12px">
+                  <span style="color:var(--text-muted)">Factures impayées :</span>
+                  <strong style="margin-left:4px">{{ dashStats.nombreFacturesImpayees }}</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Débit impayé (achats + charges) -->
+            <div style="background:var(--surface2);border-radius:10px;padding:14px 16px;border-left:3px solid var(--danger)">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:6px">📉 Débit impayé</div>
+              <div style="font-size:20px;font-weight:700;color:var(--danger)">{{ formatNum(dashStats.montantImpayeDebit) }} <small style="font-size:13px;font-weight:400">MAD</small></div>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:6px">Achats & charges non réglés</div>
+              <div style="margin-top:8px;display:flex;gap:16px">
+                <div style="font-size:12px">
+                  <span style="color:var(--text-muted)">Achats impayés :</span>
+                  <strong style="margin-left:4px">{{ dashStats.nombreAchatsImpayes }}</strong>
+                </div>
+                <div style="font-size:12px">
+                  <span style="color:var(--text-muted)">Charges impayées :</span>
+                  <strong style="margin-left:4px">{{ dashStats.nombreChargesImpayees }}</strong>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      }
+
       <div class="table-card" style="margin-top:16px">
         <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
           <div style="font-weight:600;font-size:15px">Détail mensuel — {{ annee }}</div>

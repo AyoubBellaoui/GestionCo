@@ -26,6 +26,9 @@ public class Client : AuditableEntity
     // Comment ce client a été acquis (optionnel)
     public string? SourceAcquisition { get; set; }
 
+    // Délai de paiement spécifique (en jours) — remplace le délai global si défini
+    public int? DelaiPaiement { get; set; }
+
     // Lien vers utilisateur (optionnel — si client a un accès)
     public int? UtilisateurId { get; set; }
     public Utilisateur? Utilisateur { get; set; }

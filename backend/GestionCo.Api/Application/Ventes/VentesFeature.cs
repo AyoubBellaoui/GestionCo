@@ -146,7 +146,7 @@ public class CreateVenteHandler : IRequestHandler<CreateVenteCommand, VenteDto>
             ClientId = dto.ClientId,
             UtilisateurId = userId,
             DateVente = dto.DateVente ?? now,
-            DateEcheance = dto.DateEcheance ?? now.AddDays(30),
+            DateEcheance = dto.DateEcheance ?? now.AddDays(client.DelaiPaiement ?? 30),
             Statut = StatutVente.EnAttente,
             Lignes = dto.Lignes.Select(l => new LigneVente
             {

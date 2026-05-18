@@ -641,6 +641,26 @@ public class PdfService : IPdfService
                         Kpi("Résultat Net",       r.TotalResultatNet,   r.TotalResultatNet  >= 0 ? success : danger);
                     });
 
+                    col.Item().Height(8);
+
+                    // Impayés row
+                    col.Item().Background("#fff7ed").Border(1).BorderColor("#f59e0b").Padding(10).Row(row =>
+                    {
+                        row.AutoItem().AlignMiddle().PaddingRight(12)
+                            .Text("⚠ Impayés en cours").FontSize(8).Bold().FontColor("#92400e");
+                        row.RelativeItem().Column(c =>
+                        {
+                            c.Item().Text("Crédit impayé (ventes & factures non encaissées)").FontSize(7).FontColor(muted);
+                            c.Item().PaddingTop(2).Text($"{r.MontantImpayeCredit:N2} MAD  —  {r.NombreFacturesImpayees} facture(s)").FontSize(9).Bold().FontColor("#16a34a");
+                        });
+                        row.ConstantItem(1).Background("#f59e0b");
+                        row.RelativeItem().PaddingLeft(12).Column(c =>
+                        {
+                            c.Item().Text("Débit impayé (achats & charges non réglés)").FontSize(7).FontColor(muted);
+                            c.Item().PaddingTop(2).Text($"{r.MontantImpayeDebit:N2} MAD  —  {r.NombreAchatsImpayes} achat(s), {r.NombreChargesImpayees} charge(s)").FontSize(9).Bold().FontColor(danger);
+                        });
+                    });
+
                     col.Item().Height(10);
 
                     // Table

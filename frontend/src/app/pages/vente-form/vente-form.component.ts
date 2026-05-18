@@ -46,6 +46,7 @@ export class VenteFormComponent implements OnInit {
   lignes: LigneForm[] = [];
   paiementInitial = 0;
   methodePaiement = 'Espece';
+  dateEcheance = '';
   saving = false;
   submitted = false;
 
@@ -67,6 +68,14 @@ export class VenteFormComponent implements OnInit {
     this.clients = c;
     this.produits = p;
     this.loadingData = false;
+  }
+
+  onClientChange(): void {
+    const client = this.selectedClient;
+    const delai = client?.delaiPaiement ?? this.settings.settings.facturation.delaiPaiement;
+    const d = new Date();
+    d.setDate(d.getDate() + delai);
+    this.dateEcheance = d.toISOString().slice(0, 10);
   }
 
   get totalHT(): number { return this.lignes.reduce((s, l) => s + l.quantite * l.prixUnitaire * (1 - l.remise / 100), 0); }
@@ -173,6 +182,7 @@ export class VenteFormComponent implements OnInit {
         lignes: this.lignes,
         paiementInitial: this.paiementInitial,
         methodePaiementInitial: this.paiementInitial > 0 ? this.methodePaiement : undefined,
+        dateEcheance: this.dateEcheance || undefined,
       });
       this.toast.notify('Vente créée avec succès', 'success');
       this.router.navigate(['/ventes']);

@@ -206,6 +206,9 @@
               <span class="input-suffix">unités</span>
             </div>
             <div class="form-help">
+              Quantité commandée automatiquement auprès du fournisseur lorsque le stock atteint le seuil d'alerte.
+            </div>
+            <div class="form-help" style="margin-top:4px">
               @if ((form.quantiteReappro ?? 0) > 0 && form.fournisseurId) {
                 <span style="color:var(--success)">✓ Bon de commande auto si stock ≤ seuil</span>
               } @else {
