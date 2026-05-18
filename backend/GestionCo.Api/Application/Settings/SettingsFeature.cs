@@ -14,6 +14,7 @@ public class FacturationSettingsDto
     public string PrefixeProduit { get; set; } = "PRD";
     public int TvaParDefaut { get; set; } = 20;
     public int DelaiPaiement { get; set; } = 30;
+    public bool IncludeAnnee { get; set; } = true;
 }
 
 public record GetFacturationSettingsQuery() : IRequest<FacturationSettingsDto>;
@@ -36,6 +37,7 @@ public class GetFacturationSettingsHandler : IRequestHandler<GetFacturationSetti
             PrefixeProduit = pf.PrefixeProduit,
             TvaParDefaut = pf.TvaParDefaut,
             DelaiPaiement = pf.DelaiPaiement,
+            IncludeAnnee = pf.IncludeAnnee,
         };
     }
 }
@@ -72,6 +74,7 @@ public class UpdateFacturationSettingsHandler : IRequestHandler<UpdateFacturatio
         pf.PrefixeProduit = newProduit;
         pf.TvaParDefaut   = dto.TvaParDefaut;
         pf.DelaiPaiement  = dto.DelaiPaiement;
+        pf.IncludeAnnee   = dto.IncludeAnnee;
         pf.UpdatedAt      = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
 
@@ -114,6 +117,7 @@ public class UpdateFacturationSettingsHandler : IRequestHandler<UpdateFacturatio
             PrefixeProduit = pf.PrefixeProduit,
             TvaParDefaut   = pf.TvaParDefaut,
             DelaiPaiement  = pf.DelaiPaiement,
+            IncludeAnnee   = pf.IncludeAnnee,
         };
     }
 }

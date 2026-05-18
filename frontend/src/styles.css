@@ -382,6 +382,9 @@ input, select, textarea { font-family: inherit; }
 .empty-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
 .empty-sub { font-size: 13px; }
 .loading-row { padding: 60px 20px; text-align: center; color: var(--text-muted); font-size: 13.5px; }
+.skel { height: 14px; border-radius: 6px; background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%); background-size: 200% 100%; animation: skel-shimmer 1.4s infinite; }
+@keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.skeleton-row td { padding-top: 12px; padding-bottom: 12px; }
 
 /* ============ MODAL ============ */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,0.45); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; animation: fadeIn 0.2s ease; }
@@ -676,6 +679,30 @@ input, select, textarea { font-family: inherit; }
 }
 .btn-login:active { transform: translateY(0); }
 .btn-login:disabled { opacity: 0.7; cursor: not-allowed; }
+
+/* Login page — theme toggle button */
+.login-theme-toggle {
+  position: fixed;
+  top: 18px;
+  right: 20px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+.login-theme-toggle:hover { background: var(--surface2); color: var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,.12); }
+
+/* Login — dark mode input hover fix */
+[data-theme="dark"] .login-card .form-input:hover { border-color: var(--border); }
 
 .divider {
   display: flex;

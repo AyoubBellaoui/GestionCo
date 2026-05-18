@@ -20,7 +20,7 @@ dotnet run
 cd frontend
 npm install
 ng serve
-# Application disponible sur http://localhost:4200
+# Application disponible sur http://localhost:4200 
 ```
 
 > La base de données est créée automatiquement au premier démarrage via `EnsureCreatedAsync()` avec les données de démo pré-chargées.

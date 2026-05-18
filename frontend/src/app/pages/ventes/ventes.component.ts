@@ -168,4 +168,11 @@ export class VentesComponent implements OnInit {
     try { await this.api.venteCancel(id); this.toast.notify('Vente annulée', 'success'); await this.load(); }
     catch { this.toast.notify("Impossible d'annuler la vente", 'error'); }
   }
+
+  async duplicate(v: Vente): Promise<void> {
+    try {
+      const full = await this.api.venteGet(v.id);
+      this.router.navigate(['/ventes/nouvelle'], { state: { duplicate: full } });
+    } catch { this.toast.notify('Erreur lors de la duplication', 'error'); }
+  }
 }

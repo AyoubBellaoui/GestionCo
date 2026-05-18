@@ -5,7 +5,7 @@ import { NgClass } from '@angular/common';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SettingsService } from '../../core/services/settings.service';
-import { Client, Produit } from '../../core/models';
+import { Client, Produit, Vente } from '../../core/models';
 import { formatNum } from '../../core/utils/format';
 
 interface NewClientForm {
@@ -67,6 +67,28 @@ export class VenteFormComponent implements OnInit {
     ]);
     this.clients = c;
     this.produits = p;
+
+    const dup: Vente | undefined = history.state?.duplicate;
+    if (dup?.lignes?.length) {
+      this.clientId = dup.clientId;
+      this.lignes = dup.lignes.map(l => {
+        const prod = p.find(x => x.id === l.produitId);
+        return {
+          produitId: l.produitId,
+          nomProduit: l.nomProduit,
+          referenceProduit: l.referenceProduit,
+          quantite: l.quantite,
+          prixUnitaire: l.prixUnitaire,
+          remise: l.remise ?? 0,
+          prixReference: prod?.prixTTC,
+          tva: l.tva,
+          total: l.total,
+          stockDisponible: prod?.quantiteStock,
+        };
+      });
+      this.onClientChange();
+    }
+
     this.loadingData = false;
   }
 

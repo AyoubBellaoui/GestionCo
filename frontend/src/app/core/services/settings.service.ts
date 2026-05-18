@@ -29,7 +29,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   },
   facturation: {
     prefixeFacture: 'FAC', prefixeVente: 'VNT', prefixeAchat: 'ACH',
-    prefixeProduit: 'PRD', tvaParDefaut: 20, delaiPaiement: 30,
+    prefixeProduit: 'PRD', tvaParDefaut: 20, delaiPaiement: 30, includeAnnee: true,
   },
 };
 

@@ -62,7 +62,7 @@ public class ProduitConfiguration : IEntityTypeConfiguration<Produit>
         b.Property(x => x.Reference).HasMaxLength(30).IsRequired();
         b.Property(x => x.Nom).HasMaxLength(200).IsRequired();
         b.Property(x => x.Description).HasMaxLength(1000);
-        b.Property(x => x.Image).HasMaxLength(500);
+        b.Property(x => x.Image).HasColumnType("nvarchar(max)");
         b.Property(x => x.CodeBarre).HasMaxLength(50);
         b.Property(x => x.PrixHT).HasColumnType("decimal(18,2)");
         b.Property(x => x.PrixTTC).HasColumnType("decimal(18,2)");

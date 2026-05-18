@@ -54,8 +54,21 @@
             <tr>
               <td><span class="mono">{{ p.reference }}</span></td>
               <td>
-                <div style="font-weight:600">{{ p.nom }}</div>
-                @if (p.description) { <div style="font-size:11.5px;color:var(--text-muted)">{{ p.description }}</div> }
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--surface2);display:flex;align-items:center;justify-content:center;border:1px solid var(--border)">
+                    @if (p.image) {
+                      <img [src]="p.image" [alt]="p.nom" style="width:100%;height:100%;object-fit:cover"
+                           (error)="$any($event.target).style.display='none'; $any($event.target).nextElementSibling.style.display='flex'" />
+                      <span style="font-size:16px;display:none;width:100%;height:100%;align-items:center;justify-content:center">📦</span>
+                    } @else {
+                      <span style="font-size:16px">📦</span>
+                    }
+                  </div>
+                  <div>
+                    <div style="font-weight:600">{{ p.nom }}</div>
+                    @if (p.description) { <div style="font-size:11.5px;color:var(--text-muted)">{{ p.description }}</div> }
+                  </div>
+                </div>
               </td>
               <td><span class="items-badge">{{ p.categorieNom || '—' }}</span></td>
               <td style="text-align:right"><div class="price-val">{{ formatNum(p.prixHT) }} <small>MAD</small></div></td>

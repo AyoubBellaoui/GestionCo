@@ -284,4 +284,13 @@ export class SettingsComponent implements OnInit {
     if (fmt === 'yyyy-MM-dd') return `${yyyy}-${mm}-${dd}`;
     return `${dd}/${mm}/${yyyy}`;
   }
+
+  get refYear(): number { return new Date().getFullYear(); }
+
+  refPreview(prefix: string, digits: number): string {
+    const pad = '1'.padStart(digits, '0');
+    return this.settings.settings.facturation.includeAnnee
+      ? `${prefix}-${this.refYear}-${pad}`
+      : `${prefix}-${pad}`;
+  }
 }

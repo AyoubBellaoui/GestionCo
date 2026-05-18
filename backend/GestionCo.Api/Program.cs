@@ -181,6 +181,9 @@ using (var scope = app.Services.CreateScope())
         // Colonnes ajoutées après la création initiale (ALTER TABLE manuel)
         await ApplyManualColumnsAsync(db, logger);
 
+        // Colonnes dont la définition a changé (ALTER TABLE … ALTER COLUMN)
+        await ApplyManualColumnAlterationsAsync(db, logger);
+
         // Seed par défaut pour parametres_facturation
         try
         {
@@ -451,7 +454,8 @@ static async Task ApplyManualColumnsAsync(AppDbContext db, ILogger logger)
         ("lignes_vente",  "Remise",             "DECIMAL(5,2) NOT NULL DEFAULT 0"),
         ("lignes_achat",  "Remise",             "DECIMAL(5,2) NOT NULL DEFAULT 0"),
         ("lignes_devis",  "Remise",             "DECIMAL(5,2) NOT NULL DEFAULT 0"),
-        ("Produits",      "QuantiteReappro",    "INT NOT NULL DEFAULT 0"),
+        ("Produits",                "QuantiteReappro", "INT NOT NULL DEFAULT 0"),
+        ("parametres_facturation", "IncludeAnnee",    "BIT NOT NULL DEFAULT 1"),
     };
 
     foreach (var (table, column, definition) in columns)
@@ -469,6 +473,34 @@ static async Task ApplyManualColumnsAsync(AppDbContext db, ILogger logger)
         catch (Exception ex)
         {
             logger.LogWarning("Impossible d'ajouter la colonne {Column} sur {Table} : {Msg}", column, table, ex.Message);
+        }
+    }
+}
+
+// Modifie la définition de colonnes existantes (redimensionnement, type, etc.)
+static async Task ApplyManualColumnAlterationsAsync(AppDbContext db, ILogger logger)
+{
+    var alterations = new[]
+    {
+        ("produits", "Image", "NVARCHAR(MAX) NULL"),
+    };
+
+    foreach (var (table, column, newDefinition) in alterations)
+    {
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync($"""
+                IF EXISTS (
+                    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_NAME = '{table}' AND COLUMN_NAME = '{column}'
+                      AND DATA_TYPE = 'nvarchar' AND CHARACTER_MAXIMUM_LENGTH <> -1
+                )
+                ALTER TABLE [{table}] ALTER COLUMN [{column}] {newDefinition}
+                """);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("Impossible d'altérer la colonne {Column} sur {Table} : {Msg}", column, table, ex.Message);
         }
     }
 }

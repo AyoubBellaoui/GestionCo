@@ -9,5 +9,6 @@ public class ParametresFacturation
     public string PrefixeProduit { get; set; } = "PRD";
     public int TvaParDefaut { get; set; } = 20;
     public int DelaiPaiement { get; set; } = 30;
+    public bool IncludeAnnee { get; set; } = true;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

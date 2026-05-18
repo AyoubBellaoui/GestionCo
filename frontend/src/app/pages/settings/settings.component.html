@@ -200,26 +200,47 @@
               La <strong>TVA par défaut</strong> et le <strong>délai de paiement</strong> sont appliqués aux nouveaux devis, ventes et factures.
             </div>
             <div class="panel-section-title">🔢 Préfixes de référence</div>
+
+            <!-- Format toggle -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);margin-bottom:16px">
+              <div>
+                <div style="font-weight:600;font-size:13.5px">Inclure l'année dans la référence</div>
+                <div class="field-hint" style="margin-top:2px">
+                  @if (settings.settings.facturation.includeAnnee) {
+                    Format actuel : <strong>{{ settings.settings.facturation.prefixeVente }}-{{ refYear }}-0001</strong>
+                  } @else {
+                    Format actuel : <strong>{{ settings.settings.facturation.prefixeVente }}-0001</strong>
+                  }
+                </div>
+              </div>
+              <div (click)="settings.setDraftFacturation({includeAnnee: !settings.settings.facturation.includeAnnee})"
+                   [style.background]="settings.settings.facturation.includeAnnee ? '#4f46e5' : '#cbd5e1'"
+                   style="width:44px;height:24px;border-radius:12px;cursor:pointer;transition:background .2s;position:relative;flex-shrink:0">
+                <div [style.transform]="settings.settings.facturation.includeAnnee ? 'translateX(20px)' : 'translateX(2px)'"
+                     style="position:absolute;top:2px;width:20px;height:20px;border-radius:50%;background:white;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .2s"></div>
+              </div>
+            </div>
+
             <div class="form-grid">
               <div class="form-field">
                 <label class="label">Préfixe factures</label>
                 <input class="form-input" [value]="settings.settings.facturation.prefixeFacture" (input)="settings.setDraftFacturation({prefixeFacture: $any($event.target).value.toUpperCase()})" />
-                <div class="field-hint">Ex : {{ settings.settings.facturation.prefixeFacture }}-2026-001</div>
+                <div class="field-hint">Ex : {{ refPreview(settings.settings.facturation.prefixeFacture, 3) }}</div>
               </div>
               <div class="form-field">
                 <label class="label">Préfixe ventes</label>
                 <input class="form-input" [value]="settings.settings.facturation.prefixeVente" (input)="settings.setDraftFacturation({prefixeVente: $any($event.target).value.toUpperCase()})" />
-                <div class="field-hint">Ex : {{ settings.settings.facturation.prefixeVente }}-2026-0001</div>
+                <div class="field-hint">Ex : {{ refPreview(settings.settings.facturation.prefixeVente, 4) }}</div>
               </div>
               <div class="form-field">
                 <label class="label">Préfixe achats</label>
                 <input class="form-input" [value]="settings.settings.facturation.prefixeAchat" (input)="settings.setDraftFacturation({prefixeAchat: $any($event.target).value.toUpperCase()})" />
-                <div class="field-hint">Ex : {{ settings.settings.facturation.prefixeAchat }}-2026-0001</div>
+                <div class="field-hint">Ex : {{ refPreview(settings.settings.facturation.prefixeAchat, 4) }}</div>
               </div>
               <div class="form-field">
                 <label class="label">Préfixe produits</label>
                 <input class="form-input" [value]="settings.settings.facturation.prefixeProduit" (input)="settings.setDraftFacturation({prefixeProduit: $any($event.target).value.toUpperCase()})" />
-                <div class="field-hint">Ex : {{ settings.settings.facturation.prefixeProduit }}-00001</div>
+                <div class="field-hint">Ex : {{ refPreview(settings.settings.facturation.prefixeProduit, 4) }}</div>
               </div>
             </div>
             <div class="panel-section-title">💰 Valeurs par défaut</div>

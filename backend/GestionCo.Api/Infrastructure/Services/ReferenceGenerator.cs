@@ -14,11 +14,13 @@ public class ReferenceGenerator : IReferenceGenerator
         => await _db.ParametresFacturation.AsNoTracking().FirstOrDefaultAsync(ct)
            ?? new ParametresFacturation();
 
+    private static string BuildPrefix(string basePrefix, bool includeAnnee)
+        => includeAnnee ? $"{basePrefix}-{DateTime.UtcNow.Year}-" : $"{basePrefix}-";
+
     public async Task<string> GenerateProductReferenceAsync(CancellationToken ct = default)
     {
         var pf = await GetParamsAsync(ct);
-        var year = DateTime.UtcNow.Year;
-        var prefix = $"{pf.PrefixeProduit}-{year}-";
+        var prefix = BuildPrefix(pf.PrefixeProduit, pf.IncludeAnnee);
 
         var lastRef = await _db.Produits
             .Where(p => p.Reference.StartsWith(prefix))
@@ -32,8 +34,7 @@ public class ReferenceGenerator : IReferenceGenerator
     public async Task<string> GenerateSaleReferenceAsync(CancellationToken ct = default)
     {
         var pf = await GetParamsAsync(ct);
-        var year = DateTime.UtcNow.Year;
-        var prefix = $"{pf.PrefixeVente}-{year}-";
+        var prefix = BuildPrefix(pf.PrefixeVente, pf.IncludeAnnee);
 
         var lastRef = await _db.Ventes
             .Where(v => v.Reference.StartsWith(prefix))
@@ -47,8 +48,7 @@ public class ReferenceGenerator : IReferenceGenerator
     public async Task<string> GeneratePurchaseReferenceAsync(CancellationToken ct = default)
     {
         var pf = await GetParamsAsync(ct);
-        var year = DateTime.UtcNow.Year;
-        var prefix = $"{pf.PrefixeAchat}-{year}-";
+        var prefix = BuildPrefix(pf.PrefixeAchat, pf.IncludeAnnee);
 
         var lastRef = await _db.Achats
             .Where(a => a.Reference.StartsWith(prefix))
@@ -62,8 +62,7 @@ public class ReferenceGenerator : IReferenceGenerator
     public async Task<string> GenerateInvoiceReferenceAsync(CancellationToken ct = default)
     {
         var pf = await GetParamsAsync(ct);
-        var year = DateTime.UtcNow.Year;
-        var prefix = $"{pf.PrefixeFacture}-{year}-";
+        var prefix = BuildPrefix(pf.PrefixeFacture, pf.IncludeAnnee);
 
         var lastRef = await _db.Factures
             .Where(f => f.NumeroFacture.StartsWith(prefix))

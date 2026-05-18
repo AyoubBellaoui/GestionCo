@@ -141,6 +141,13 @@ export class DevisComponent implements OnInit {
     } catch { this.toast.notify('Erreur lors de la suppression', 'error'); }
   }
 
+  async duplicate(d: Devis): Promise<void> {
+    try {
+      const full = await this.api.devisGet(d.id);
+      this.router.navigate(['/devis/nouveau'], { state: { duplicate: full } });
+    } catch { this.toast.notify('Erreur lors de la duplication', 'error'); }
+  }
+
   async shareWhatsApp(d: Devis): Promise<void> {
     const entreprise = this.settings.settings.entreprise.raisonSociale || 'GestionCo';
     const client = this.clients.find(c => c.id === d.clientId)?.nomClient || '';

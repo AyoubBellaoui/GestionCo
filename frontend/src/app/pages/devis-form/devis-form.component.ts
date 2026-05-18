@@ -5,7 +5,7 @@ import { NgClass } from '@angular/common';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SettingsService } from '../../core/services/settings.service';
-import { Client, Produit } from '../../core/models';
+import { Client, Produit, Devis } from '../../core/models';
 import { formatNum } from '../../core/utils/format';
 
 interface NewClientForm {
@@ -99,11 +99,32 @@ export class DevisFormComponent implements OnInit {
           quantite: l.quantite,
           prixUnitaire: l.prixUnitaire,
           remise: l.remise ?? 0,
-          prixReference: this.produits.find(p => p.id === l.produitId)?.prixHT,
+          prixReference: this.produits.find(x => x.id === l.produitId)?.prixHT,
           tva: l.tva,
           total: l.total,
         }));
       } catch { this.toast.notify('Erreur lors du chargement du devis', 'error'); }
+    } else {
+      const dup: Devis | undefined = history.state?.duplicate;
+      if (dup?.lignes?.length) {
+        this.clientId = dup.clientId;
+        this.notes = dup.notes || '';
+        this.lignes = dup.lignes.map(l => {
+          const prod = p.find(x => x.id === l.produitId);
+          return {
+            produitId: l.produitId,
+            nomProduit: l.nomProduit,
+            referenceProduit: l.referenceProduit,
+            quantite: l.quantite,
+            prixUnitaire: l.prixUnitaire,
+            remise: l.remise ?? 0,
+            prixReference: prod?.prixTTC,
+            tva: l.tva,
+            total: l.total,
+            stockDisponible: prod?.quantiteStock,
+          };
+        });
+      }
     }
 
     this.loadingData = false;

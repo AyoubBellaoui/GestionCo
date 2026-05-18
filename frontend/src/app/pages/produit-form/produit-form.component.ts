@@ -81,6 +81,31 @@ export class ProduitFormComponent implements OnInit {
     this.form.categorieNom = cat?.nom || '';
   }
 
+  imageError = '';
+
+  handleImageUpload(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      this.imageError = 'Format invalide — utilisez JPG, PNG ou WebP';
+      input.value = '';
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      this.imageError = 'Image trop lourde — maximum 2 Mo';
+      input.value = '';
+      return;
+    }
+    this.imageError = '';
+    const reader = new FileReader();
+    reader.onload = (e) => { this.form.image = e.target?.result as string; };
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+
+  removeImage(): void { this.form.image = undefined; this.imageError = ''; }
+
   onFournisseurChange(idStr: string): void {
     const id = idStr ? +idStr : undefined;
     const f = this.fournisseurs.find(x => x.id === id);

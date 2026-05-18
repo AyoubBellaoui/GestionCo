@@ -345,6 +345,7 @@ export type FacturationSettings = {
   prefixeProduit: string;
   tvaParDefaut: number;
   delaiPaiement: number;
+  includeAnnee: boolean;
 };
 
 export type Devise = 'MAD' | 'EUR' | 'USD';
@@ -384,6 +385,7 @@ export interface AppSettings {
     prefixeProduit: string;
     tvaParDefaut: number;
     delaiPaiement: number;
+    includeAnnee: boolean;
   };
 }
 

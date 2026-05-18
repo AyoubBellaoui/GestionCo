@@ -6,6 +6,7 @@ import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SettingsService } from '../../core/services/settings.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { ToastComponent } from '../../shared/toast/toast.component';
 
 @Component({
@@ -28,6 +29,7 @@ export class LoginComponent {
     private toast: ToastService,
     private router: Router,
     public settings: SettingsService,
+    public theme: ThemeService,
   ) {}
 
   get nomEntreprise(): string { return this.settings.settings.entreprise.raisonSociale || 'GestionCo.'; }

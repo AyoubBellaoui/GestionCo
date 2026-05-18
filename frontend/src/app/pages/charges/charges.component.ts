@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -15,6 +15,7 @@ import { formatNum, formatDate, getPayStatus } from '../../core/utils/format';
   standalone: true,
   imports: [CommonModule, TopbarComponent, ModalComponent, PaginationComponent, FormsModule],
   templateUrl: './charges.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChargesComponent implements OnInit {
   charges: Charge[] = [];
@@ -66,7 +67,7 @@ export class ChargesComponent implements OnInit {
   getPayStatus = getPayStatus;
   Math = Math;
 
-  constructor(private api: ApiService, private toast: ToastService, public router: Router) {}
+  constructor(private api: ApiService, private toast: ToastService, public router: Router, private cdr: ChangeDetectorRef) {}
 
   async ngOnInit(): Promise<void> { await Promise.all([this.load(), this.loadStats(), this.loadMeta()]); }
 
@@ -78,11 +79,13 @@ export class ChargesComponent implements OnInit {
       ]);
       this.categories = cats;
       this.fournisseurs = fournisseurs;
+      this.cdr.markForCheck();
     } catch {}
   }
 
   async load(): Promise<void> {
     this.loading = true;
+    this.cdr.markForCheck();
     try {
       const result = await this.api.chargesListPaged({
         page: this.page, pageSize: this.pageSize,
@@ -94,13 +97,17 @@ export class ChargesComponent implements OnInit {
       });
       this.charges = result.items;
       this.totalCount = result.totalCount;
-    } finally { this.loading = false; }
+    } finally {
+      this.loading = false;
+      this.cdr.markForCheck();
+    }
   }
 
   async loadStats(): Promise<void> {
     try {
       const s = await this.api.chargesStats();
       this.statsData = { totalMois: s.totalMois, count: s.count, impayes: s.impayes, nbImpayes: s.nbImpayes, totalGlobal: s.totalGlobal };
+      this.cdr.markForCheck();
     } catch (err) { console.error('loadStats charges error:', err); }
   }
 
@@ -156,6 +163,7 @@ export class ChargesComponent implements OnInit {
     if (!this.editCategorieId) { this.toast.notify('Sélectionnez une catégorie', 'warning'); return; }
 
     this.editSaving = true;
+    this.cdr.markForCheck();
     try {
       await this.api.chargeUpdate(this.editCharge.id, {
         titre: this.editTitre.trim(),
@@ -176,6 +184,7 @@ export class ChargesComponent implements OnInit {
       this.toast.notify(e?.error?.message || 'Erreur lors de la modification', 'error');
     } finally {
       this.editSaving = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -200,6 +209,7 @@ export class ChargesComponent implements OnInit {
   async addPaiement(): Promise<void> {
     if (!this.viewCharge || this.paiementMontant <= 0) return;
     this.paiementSaving = true;
+    this.cdr.markForCheck();
     try {
       const updated = await this.api.chargeAddPaiement(this.viewCharge.id, {
         montant: this.paiementMontant,
@@ -218,11 +228,13 @@ export class ChargesComponent implements OnInit {
       this.toast.notify('Erreur lors du paiement', 'error');
     } finally {
       this.paiementSaving = false;
+      this.cdr.markForCheck();
     }
   }
 
   async genererRecurrentes(): Promise<void> {
     this.generatingRecurrentes = true;
+    this.cdr.markForCheck();
     try {
       const result = await this.api.chargeGenererRecurrentes();
       this.toast.notify(result.message, result.count > 0 ? 'success' : 'info');
@@ -231,6 +243,7 @@ export class ChargesComponent implements OnInit {
       this.toast.notify('Erreur lors de la génération des charges récurrentes', 'error');
     } finally {
       this.generatingRecurrentes = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -243,13 +256,14 @@ export class ChargesComponent implements OnInit {
   async saveNewCat(): Promise<void> {
     if (!this.newCatNom.trim()) { this.toast.notify('Le nom est requis', 'warning'); return; }
     this.newCatSaving = true;
+    this.cdr.markForCheck();
     try {
       const created = await this.api.categorieChargeCreate({ nom: this.newCatNom.trim(), icone: this.newCatIcone });
       this.categories = [...this.categories, created].sort((a, b) => a.nom.localeCompare(b.nom));
       this.newCatModalOpen = false;
       this.toast.notify(`Catégorie « ${created.nom} » créée`, 'success');
     } catch { this.toast.notify('Erreur lors de la création', 'error'); }
-    finally { this.newCatSaving = false; }
+    finally { this.newCatSaving = false; this.cdr.markForCheck(); }
   }
 
   async deleteCat(id: number, nom: string): Promise<void> {
