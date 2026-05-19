@@ -69,12 +69,44 @@ public class AddPaiementAchatDto
     public string? Notes { get; set; }
 }
 
+public class UpdateAchatDto
+{
+    public int FournisseurId { get; set; }
+    public string? Notes { get; set; }
+    public List<UpdateLigneAchatDto> Lignes { get; set; } = new();
+}
+
+public class UpdateLigneAchatDto
+{
+    public int ProduitId { get; set; }
+    public int Quantite { get; set; }
+    public decimal PrixUnitaire { get; set; }
+    public decimal Remise { get; set; } = 0;
+}
+
 // ============ COMMANDS ============
 public record CreateAchatCommand(CreateAchatDto Dto) : IRequest<AchatDto>;
+public record UpdateAchatCommand(int Id, UpdateAchatDto Dto) : IRequest<AchatDto>;
+public record CancelAchatCommand(int Id, string? Raison) : IRequest<Unit>;
 
 public class CreateAchatValidator : AbstractValidator<CreateAchatCommand>
 {
     public CreateAchatValidator()
+    {
+        RuleFor(x => x.Dto.FournisseurId).GreaterThan(0);
+        RuleFor(x => x.Dto.Lignes).NotEmpty();
+        RuleForEach(x => x.Dto.Lignes).ChildRules(l =>
+        {
+            l.RuleFor(x => x.ProduitId).GreaterThan(0);
+            l.RuleFor(x => x.Quantite).GreaterThan(0);
+            l.RuleFor(x => x.PrixUnitaire).GreaterThanOrEqualTo(0);
+        });
+    }
+}
+
+public class UpdateAchatValidator : AbstractValidator<UpdateAchatCommand>
+{
+    public UpdateAchatValidator()
     {
         RuleFor(x => x.Dto.FournisseurId).GreaterThan(0);
         RuleFor(x => x.Dto.Lignes).NotEmpty();
@@ -207,6 +239,211 @@ public class CreateAchatHandler : IRequestHandler<CreateAchatCommand, AchatDto>
             .Include(a => a.PaiementsAchat)
             .FirstAsync(a => a.Id == id, ct);
         return AchatMapper.ToDto(a);
+    }
+}
+
+// ============ MODIFIER ACHAT ============
+public class UpdateAchatHandler : IRequestHandler<UpdateAchatCommand, AchatDto>
+{
+    private readonly IAppDbContext _db;
+    private readonly ICurrentUserService _current;
+    private readonly IAuditLogger _audit;
+
+    public UpdateAchatHandler(IAppDbContext db, ICurrentUserService current, IAuditLogger audit)
+    {
+        _db = db; _current = current; _audit = audit;
+    }
+
+    public async Task<AchatDto> Handle(UpdateAchatCommand req, CancellationToken ct)
+    {
+        var dto = req.Dto;
+        var userId = _current.UserId ?? throw new UnauthorizedException();
+
+        var achat = await _db.Achats
+            .Include(a => a.Lignes)
+            .Include(a => a.Fournisseur)
+            .FirstOrDefaultAsync(a => a.Id == req.Id, ct)
+            ?? throw new NotFoundException("Achat", req.Id);
+
+        if (achat.Statut == StatutAchat.Annule)
+            throw new BusinessException("Impossible de modifier un achat annulé");
+
+        var fournisseur = await _db.Fournisseurs.FirstOrDefaultAsync(f => f.Id == dto.FournisseurId, ct)
+            ?? throw new NotFoundException("Fournisseur", dto.FournisseurId);
+
+        // Collecter tous les produits concernés (anciens + nouveaux)
+        var allProduitIds = achat.Lignes.Select(l => l.ProduitId)
+            .Union(dto.Lignes.Select(l => l.ProduitId))
+            .Distinct().ToList();
+        var produits = await _db.Produits.Where(p => allProduitIds.Contains(p.Id)).ToListAsync(ct);
+
+        // Calculer les deltas de stock nets par produit
+        var stockDeltas = new Dictionary<int, int>();
+        foreach (var old in achat.Lignes)
+        {
+            stockDeltas.TryGetValue(old.ProduitId, out var v);
+            stockDeltas[old.ProduitId] = v - old.Quantite; // undo old purchase
+        }
+        foreach (var newL in dto.Lignes)
+        {
+            if (!produits.Any(p => p.Id == newL.ProduitId))
+                throw new NotFoundException("Produit", newL.ProduitId);
+            stockDeltas.TryGetValue(newL.ProduitId, out var v);
+            stockDeltas[newL.ProduitId] = v + newL.Quantite; // apply new purchase
+        }
+
+        // Valider les baisses de stock (produits "retournés" au fournisseur)
+        foreach (var (produitId, delta) in stockDeltas)
+        {
+            if (delta < 0)
+            {
+                var produit = produits.First(p => p.Id == produitId);
+                if (produit.QuantiteStock + delta < 0)
+                    throw new BusinessException(
+                        $"Stock insuffisant pour modifier : '{produit.Nom}' a {produit.QuantiteStock} unités en stock, mais la modification nécessite d'en retirer {-delta} (probablement déjà vendues).");
+            }
+        }
+
+        var now = DateTime.UtcNow;
+
+        // Appliquer les mouvements de stock nets
+        foreach (var (produitId, delta) in stockDeltas)
+        {
+            if (delta == 0) continue;
+            var produit = produits.First(p => p.Id == produitId);
+            var stockAvant = produit.QuantiteStock;
+            produit.QuantiteStock += delta;
+            _db.MouvementsStock.Add(new MouvementStock
+            {
+                ProduitId = produitId,
+                Type = delta > 0 ? TypeMouvementStock.Entree : TypeMouvementStock.Sortie,
+                Quantite = Math.Abs(delta),
+                StockAvant = stockAvant,
+                StockApres = produit.QuantiteStock,
+                Source = SourceMouvementStock.ModificationAchat,
+                ReferenceId = achat.Id,
+                ReferenceText = achat.Reference,
+                UtilisateurId = userId,
+                Raison = "Modification achat",
+                DateMouvement = now
+            });
+        }
+
+        // Remplacer les lignes
+        _db.LignesAchat.RemoveRange(achat.Lignes);
+        achat.Lignes = dto.Lignes.Select(l => new LigneAchat
+        {
+            ProduitId = l.ProduitId,
+            Quantite = l.Quantite,
+            PrixUnitaire = l.PrixUnitaire,
+            Remise = l.Remise
+        }).ToList();
+
+        // Recalculer le total
+        achat.FournisseurId = dto.FournisseurId;
+        achat.Notes = dto.Notes;
+        achat.MontantTotal = achat.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (1 - l.Remise / 100));
+
+        // Recalculer le statut
+        if (achat.MontantPaye >= achat.MontantTotal)
+            achat.Statut = StatutAchat.Paye;
+        else if (achat.MontantPaye > 0)
+            achat.Statut = StatutAchat.Partiel;
+        else
+            achat.Statut = StatutAchat.EnAttente;
+
+        await _db.SaveChangesAsync(ct);
+
+        await _audit.LogAsync(ActionLog.Update, "achats",
+            $"Achat modifié : {achat.Reference} chez {fournisseur.Nom} ({achat.MontantTotal:N2} MAD)",
+            achat.Id, achat.Reference, ct: ct);
+
+        var a = await _db.Achats
+            .Include(a => a.Fournisseur).Include(a => a.Utilisateur)
+            .Include(a => a.Lignes).ThenInclude(l => l.Produit)
+            .Include(a => a.PaiementsAchat)
+            .FirstAsync(a => a.Id == req.Id, ct);
+        return AchatMapper.ToDto(a);
+    }
+}
+
+// ============ ANNULER ACHAT ============
+public class CancelAchatHandler : IRequestHandler<CancelAchatCommand, Unit>
+{
+    private readonly IAppDbContext _db;
+    private readonly ICurrentUserService _current;
+    private readonly IAuditLogger _audit;
+
+    public CancelAchatHandler(IAppDbContext db, ICurrentUserService current, IAuditLogger audit)
+    {
+        _db = db; _current = current; _audit = audit;
+    }
+
+    public async Task<Unit> Handle(CancelAchatCommand req, CancellationToken ct)
+    {
+        var achat = await _db.Achats
+            .Include(a => a.Lignes)
+            .Include(a => a.Fournisseur)
+            .FirstOrDefaultAsync(a => a.Id == req.Id, ct)
+            ?? throw new NotFoundException("Achat", req.Id);
+
+        if (achat.Statut == StatutAchat.Annule)
+            throw new BusinessException("Cet achat est déjà annulé");
+
+        var userId = _current.UserId ?? throw new UnauthorizedException();
+        var now = DateTime.UtcNow;
+
+        var produitIds = achat.Lignes.Select(l => l.ProduitId).ToList();
+        var produits = await _db.Produits.Where(p => produitIds.Contains(p.Id)).ToListAsync(ct);
+
+        // Valider que le stock est suffisant avant de décrémenter
+        foreach (var ligne in achat.Lignes)
+        {
+            var produit = produits.FirstOrDefault(p => p.Id == ligne.ProduitId)
+                ?? throw new NotFoundException("Produit", ligne.ProduitId);
+            if (produit.QuantiteStock < ligne.Quantite)
+                throw new BusinessException(
+                    $"Stock insuffisant pour annuler : '{produit.Nom}' a {produit.QuantiteStock} unités en stock, mais {ligne.Quantite} ont été reçues via cet achat. Les produits ont probablement déjà été vendus.");
+        }
+
+        // Décrémenter le stock (inverse de la réception)
+        foreach (var ligne in achat.Lignes)
+        {
+            var produit = produits.First(p => p.Id == ligne.ProduitId);
+            var stockAvant = produit.QuantiteStock;
+            produit.QuantiteStock -= ligne.Quantite;
+
+            _db.MouvementsStock.Add(new MouvementStock
+            {
+                ProduitId = produit.Id,
+                Type = TypeMouvementStock.Sortie,
+                Quantite = ligne.Quantite,
+                StockAvant = stockAvant,
+                StockApres = produit.QuantiteStock,
+                Source = SourceMouvementStock.AnnulationAchat,
+                ReferenceId = achat.Id,
+                ReferenceText = achat.Reference,
+                UtilisateurId = userId,
+                Raison = req.Raison ?? "Annulation achat",
+                DateMouvement = now
+            });
+        }
+
+        achat.Statut = StatutAchat.Annule;
+
+        // Supprimer les notifications liées à cet achat
+        await _db.Notifications
+            .Where(n => n.EntiteId == achat.Id &&
+                (n.Categorie == CategorieNotification.Achat || n.Categorie == CategorieNotification.Paiement))
+            .ExecuteDeleteAsync(ct);
+
+        await _db.SaveChangesAsync(ct);
+
+        await _audit.LogAsync(ActionLog.Delete, "achats",
+            $"Achat annulé : {achat.Reference} de {achat.Fournisseur.Nom} — Stock décrémenté",
+            achat.Id, achat.Reference, estSensible: true, ct: ct);
+
+        return Unit.Value;
     }
 }
 

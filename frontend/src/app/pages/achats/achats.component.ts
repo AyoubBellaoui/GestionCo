@@ -8,6 +8,7 @@ import { PaginationComponent } from '../../shared/pagination/pagination.componen
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ExportService } from '../../core/services/export.service';
+import { AuthService } from '../../core/services/auth.service';
 import { Achat, Fournisseur } from '../../core/models';
 import { formatNum, formatDate, getInitials, getAvatarClass, getPayStatus } from '../../core/utils/format';
 
@@ -35,6 +36,7 @@ export class AchatsComponent implements OnInit {
   paiementMontant = 0;
   paiementMethode = 'Espece';
   paiementSaving = false;
+  cancelSaving = false;
 
   formatNum = formatNum;
   formatDate = formatDate;
@@ -45,7 +47,7 @@ export class AchatsComponent implements OnInit {
 
   private searchTimer: any;
 
-  constructor(private api: ApiService, private toast: ToastService, private exportSvc: ExportService, public router: Router) {}
+  constructor(private api: ApiService, private toast: ToastService, private exportSvc: ExportService, public router: Router, public auth: AuthService) {}
 
   async ngOnInit(): Promise<void> {
     await Promise.all([this.load(), this.loadStats(), this.loadFournisseurs()]);
@@ -124,6 +126,20 @@ export class AchatsComponent implements OnInit {
       await Promise.all([this.load(), this.loadStats()]);
     } catch { this.toast.notify('Erreur lors du paiement', 'error'); }
     finally { this.paiementSaving = false; }
+  }
+
+  async handleCancel(id: number): Promise<void> {
+    if (!confirm('Annuler cet achat ? Le stock sera décrémenté des quantités reçues.')) return;
+    this.cancelSaving = true;
+    try {
+      await this.api.achatCancel(id);
+      this.toast.notify('Achat annulé — stock mis à jour', 'success');
+      this.modalOpen = false; this.viewAchat = null;
+      await Promise.all([this.load(), this.loadStats()]);
+    } catch (e: any) {
+      const msg = e?.error?.message || 'Erreur lors de l\'annulation';
+      this.toast.notify(msg, 'error');
+    } finally { this.cancelSaving = false; }
   }
 
   async exportExcel(): Promise<void> {

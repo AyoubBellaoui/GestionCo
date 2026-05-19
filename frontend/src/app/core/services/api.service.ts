@@ -109,6 +109,15 @@ export class ApiService {
   achatAddPaiement(id: number, data: any): Promise<Achat> {
     return firstValueFrom(this.http.post<Achat>(`${this.base}/achats/${id}/paiements`, data));
   }
+  achatGet(id: number): Promise<Achat> {
+    return firstValueFrom(this.http.get<Achat>(`${this.base}/achats/${id}`));
+  }
+  achatUpdate(id: number, data: any): Promise<Achat> {
+    return firstValueFrom(this.http.put<Achat>(`${this.base}/achats/${id}`, data));
+  }
+  achatCancel(id: number, raison?: string): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.base}/achats/${id}/cancel`, { raison }));
+  }
 
   // ── PRODUITS ──
   produitsList(): Promise<Produit[]> {

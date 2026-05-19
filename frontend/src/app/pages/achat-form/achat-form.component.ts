@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
+import { NgClass } from '@angular/common';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Fournisseur, Produit } from '../../core/models';
@@ -29,7 +30,7 @@ interface LigneForm {
 @Component({
   selector: 'app-achat-form',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, NgClass],
   templateUrl: './achat-form.component.html',
 })
 export class AchatFormComponent implements OnInit {
@@ -44,6 +45,8 @@ export class AchatFormComponent implements OnInit {
   saving = false;
   submitted = false;
 
+  editId: number | null = null;
+
   newFournisseurModalOpen = false;
   newFournisseurSaving = false;
   newFournisseurForm: NewFournisseurForm = { nom: '', icone: '🏢', telephone: '', email: '', adresse: '', siteWeb: '', personneContact: '' };
@@ -51,15 +54,42 @@ export class AchatFormComponent implements OnInit {
   formatNum = formatNum;
   Math = Math;
 
-  constructor(private api: ApiService, private toast: ToastService, public router: Router) {}
+  constructor(private api: ApiService, private toast: ToastService, public router: Router, private route: ActivatedRoute) {}
+
+  get isEdit(): boolean { return this.editId !== null; }
+  get pageTitle(): string { return this.isEdit ? '✏️ Modifier l\'achat' : '📥 Nouvel achat'; }
 
   async ngOnInit(): Promise<void> {
+    const idParam = this.route.snapshot.paramMap.get('id');
+    if (idParam) this.editId = +idParam;
+
     const [f, p] = await Promise.all([
       this.api.fournisseursList().catch(() => []),
       this.api.produitsList().catch(() => []),
     ]);
     this.fournisseurs = f;
     this.produits = p;
+
+    if (this.editId) {
+      try {
+        const achat = await this.api.achatGet(this.editId);
+        this.fournisseurId = achat.fournisseurId;
+        this.notes = achat.notes || '';
+        this.lignes = achat.lignes.map((l: any) => ({
+          produitId: l.produitId,
+          nomProduit: l.nomProduit,
+          referenceProduit: l.referenceProduit,
+          quantite: l.quantite,
+          prixUnitaire: l.prixUnitaire,
+          remise: l.remise || 0,
+          total: l.total,
+        }));
+      } catch {
+        this.toast.notify('Erreur lors du chargement de l\'achat', 'error');
+        this.router.navigate(['/achats']);
+      }
+    }
+
     this.loadingData = false;
   }
 
@@ -93,7 +123,8 @@ export class AchatFormComponent implements OnInit {
   }
 
   updateLigneQty(i: number, quantite: number): void {
-    const l = { ...this.lignes[i], quantite: quantite || 0 };
+    if (!quantite || isNaN(quantite)) return;
+    const l = { ...this.lignes[i], quantite: Math.max(1, quantite) };
     l.total = this.calcTotal(l);
     this.lignes = this.lignes.map((x, idx) => idx === i ? l : x);
   }
@@ -144,21 +175,51 @@ export class AchatFormComponent implements OnInit {
     this.submitted = true;
     if (!this.fournisseurId) { this.toast.notify('Sélectionnez un fournisseur', 'warning'); return; }
     if (this.lignes.length === 0) { this.toast.notify('Ajoutez au moins une ligne', 'warning'); return; }
-    if (this.lignes.some(l => l.produitId === 0)) { this.toast.notify('Sélectionnez un produit pour chaque ligne', 'warning'); return; }
-    if (this.lignes.some(l => l.quantite < 1)) { this.toast.notify('La quantité doit être ≥ 1 sur chaque ligne', 'warning'); return; }
-    if (this.lignes.some(l => l.prixUnitaire <= 0)) { this.toast.notify('Le prix unitaire doit être > 0 sur chaque ligne', 'warning'); return; }
+    if (this.lignes.some(l => !l.produitId || l.produitId === 0)) { this.toast.notify('Sélectionnez un produit pour chaque ligne', 'warning'); return; }
+    if (this.lignes.some(l => !(l.quantite >= 1))) { this.toast.notify('La quantité doit être ≥ 1 sur chaque ligne', 'warning'); return; }
+    if (this.lignes.some(l => !(l.prixUnitaire > 0))) { this.toast.notify('Le prix unitaire doit être > 0 sur chaque ligne', 'warning'); return; }
     this.saving = true;
+    const fournisseurId = Number(this.fournisseurId);
     try {
-      await this.api.achatCreate({
-        fournisseurId: this.fournisseurId as number,
-        notes: this.notes || undefined,
-        lignes: this.lignes as any,
-        paiementInitial: this.paiementInitial > 0 ? this.paiementInitial : undefined,
-        methodePaiementInitial: this.paiementInitial > 0 ? this.methodePaiement : undefined,
-      });
-      this.toast.notify('Achat créé avec succès — Stock mis à jour', 'success');
+      if (this.isEdit) {
+        await this.api.achatUpdate(this.editId!, {
+          fournisseurId,
+          notes: this.notes || undefined,
+          lignes: this.lignes.map(l => ({
+            produitId: Number(l.produitId),
+            quantite: Number(l.quantite),
+            prixUnitaire: Number(l.prixUnitaire),
+            remise: Number(l.remise) || 0,
+          })),
+        });
+        this.toast.notify('Achat modifié avec succès — Stock mis à jour', 'success');
+      } else {
+        await this.api.achatCreate({
+          fournisseurId,
+          notes: this.notes || undefined,
+          lignes: this.lignes.map(l => ({
+            produitId: Number(l.produitId),
+            quantite: Number(l.quantite),
+            prixUnitaire: Number(l.prixUnitaire),
+            remise: Number(l.remise) || 0,
+          })),
+          paiementInitial: this.paiementInitial > 0 ? this.paiementInitial : undefined,
+          methodePaiementInitial: this.paiementInitial > 0 ? this.methodePaiement : undefined,
+        });
+        this.toast.notify('Achat créé avec succès — Stock mis à jour', 'success');
+      }
       this.router.navigate(['/achats']);
-    } catch { this.toast.notify('Erreur lors de la création', 'error'); }
-    finally { this.saving = false; }
+    } catch (e: any) {
+      console.error('Achat save error:', e);
+      const errObj = e?.error;
+      let msg: string = errObj?.message || errObj?.title || '';
+      if (errObj?.errors && typeof errObj.errors === 'object') {
+        const firstKey = Object.keys(errObj.errors)[0];
+        const fieldMsg = Array.isArray(errObj.errors[firstKey]) ? errObj.errors[firstKey][0] : null;
+        if (fieldMsg) msg = fieldMsg;
+      }
+      if (!msg) msg = this.isEdit ? 'Erreur lors de la modification' : 'Erreur lors de la création';
+      this.toast.notify(msg, 'error');
+    } finally { this.saving = false; }
   }
 }

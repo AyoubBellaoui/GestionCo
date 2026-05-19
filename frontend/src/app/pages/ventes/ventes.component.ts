@@ -113,6 +113,8 @@ export class VentesComponent implements OnInit {
     this.searchTimer = setTimeout(() => { this.page = 1; this.load(); }, 300);
   }
 
+  isOverdue(dateStr: string): boolean { return new Date(dateStr) < new Date(); }
+
   venteStatus(v: Vente): { label: string; cls: string } {
     if (v.statut === 'EnAttente' && v.montantPaye > 0) return { label: 'Partiel', cls: 'partial' };
     return statusInfo(v.statut);

@@ -84,11 +84,23 @@ public class AchatsController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateAchatDto dto, CancellationToken ct)
         => Ok(await _mediator.Send(new CreateAchatCommand(dto), ct));
 
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateAchatDto dto, CancellationToken ct)
+        => Ok(await _mediator.Send(new UpdateAchatCommand(id, dto), ct));
+
     [HttpPost("{id}/paiements")]
     public async Task<IActionResult> AddPaiement(int id, [FromBody] AddPaiementAchatDto dto, CancellationToken ct)
     {
         dto.AchatId = id;
         return Ok(await _mediator.Send(new AddPaiementAchatCommand(dto), ct));
+    }
+
+    [HttpPost("{id}/cancel")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> Cancel(int id, [FromBody] CancelDto dto, CancellationToken ct)
+    {
+        await _mediator.Send(new CancelAchatCommand(id, dto?.Raison), ct);
+        return Ok(new { message = "Achat annulé et stock décrémenté" });
     }
 
     [HttpGet("paiements")]

@@ -83,7 +83,7 @@
                 </button>
                 @if (auth.isAdmin) {
                   <button class="btn-icon danger" title="Annuler la vente" (click)="handleCancel(v.id)">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                   </button>
                 }
               </td>
@@ -102,10 +102,20 @@
       @let d = formatDate(viewVente.dateVente);
       @let pay = getPayStatus(viewVente.montantPaye, viewVente.montantTotal);
       @let st = venteStatus(viewVente);
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+      <div [style.grid-template-columns]="(viewVente.statut === 'EnAttente' || viewVente.statut === 'Partiel') && viewVente.dateEcheance ? 'repeat(4,1fr)' : 'repeat(3,1fr)'" style="display:grid;gap:12px;margin-bottom:20px">
         <div style="padding:12px;background:var(--surface2);border-radius:8px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Client</div><div style="font-size:13.5px;font-weight:600">{{ viewVente.nomClient || '—' }}</div></div>
         <div style="padding:12px;background:var(--surface2);border-radius:8px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Date</div><div style="font-size:13.5px;font-weight:600">{{ d.main }} {{ d.time }}</div></div>
         <div style="padding:12px;background:var(--surface2);border-radius:8px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Statut</div><div><span [class]="'status-badge ' + st.cls">{{ st.label }}</span></div></div>
+        @if ((viewVente.statut === 'EnAttente' || viewVente.statut === 'Partiel') && viewVente.dateEcheance) {
+          @let overdue = isOverdue(viewVente.dateEcheance);
+          <div [style.border-left]="overdue ? '3px solid #dc2626' : '3px solid var(--warning)'" style="padding:12px;background:var(--surface2);border-radius:8px">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Date d'échéance</div>
+            <div [style.color]="overdue ? '#dc2626' : 'var(--warning)'" style="font-size:13.5px;font-weight:700">{{ formatDate(viewVente.dateEcheance).main }}</div>
+            @if (overdue) {
+              <div style="font-size:10.5px;color:#dc2626;margin-top:2px;font-weight:600">⚠ En retard</div>
+            }
+          </div>
+        }
       </div>
       <table class="data-table" style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
         <thead><tr><th>Produit</th><th style="text-align:right">Qté</th><th style="text-align:right">Prix unit.</th><th style="text-align:right">TVA</th><th style="text-align:right">Total</th></tr></thead>
