@@ -33,6 +33,7 @@ public class GetProduitsHandler : IRequestHandler<GetProduitsQuery, PagedList<Pr
         var query = _db.Produits
             .Include(p => p.Categorie)
             .Include(p => p.Fournisseur)
+            .Where(p => p.IsActive)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(q.Search))
