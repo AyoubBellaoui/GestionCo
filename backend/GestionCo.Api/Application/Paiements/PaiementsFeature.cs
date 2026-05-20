@@ -101,8 +101,9 @@ public class CreatePaiementHandler : IRequestHandler<CreatePaiementCommand, Paie
 
         await _db.SaveChangesAsync(ct);
 
+        var resteP = vente.MontantTotal - vente.MontantPaye;
         await _audit.LogAsync(ActionLog.Create, "paiements",
-            $"Paiement de {paiement.Montant:N2} MAD pour {vente.Reference} ({vente.Client.NomClient})",
+            $"Paiement de {paiement.Montant:N2} MAD via {paiement.Methode} — {vente.Reference} ({vente.Client.NomClient}) · Reste dû: {(resteP > 0 ? resteP.ToString("N2") + " MAD" : "Soldé")}",
             paiement.Id, vente.Reference, ct: ct);
 
         return await GetDetails(paiement.Id, ct);

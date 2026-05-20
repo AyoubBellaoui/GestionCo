@@ -142,8 +142,14 @@ public class CreateClientHandler : IRequestHandler<CreateClientCommand, ClientDt
             await _db.SaveChangesAsync(ct);
         }
 
+        var details = new List<string>();
+        details.Add(client.Type.ToString());
+        if (!string.IsNullOrEmpty(client.Telephone)) details.Add($"Tél: {client.Telephone}");
+        if (!string.IsNullOrEmpty(client.Ville)) details.Add(client.Ville);
+        if (!string.IsNullOrEmpty(client.ICE)) details.Add($"ICE: {client.ICE}");
         await _audit.LogAsync(ActionLog.Create, "clients",
-            $"Client créé : {client.NomClient}", client.Id, ct: ct);
+            $"Client créé : {client.NomClient}" + (details.Count > 0 ? $" — {string.Join(" · ", details)}" : ""),
+            client.Id, ct: ct);
 
         return ClientMapper.ToDto(client);
     }
@@ -180,8 +186,14 @@ public class UpdateClientHandler : IRequestHandler<UpdateClientCommand, ClientDt
 
         await _db.SaveChangesAsync(ct);
 
+        var updDetails = new List<string>();
+        updDetails.Add(client.Type.ToString());
+        if (!string.IsNullOrEmpty(client.Telephone)) updDetails.Add($"Tél: {client.Telephone}");
+        if (!string.IsNullOrEmpty(client.Ville)) updDetails.Add(client.Ville);
+        if (!string.IsNullOrEmpty(client.Email)) updDetails.Add(client.Email);
         await _audit.LogAsync(ActionLog.Update, "clients",
-            $"Client modifié : {client.NomClient}", client.Id, ct: ct);
+            $"Client modifié : {client.NomClient}" + (updDetails.Count > 0 ? $" — {string.Join(" · ", updDetails)}" : ""),
+            client.Id, ct: ct);
 
         return ClientMapper.ToDto(client);
     }

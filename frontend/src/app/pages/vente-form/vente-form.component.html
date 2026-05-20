@@ -181,17 +181,19 @@
             </select>
           </div>
         }
-        <div class="form-group" style="margin-top:10px">
-          <label class="form-label">Date d'échéance <span style="color:var(--text-muted);font-weight:400">(optionnel)</span></label>
-          <input type="date" class="form-input" [(ngModel)]="dateEcheance" />
-          <div class="form-help">
-            @if (dateEcheance) {
-              <span style="color:var(--primary)">📅 Solde attendu le {{ dateEcheance }}</span>
-            } @else {
-              Auto-calculée selon le délai du client ou global
-            }
+        @if (totalTTC === 0 || paiementInitial < totalTTC) {
+          <div class="form-group" style="margin-top:10px">
+            <label class="form-label">Date d'échéance <span style="color:var(--text-muted);font-weight:400">(optionnel)</span></label>
+            <input type="date" class="form-input" [(ngModel)]="dateEcheance" />
+            <div class="form-help">
+              @if (dateEcheance) {
+                <span style="color:var(--primary)">📅 Solde attendu le {{ dateEcheance }}</span>
+              } @else {
+                Auto-calculée selon le délai du client ou global
+              }
+            </div>
           </div>
-        </div>
+        }
         @if (totalTTC > 0) {
           <div style="margin-top:12px">
             <div class="preview-row"><span class="preview-label">Total TTC</span><span class="preview-value">{{ formatNum(totalTTC) }} MAD</span></div>

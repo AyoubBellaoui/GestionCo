@@ -201,18 +201,19 @@ public class PdfService : IPdfService
                     col.Item().Height(12);
 
                     // ── TABLE DES LIGNES ────────────────────
+                    var hasRemiseF = vente.Lignes.Any(l => l.Remise > 0);
                     col.Item().Table(table =>
                     {
                         table.ColumnsDefinition(cols =>
                         {
-                            cols.RelativeColumn(3);   // Désignation
-                            cols.ConstantColumn(40);  // Qté
-                            cols.ConstantColumn(75);  // P.U. HT
-                            cols.ConstantColumn(45);  // TVA
-                            cols.ConstantColumn(75);  // Total HT
+                            cols.RelativeColumn(3);
+                            cols.ConstantColumn(40);
+                            cols.ConstantColumn(75);
+                            if (hasRemiseF) cols.ConstantColumn(65);
+                            cols.ConstantColumn(44);
+                            cols.ConstantColumn(75);
                         });
 
-                        // En-tête
                         table.Header(h =>
                         {
                             static IContainer HeaderStyle(IContainer c)
@@ -224,13 +225,15 @@ public class PdfService : IPdfService
                                 .Text("Qté").FontSize(10).Bold().FontColor("#ffffff");
                             HeaderStyle(h.Cell()).AlignRight()
                                 .Text("P.U. HT").FontSize(10).Bold().FontColor("#ffffff");
+                            if (hasRemiseF)
+                                HeaderStyle(h.Cell()).AlignCenter()
+                                    .Text("Remise").FontSize(10).Bold().FontColor("#ffffff");
                             HeaderStyle(h.Cell()).AlignCenter()
                                 .Text("TVA").FontSize(10).Bold().FontColor("#ffffff");
                             HeaderStyle(h.Cell()).AlignRight()
                                 .Text("Total HT").FontSize(10).Bold().FontColor("#ffffff");
                         });
 
-                        // Lignes
                         var idx = 0;
                         foreach (var ligne in vente.Lignes)
                         {
@@ -249,6 +252,13 @@ public class PdfService : IPdfService
                                 .Text(ligne.Quantite.ToString());
                             CellStyle(table.Cell(), rowBg).AlignRight()
                                 .Text($"{ligne.PrixUnitaire:N2}");
+                            if (hasRemiseF)
+                                CellStyle(table.Cell(), rowBg).AlignCenter().Column(c =>
+                                {
+                                    c.Item().Text($"{ligne.Remise:0}%").Bold().FontColor("#22c55e");
+                                    var remiseMontant = ligne.Quantite * ligne.PrixUnitaire * (ligne.Remise / 100);
+                                    c.Item().Text($"-{remiseMontant:N2}").FontSize(7.5f).FontColor("#22c55e");
+                                });
                             CellStyle(table.Cell(), rowBg).AlignCenter()
                                 .Text($"{ligne.TVA:0}%");
                             CellStyle(table.Cell(), rowBg).AlignRight()
@@ -264,7 +274,7 @@ public class PdfService : IPdfService
                         outer.RelativeItem(); // spacer
                         outer.ConstantItem(265).Background(bg).Padding(14).Column(totaux =>
                         {
-                            void TRow(string label, string val, bool highlight = false)
+                            void TRow(string label, string val, bool highlight = false, string? color = null)
                             {
                                 totaux.Item().Row(r =>
                                 {
@@ -275,11 +285,18 @@ public class PdfService : IPdfService
                                         .Text(val)
                                         .FontSize(highlight ? 12 : 10)
                                         .Bold()
-                                        .FontColor(highlight ? primary : "#1a1d2e");
+                                        .FontColor(color ?? (highlight ? primary : "#1a1d2e"));
                                 });
                                 if (!highlight) totaux.Item().Height(5);
                             }
 
+                            var totalRemise = vente.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (l.Remise / 100));
+                            var brut = vente.MontantTotalHT + totalRemise;
+                            if (totalRemise > 0)
+                            {
+                                TRow("Sous-total brut HT", $"{brut:N2} MAD");
+                                TRow("Remise totale", $"- {totalRemise:N2} MAD", color: "#22c55e");
+                            }
                             TRow("Sous-total HT", $"{vente.MontantTotalHT:N2} MAD");
                             TRow("TVA", $"{vente.MontantTVA:N2} MAD");
                             TRow("Total TTC", $"{vente.MontantTotal:N2} MAD");
@@ -485,6 +502,7 @@ public class PdfService : IPdfService
                     col.Item().Height(12);
 
                     // ── TABLE DES LIGNES ────────────────────
+                    var hasRemiseD = devis.Lignes.Any(l => l.Remise > 0);
                     col.Item().Table(table =>
                     {
                         table.ColumnsDefinition(cols =>
@@ -492,7 +510,8 @@ public class PdfService : IPdfService
                             cols.RelativeColumn(3);
                             cols.ConstantColumn(40);
                             cols.ConstantColumn(75);
-                            cols.ConstantColumn(45);
+                            if (hasRemiseD) cols.ConstantColumn(65);
+                            cols.ConstantColumn(44);
                             cols.ConstantColumn(75);
                         });
 
@@ -504,6 +523,8 @@ public class PdfService : IPdfService
                             HeaderStyle(h.Cell()).AlignLeft().Text("Désignation").FontSize(10).Bold().FontColor("#ffffff");
                             HeaderStyle(h.Cell()).AlignCenter().Text("Qté").FontSize(10).Bold().FontColor("#ffffff");
                             HeaderStyle(h.Cell()).AlignRight().Text("P.U. HT").FontSize(10).Bold().FontColor("#ffffff");
+                            if (hasRemiseD)
+                                HeaderStyle(h.Cell()).AlignCenter().Text("Remise").FontSize(10).Bold().FontColor("#ffffff");
                             HeaderStyle(h.Cell()).AlignCenter().Text("TVA").FontSize(10).Bold().FontColor("#ffffff");
                             HeaderStyle(h.Cell()).AlignRight().Text("Total HT").FontSize(10).Bold().FontColor("#ffffff");
                         });
@@ -523,6 +544,13 @@ public class PdfService : IPdfService
                             });
                             CellStyle(table.Cell(), rowBg).AlignCenter().Text(ligne.Quantite.ToString());
                             CellStyle(table.Cell(), rowBg).AlignRight().Text($"{ligne.PrixUnitaire:N2}");
+                            if (hasRemiseD)
+                                CellStyle(table.Cell(), rowBg).AlignCenter().Column(c =>
+                                {
+                                    c.Item().Text($"{ligne.Remise:0}%").Bold().FontColor("#22c55e");
+                                    var remiseMontant = ligne.Quantite * ligne.PrixUnitaire * (ligne.Remise / 100);
+                                    c.Item().Text($"-{remiseMontant:N2}").FontSize(7.5f).FontColor("#22c55e");
+                                });
                             CellStyle(table.Cell(), rowBg).AlignCenter().Text($"{ligne.Tva:0}%");
                             CellStyle(table.Cell(), rowBg).AlignRight().Text($"{ligne.Total:N2}").Bold();
                         }
@@ -536,7 +564,7 @@ public class PdfService : IPdfService
                         outer.RelativeItem();
                         outer.ConstantItem(265).Background(bg).Padding(14).Column(totaux =>
                         {
-                            void TRow(string label, string val, bool highlight = false)
+                            void TRow(string label, string val, bool highlight = false, string? color = null)
                             {
                                 totaux.Item().Row(r =>
                                 {
@@ -544,9 +572,17 @@ public class PdfService : IPdfService
                                     if (highlight) ls.Bold();
                                     r.ConstantItem(110).AlignRight().Text(val)
                                         .FontSize(highlight ? 12 : 10).Bold()
-                                        .FontColor(highlight ? primary : "#1a1d2e");
+                                        .FontColor(color ?? (highlight ? primary : "#1a1d2e"));
                                 });
                                 if (!highlight) totaux.Item().Height(5);
+                            }
+
+                            var totalRemise = devis.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (l.Remise / 100));
+                            var brut = devis.MontantTotalHT + totalRemise;
+                            if (totalRemise > 0)
+                            {
+                                TRow("Sous-total brut HT", $"{brut:N2} MAD");
+                                TRow("Remise totale", $"- {totalRemise:N2} MAD", color: "#22c55e");
                             }
                             TRow("Sous-total HT", $"{devis.MontantTotalHT:N2} MAD");
                             TRow("TVA", $"{devis.MontantTVA:N2} MAD");

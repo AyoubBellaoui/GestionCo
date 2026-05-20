@@ -223,6 +223,7 @@ export class DevisFormComponent implements OnInit {
         produitId: l.produitId,
         quantite: l.quantite,
         prixUnitaire: l.prixUnitaire,
+        remise: l.remise,
         tva: l.tva,
       })),
     };

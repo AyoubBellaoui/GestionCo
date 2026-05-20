@@ -1,9 +1,11 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { User } from '../models';
+import { ApiService } from './api.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  private api = inject(ApiService);
   private userSubject = new BehaviorSubject<User | null>(null);
   private loadingSubject = new BehaviorSubject<boolean>(true);
 
@@ -42,8 +44,10 @@ export class AuthService {
   }
 
   logout(): void {
-    this.clearAuth();
-    window.location.href = '/login';
+    this.api.authLogout().catch(() => {}).finally(() => {
+      this.clearAuth();
+      window.location.href = '/login';
+    });
   }
 
   updateUser(patch: Partial<User>): void {

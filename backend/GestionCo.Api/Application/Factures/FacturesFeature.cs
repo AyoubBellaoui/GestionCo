@@ -37,7 +37,9 @@ public record GetFacturesQuery(
     int? ClientId = null,
     bool? EstEnRetard = null,
     string? ClientNom = null,
-    string? DateFilter = null
+    string? DateFilter = null,
+    string? SortField = null,
+    string? SortDir = null
 ) : IRequest<PagedList<FactureDto>>;
 
 public class GetFacturesHandler : IRequestHandler<GetFacturesQuery, PagedList<FactureDto>>
@@ -88,7 +90,15 @@ public class GetFacturesHandler : IRequestHandler<GetFacturesQuery, PagedList<Fa
                 f.Statut != StatutFacture.Payee && f.Statut != StatutFacture.Annulee);
         }
 
-        query = query.OrderByDescending(f => f.DateEmission);
+        var asc = string.Equals(q.SortDir, "asc", StringComparison.OrdinalIgnoreCase);
+        query = q.SortField switch
+        {
+            "client"       => asc ? query.OrderBy(f => f.Vente.Client.NomClient)       : query.OrderByDescending(f => f.Vente.Client.NomClient),
+            "numero"       => asc ? query.OrderBy(f => f.NumeroFacture)                : query.OrderByDescending(f => f.NumeroFacture),
+            "montant"      => asc ? query.OrderBy(f => f.Vente.MontantTotal)            : query.OrderByDescending(f => f.Vente.MontantTotal),
+            "dateEmission" => asc ? query.OrderBy(f => f.DateEmission)                 : query.OrderByDescending(f => f.DateEmission),
+            _              => query.OrderByDescending(f => f.DateEmission),
+        };
 
         var paged = await PagedList<Facture>.CreateAsync(query, q.Page, q.PageSize, ct);
 

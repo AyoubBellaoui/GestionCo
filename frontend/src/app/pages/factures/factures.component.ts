@@ -91,6 +91,8 @@ export class FacturesComponent implements OnInit {
         page: this.page, pageSize: this.pageSize,
         search: this.search || undefined,
         dateFilter: this.selectedDate || undefined,
+        sortField: this.sortField || undefined,
+        sortDir: this.sortDir || undefined,
         ...tabParams,
       });
       this.factures = result.items;

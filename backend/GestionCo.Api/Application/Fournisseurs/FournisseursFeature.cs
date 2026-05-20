@@ -80,8 +80,13 @@ public class CreateFournisseurHandler : IRequestHandler<CreateFournisseurCommand
         _db.Fournisseurs.Add(f);
         await _db.SaveChangesAsync(ct);
 
+        var fDetails = new List<string>();
+        if (!string.IsNullOrEmpty(f.Telephone)) fDetails.Add($"Tél: {f.Telephone}");
+        if (!string.IsNullOrEmpty(f.Email)) fDetails.Add(f.Email);
+        if (!string.IsNullOrEmpty(f.PersonneContact)) fDetails.Add($"Contact: {f.PersonneContact}");
         await _audit.LogAsync(ActionLog.Create, "fournisseurs",
-            $"Fournisseur créé : {f.Nom}", f.Id, ct: ct);
+            $"Fournisseur créé : {f.Nom}" + (fDetails.Count > 0 ? $" — {string.Join(" · ", fDetails)}" : ""),
+            f.Id, ct: ct);
 
         return FournisseurMapper.ToDto(f);
     }
@@ -108,8 +113,13 @@ public class UpdateFournisseurHandler : IRequestHandler<UpdateFournisseurCommand
         f.IsActive = req.Dto.IsActive;
         await _db.SaveChangesAsync(ct);
 
+        var fUpdDetails = new List<string>();
+        if (!string.IsNullOrEmpty(f.Telephone)) fUpdDetails.Add($"Tél: {f.Telephone}");
+        if (!string.IsNullOrEmpty(f.Email)) fUpdDetails.Add(f.Email);
+        if (!string.IsNullOrEmpty(f.PersonneContact)) fUpdDetails.Add($"Contact: {f.PersonneContact}");
         await _audit.LogAsync(ActionLog.Update, "fournisseurs",
-            $"Fournisseur modifié : {f.Nom}", f.Id, ct: ct);
+            $"Fournisseur modifié : {f.Nom}" + (fUpdDetails.Count > 0 ? $" — {string.Join(" · ", fUpdDetails)}" : ""),
+            f.Id, ct: ct);
 
         return FournisseurMapper.ToDto(f);
     }

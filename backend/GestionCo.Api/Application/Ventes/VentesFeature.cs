@@ -241,8 +241,10 @@ public class CreateVenteHandler : IRequestHandler<CreateVenteCommand, VenteDto>
 
         await _db.SaveChangesAsync(ct);
 
+        var nbLignes = vente.Lignes.Count;
+        var payeInfo = vente.MontantPaye > 0 ? $" · Payé: {vente.MontantPaye:N2} MAD ({(dto.MethodePaiementInitial ?? MethodePaiement.Espece)})" : " · À crédit";
         await _audit.LogAsync(ActionLog.Create, "ventes",
-            $"Vente créée : {vente.Reference} pour {client.NomClient} ({vente.MontantTotal:N2} MAD)",
+            $"Vente créée : {vente.Reference} pour {client.NomClient} — {nbLignes} article(s) · HT: {vente.MontantTotalHT:N2} MAD · TTC: {vente.MontantTotal:N2} MAD{payeInfo}",
             vente.Id, vente.Reference, ct: ct);
 
         await _notif.CreateAsync(
@@ -404,7 +406,7 @@ public class UpdateVenteHandler : IRequestHandler<UpdateVenteCommand, VenteDto>
         await _db.SaveChangesAsync(ct);
 
         await _audit.LogAsync(ActionLog.Update, "ventes",
-            $"Vente modifiée : {vente.Reference} pour {client.NomClient} ({vente.MontantTotal:N2} MAD)",
+            $"Vente modifiée : {vente.Reference} pour {client.NomClient} — {vente.Lignes.Count} article(s) · HT: {vente.MontantTotalHT:N2} MAD · TTC: {vente.MontantTotal:N2} MAD",
             vente.Id, vente.Reference, ct: ct);
 
         return await GetVenteDetailsAsync(vente.Id, ct);
@@ -544,8 +546,9 @@ public class AddPaiementVenteHandler : IRequestHandler<AddPaiementVenteCommand, 
 
         await _db.SaveChangesAsync(ct);
 
+        var resteApres = vente.MontantTotal - vente.MontantPaye;
         await _audit.LogAsync(ActionLog.Update, "ventes",
-            $"Paiement de {montant:N2} MAD ajouté à {vente.Reference}",
+            $"Paiement encaissé : {montant:N2} MAD via {dto.Methode} — {vente.Reference} ({vente.Client?.NomClient}) · Reste dû: {(resteApres > 0 ? resteApres.ToString("N2") + " MAD" : "Soldé")}",
             vente.Id, vente.Reference, ct: ct);
 
         await _notif.CreateAsync(

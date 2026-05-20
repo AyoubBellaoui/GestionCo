@@ -92,9 +92,9 @@
                       <select class="form-select" style="height:34px;font-size:13px" [value]="l.produitId"
                               (change)="updateLigneProduit($index, +$any($event.target).value)"
                               [class.invalid]="submitted && l.produitId === 0">
-                        <option [value]="0">— Produit —</option>
+                        <option [value]="0" [selected]="l.produitId === 0">— Produit —</option>
                         @for (p of produits; track p.id) {
-                          <option [value]="p.id" [disabled]="p.quantiteStock === 0">{{ p.reference }} — {{ p.nom }}{{ p.quantiteStock === 0 ? ' (Rupture)' : p.isStockFaible ? ' (⚠️ ' + p.quantiteStock + ' en stock)' : ' (' + p.quantiteStock + ' en stock)' }}</option>
+                          <option [value]="p.id" [selected]="p.id === l.produitId" [disabled]="p.quantiteStock === 0">{{ p.reference }} — {{ p.nom }}{{ p.quantiteStock === 0 ? ' (Rupture)' : p.isStockFaible ? ' (⚠️ ' + p.quantiteStock + ' en stock)' : ' (' + p.quantiteStock + ' en stock)' }}</option>
                         }
                       </select>
                       @if (submitted && l.produitId === 0) {
@@ -139,7 +139,10 @@
                     </td>
                     <td>
                       <select class="form-select" style="height:34px;font-size:13px" [value]="l.tva" (change)="updateLigneTva($index, +$any($event.target).value)">
-                        <option [value]="0">0%</option><option [value]="7">7%</option><option [value]="14">14%</option><option [value]="20">20%</option>
+                        <option [value]="0"  [selected]="l.tva === 0">0%</option>
+                        <option [value]="7"  [selected]="l.tva === 7">7%</option>
+                        <option [value]="14" [selected]="l.tva === 14">14%</option>
+                        <option [value]="20" [selected]="l.tva === 20">20%</option>
                       </select>
                     </td>
                     <td style="text-align:right;font-weight:700">

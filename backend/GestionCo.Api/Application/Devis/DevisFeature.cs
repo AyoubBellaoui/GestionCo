@@ -238,8 +238,9 @@ public class UpdateDevisHandler : IRequestHandler<UpdateDevisCommand, DevisDto>
 
         await _db.SaveChangesAsync(ct);
 
+        var clientNom = (await _db.Clients.FindAsync([dto.ClientId], ct))?.NomClient ?? "—";
         await _audit.LogAsync(ActionLog.Update, "devis",
-            $"Devis modifié : {devis.Reference}",
+            $"Devis modifié : {devis.Reference} pour {clientNom} — {devis.Lignes.Count} ligne(s) · HT: {devis.MontantTotalHT:N2} MAD · TTC: {devis.MontantTotal:N2} MAD",
             devis.Id, devis.Reference, ct: ct);
 
         return await LoadDtoHelper.LoadDto(_db, devis.Id, ct);

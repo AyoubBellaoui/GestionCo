@@ -61,6 +61,9 @@ export class ApiService {
   changePassword(data: { currentPassword: string; newPassword: string }): Promise<void> {
     return firstValueFrom(this.http.post<void>(`${this.base}/auth/change-password`, data));
   }
+  authLogout(): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.base}/auth/logout`, {}));
+  }
 
   // ── DASHBOARD ──
   dashboardStats(): Promise<DashboardStats> {
@@ -402,7 +405,7 @@ export class ApiService {
   achatsListPaged(p: { page?: number; pageSize?: number; search?: string; fournisseurId?: number; dateDebut?: string; dateFin?: string; statut?: string } = {}): Promise<PagedList<Achat>> {
     return firstValueFrom(this.http.get<PagedList<Achat>>(`${this.base}/achats`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
   }
-  facturesListPaged(p: { page?: number; pageSize?: number; search?: string; statut?: string; clientId?: number; dateFilter?: string; estEnRetard?: boolean } = {}): Promise<PagedList<Facture>> {
+  facturesListPaged(p: { page?: number; pageSize?: number; search?: string; statut?: string; clientId?: number; dateFilter?: string; estEnRetard?: boolean; sortField?: string; sortDir?: string } = {}): Promise<PagedList<Facture>> {
     return firstValueFrom(this.http.get<PagedList<Facture>>(`${this.base}/factures`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
   }
   clientsListPaged(p: { page?: number; pageSize?: number; search?: string; type?: string } = {}): Promise<PagedList<Client>> {
@@ -428,6 +431,9 @@ export class ApiService {
   }
   auditListPaged(p: { page?: number; pageSize?: number; search?: string; action?: string; entite?: string; sensibleOnly?: boolean } = {}): Promise<PagedList<AuditLog>> {
     return firstValueFrom(this.http.get<PagedList<AuditLog>>(`${this.base}/logs`, { params: buildParams({ page: 1, pageSize: 25, ...p }) }));
+  }
+  auditStats(): Promise<{ total: number; sensitifs: number; creations: number; modifications: number; suppressions: number }> {
+    return firstValueFrom(this.http.get<any>(`${this.base}/logs/stats`));
   }
 
   // ── PARAMÈTRES FACTURATION ──

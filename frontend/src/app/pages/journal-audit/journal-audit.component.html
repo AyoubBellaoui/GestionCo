@@ -1,70 +1,200 @@
-<app-topbar title="Journal d'audit" [subtitle]="logs.length + ' entrée' + (logs.length > 1 ? 's' : '') + ' — Historique des actions'" icon="🔎">
+<app-topbar title="Journal d'audit" [subtitle]="'Historique complet des actions — ' + stats.total + ' entrée' + (stats.total > 1 ? 's' : '')" icon="🔎">
 </app-topbar>
 
 <div class="content">
+
+  <!-- Stats -->
   <div class="stats-row">
-    <div class="stat-card"><div class="stat-icon blue">📋</div><div><div class="stat-label">Total entrées</div><div class="stat-value">{{ logs.length }}</div><div class="stat-trend neutral">Journal complet</div></div></div>
-    <div class="stat-card"><div class="stat-icon green">➕</div><div><div class="stat-label">Créations</div><div class="stat-value">{{ getCreateCount() }}</div><div class="stat-trend neutral">Enregistrements</div></div></div>
-    <div class="stat-card"><div class="stat-icon orange">✏️</div><div><div class="stat-label">Modifications</div><div class="stat-value">{{ getUpdateCount() }}</div><div class="stat-trend neutral">Mises à jour</div></div></div>
-    <div class="stat-card"><div class="stat-icon red">⚠️</div><div><div class="stat-label">Actions sensibles</div><div class="stat-value">{{ getSensibleCount() }}</div><div class="stat-trend down">À surveiller</div></div></div>
+    <div class="stat-card">
+      <div class="stat-icon blue">📋</div>
+      <div><div class="stat-label">Total entrées</div><div class="stat-value">{{ stats.total }}</div><div class="stat-trend neutral">Journal complet</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green">➕</div>
+      <div><div class="stat-label">Créations</div><div class="stat-value">{{ stats.creations }}</div><div class="stat-trend neutral">Enregistrements</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon orange">✏️</div>
+      <div><div class="stat-label">Modifications</div><div class="stat-value">{{ stats.modifications }}</div><div class="stat-trend neutral">Mises à jour</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon red">⚠️</div>
+      <div><div class="stat-label">Actions sensibles</div><div class="stat-value">{{ stats.sensitifs }}</div><div class="stat-trend down">À surveiller</div></div>
+    </div>
   </div>
 
-  <div class="toolbar">
-    <div class="search-wrapper">
-      <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-      <input class="search-input" placeholder="Rechercher par utilisateur, action, entité..." [(ngModel)]="search" />
+  <!-- Toolbar -->
+  <div class="toolbar" style="flex-wrap:wrap;gap:8px">
+    <div class="search-wrapper" style="flex:1;min-width:220px">
+      <span class="search-icon">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </span>
+      <input class="search-input" placeholder="Rechercher dans les descriptions, entités, utilisateurs…" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
     </div>
-    <select class="filter-select" [(ngModel)]="actionFilter">
+    <select class="filter-select" [(ngModel)]="actionFilter" (ngModelChange)="onFilterChange()">
       <option value="">Toutes actions</option>
-      @for (a of uniqueActions; track a.value) { <option [value]="a.value">{{ a.label }}</option> }
+      <option value="Create">➕ Création</option>
+      <option value="Update">✏️ Modification</option>
+      <option value="Delete">🗑️ Suppression</option>
+      <option value="Login">🔑 Connexion</option>
+      <option value="Logout">🚪 Déconnexion</option>
     </select>
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-muted);cursor:pointer;white-space:nowrap">
-      <input type="checkbox" [(ngModel)]="sensibleOnly" />
-      Sensibles seulement
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-muted);cursor:pointer;white-space:nowrap;padding:0 8px;border:1px solid var(--border);border-radius:8px;height:36px">
+      <input type="checkbox" [(ngModel)]="sensibleOnly" (ngModelChange)="onFilterChange()" />
+      🔴 Sensibles seulement
     </label>
     <div class="toolbar-divider"></div>
     <button class="btn btn-ghost btn-sm" (click)="resetFilters()">🔄 Réinitialiser</button>
   </div>
 
+  <!-- Table -->
   <div class="table-card">
     <div class="table-wrapper">
       <table class="data-table">
-        <thead><tr><th>Date</th><th>Utilisateur</th><th>Action</th><th>Entité</th><th>Description</th><th>IP</th></tr></thead>
+        <thead>
+          <tr>
+            <th style="width:130px">Horodatage</th>
+            <th style="width:150px">Utilisateur</th>
+            <th style="width:140px">Action</th>
+            <th style="width:130px">Entité</th>
+            <th>Description</th>
+            <th style="width:110px;text-align:right">IP</th>
+          </tr>
+        </thead>
         <tbody>
-          @if (loading) { <tr><td colspan="6" class="loading-row">Chargement…</td></tr> }
-          @if (!loading && filtered.length === 0) {
-            <tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🔎</div><div class="empty-title">Aucune entrée</div><div class="empty-sub">Le journal d'audit est vide</div></div></td></tr>
+          @if (loading) {
+            <tr><td colspan="6" class="loading-row">Chargement…</td></tr>
           }
-          @for (l of paged; track l.id) {
-            @let d = formatDate(l.dateAction);
+          @if (!loading && logs.length === 0) {
+            <tr><td colspan="6">
+              <div class="empty-state">
+                <div class="empty-icon">🔎</div>
+                <div class="empty-title">Aucune entrée</div>
+                <div class="empty-sub">Aucun événement ne correspond aux filtres</div>
+              </div>
+            </td></tr>
+          }
+          @for (l of logs; track l.id) {
+            @let dt = formatDateTime(l.dateAction);
             @let as_ = actionStyle(l.action);
-            <tr [style.background]="l.estSensible ? 'rgba(239,68,68,0.03)' : null">
-              <td class="date-cell"><div class="date-main">{{ d.main }}</div><div class="date-sub">{{ d.time }}</div></td>
+            @let oldVals = parseJson(l.anciennesValeurs);
+            @let newVals = parseJson(l.nouvellesValeurs);
+            @let hasDetail = (oldVals !== null || newVals !== null);
+            @let isExpanded = expandedId === l.id;
+
+            <!-- Main row -->
+            <tr [style.background]="l.estSensible ? 'rgba(239,68,68,0.04)' : null"
+                [style.cursor]="hasDetail ? 'pointer' : 'default'"
+                (click)="hasDetail ? toggleExpand(l.id) : null">
+
+              <td class="date-cell">
+                <div class="date-main">{{ dt.date }}</div>
+                <div class="date-sub" style="font-family:monospace;font-size:11px">{{ dt.time }}</div>
+              </td>
+
               <td>
                 <div class="client-cell">
-                  <div [class]="'client-avatar ' + getAvatarClass(l.nomUtilisateur)">{{ l.initialesUtilisateur || getInitials(l.nomUtilisateur) }}</div>
-                  <div><div class="client-name">{{ l.nomUtilisateur }}</div></div>
+                  <div [class]="'client-avatar ' + getAvatarClass(l.nomUtilisateur)" style="width:30px;height:30px;font-size:11px;flex-shrink:0">
+                    {{ l.initialesUtilisateur || getInitials(l.nomUtilisateur) }}
+                  </div>
+                  <div style="min-width:0">
+                    <div class="client-name" style="font-size:12.5px">{{ l.nomUtilisateur }}</div>
+                  </div>
                 </div>
               </td>
+
               <td>
-                <div style="display:flex;align-items:center;gap:6px">
-                  <span [class]="'status-badge ' + as_.cls">{{ as_.icon }} {{ l.actionLibelle }}</span>
-                  @if (l.estSensible) { <span title="Action sensible">🔴</span> }
+                <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+                  <span [class]="'status-badge ' + as_.cls" style="font-size:11px;white-space:nowrap">
+                    {{ as_.icon }} {{ as_.label }}
+                  </span>
+                  @if (l.estSensible) {
+                    <span title="Action sensible" style="font-size:12px">🔴</span>
+                  }
                 </div>
               </td>
+
               <td>
-                <div style="font-weight:600">{{ l.entite }}</div>
-                @if (l.entiteReference) { <div style="font-size:11.5px;color:var(--text-muted)">{{ l.entiteReference }}</div> }
+                <div style="display:flex;align-items:center;gap:5px">
+                  <span style="font-size:15px">{{ entityIcon(l.entite) }}</span>
+                  <div>
+                    <div style="font-weight:600;font-size:12px;text-transform:capitalize">{{ l.entite }}</div>
+                    @if (l.entiteReference) {
+                      <div style="font-size:10.5px;color:var(--primary);font-family:monospace;font-weight:600">{{ l.entiteReference }}</div>
+                    }
+                  </div>
+                </div>
               </td>
-              <td style="font-size:12.5px;color:var(--text-muted);max-width:280px">
-                <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ l.description || '—' }}</div>
+
+              <td style="max-width:340px">
+                <div style="font-size:12.5px;color:var(--text);line-height:1.5;word-break:break-word">
+                  {{ l.description || '—' }}
+                </div>
+                @if (hasDetail) {
+                  <div style="font-size:11px;color:var(--primary);margin-top:3px;display:flex;align-items:center;gap:4px">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      @if (isExpanded) { <polyline points="18 15 12 9 6 15"/> }
+                      @else { <polyline points="6 9 12 15 18 9"/> }
+                    </svg>
+                    {{ isExpanded ? 'Masquer les détails' : 'Voir les modifications' }}
+                  </div>
+                }
               </td>
-              <td style="font-size:12px;font-family:monospace;color:var(--text-muted)">{{ l.ipAddress || '—' }}</td>
+
+              <td style="text-align:right;font-size:11px;font-family:monospace;color:var(--text-muted)">
+                {{ l.ipAddress || '—' }}
+              </td>
             </tr>
+
+            <!-- Expanded detail row -->
+            @if (isExpanded && hasDetail) {
+              <tr style="background:var(--surface2)">
+                <td colspan="6" style="padding:0">
+                  <div style="padding:14px 20px;display:grid;grid-template-columns:1fr 1fr;gap:16px;border-top:1px solid var(--border)">
+
+                    @if (oldVals !== null) {
+                      <div>
+                        <div style="font-size:11px;font-weight:700;color:var(--danger);margin-bottom:8px;display:flex;align-items:center;gap:5px">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                          AVANT
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:4px">
+                          @for (e of jsonEntries(oldVals); track e.key) {
+                            <div style="display:flex;gap:8px;font-size:12px;padding:3px 8px;background:rgba(239,68,68,0.07);border-radius:5px;border-left:2px solid var(--danger)">
+                              <span style="color:var(--text-muted);min-width:90px;font-weight:600">{{ e.key }}</span>
+                              <span style="color:var(--text);word-break:break-all">{{ e.value }}</span>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    }
+
+                    @if (newVals !== null) {
+                      <div>
+                        <div style="font-size:11px;font-weight:700;color:var(--success);margin-bottom:8px;display:flex;align-items:center;gap:5px">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          APRÈS
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:4px">
+                          @for (e of jsonEntries(newVals); track e.key) {
+                            <div style="display:flex;gap:8px;font-size:12px;padding:3px 8px;background:rgba(34,197,94,0.07);border-radius:5px;border-left:2px solid var(--success)">
+                              <span style="color:var(--text-muted);min-width:90px;font-weight:600">{{ e.key }}</span>
+                              <span style="color:var(--text);word-break:break-all">{{ e.value }}</span>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    }
+
+                  </div>
+                </td>
+              </tr>
+            }
           }
         </tbody>
       </table>
     </div>
-    <app-pagination [page]="page" [pageSize]="pageSize" [total]="filtered.length" (pageChange)="page=$event" (pageSizeChange)="pageSize=$event;page=1"></app-pagination>
+    <app-pagination [page]="page" [pageSize]="pageSize" [total]="totalCount" (pageChange)="onPage($event)" (pageSizeChange)="onPageSize($event)"></app-pagination>
   </div>
+
 </div>
