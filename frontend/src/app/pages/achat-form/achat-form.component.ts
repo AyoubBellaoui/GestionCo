@@ -86,7 +86,7 @@ export class AchatFormComponent implements OnInit {
         }));
       } catch {
         this.toast.notify('Erreur lors du chargement de l\'achat', 'error');
-        this.router.navigate(['/achats']);
+        this.router.navigate(['/depenses']);
       }
     }
 
@@ -208,7 +208,7 @@ export class AchatFormComponent implements OnInit {
         });
         this.toast.notify('Achat créé avec succès — Stock mis à jour', 'success');
       }
-      this.router.navigate(['/achats']);
+      this.router.navigate(['/depenses']);
     } catch (e: any) {
       console.error('Achat save error:', e);
       const errObj = e?.error;

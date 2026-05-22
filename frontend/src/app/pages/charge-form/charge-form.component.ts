@@ -101,7 +101,7 @@ export class ChargeFormComponent implements OnInit {
         periodicite: this.estRecurrente ? this.periodicite : undefined,
       });
       this.toast.notify('Charge créée avec succès', 'success');
-      this.router.navigate(['/charges']);
+      this.router.navigate(['/depenses'], { queryParams: { tab: 'charges' } });
     } catch { this.toast.notify('Erreur lors de la création', 'error'); }
     finally { this.saving = false; }
   }

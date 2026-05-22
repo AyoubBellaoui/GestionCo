@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Input, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -18,6 +18,8 @@ import { formatNum, formatDate, getPayStatus } from '../../core/utils/format';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChargesComponent implements OnInit {
+  @Input() hideTopbar = false;
+
   charges: Charge[] = [];
   totalCount = 0;
   categories: CategorieCharge[] = [];

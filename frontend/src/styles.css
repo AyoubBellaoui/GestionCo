@@ -2019,6 +2019,16 @@ kbd {
 .page-tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 18px; padding: 0 5px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; font-size: 11px; font-weight: 700; color: var(--text-muted); transition: background 0.15s, color 0.15s; }
 .page-tab.active .page-tab-badge { background: var(--primary-light); border-color: transparent; color: var(--primary); }
 
+/* ============ DEPENSES TABS ============ */
+.depenses-tabs-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.depenses-tab { display: inline-flex; align-items: center; gap: 8px; padding: 13px 18px 12px; font-size: 13.5px; font-weight: 500; color: var(--text-muted); background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; transition: color 0.15s, border-color 0.15s; white-space: nowrap; }
+.depenses-tab:hover { color: var(--text); }
+.depenses-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+.depenses-tab-icon { display: flex; align-items: center; opacity: 0.7; transition: opacity 0.15s; }
+.depenses-tab.active .depenses-tab-icon { opacity: 1; }
+.depenses-tab-count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 19px; padding: 0 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; font-size: 11px; font-weight: 700; color: var(--text-muted); transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.depenses-tab.active .depenses-tab-count { background: var(--primary-light); border-color: transparent; color: var(--primary); }
+
 /* ============ EMOJI PICKER ============ */
 .emoji-grid { display: flex; flex-wrap: wrap; gap: 4px; }
 .emoji-btn { width: 34px; height: 34px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.12s; line-height: 1; }

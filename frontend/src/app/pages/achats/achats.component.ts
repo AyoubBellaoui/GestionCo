@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -19,6 +19,8 @@ import { formatNum, formatDate, getInitials, getAvatarClass, getPayStatus } from
   templateUrl: './achats.component.html',
 })
 export class AchatsComponent implements OnInit {
+  @Input() hideTopbar = false;
+
   items: Achat[] = [];
   fournisseurs: Fournisseur[] = [];
   loading = true;
