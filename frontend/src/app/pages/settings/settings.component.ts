@@ -14,7 +14,7 @@ type TabKey = 'entreprise' | 'profil' | 'apparence' | 'securite' | 'facturation'
 const TABS: { key: TabKey; label: string; icon: string; desc: string; adminOnly?: boolean }[] = [
   { key: 'entreprise',  label: 'Entreprise',  icon: '🏢', desc: 'Infos légales, ICE, RC, IF' },
   { key: 'profil',      label: 'Mon profil',  icon: '👤', desc: 'Informations personnelles' },
-  { key: 'apparence',   label: 'Apparence',   icon: '🎨', desc: 'Format de date & affichage' },
+  { key: 'apparence',   label: 'Apparence',   icon: '🎨', desc: 'Date, heure & fuseau horaire' },
   { key: 'securite',    label: 'Sécurité',    icon: '🔒', desc: 'Mot de passe, sessions' },
   { key: 'facturation', label: 'Facturation', icon: '📋', desc: 'Numérotation, TVA, délais' },
   { key: 'comptes',     label: 'Comptes',     icon: '👥', desc: 'Gérer les accès utilisateurs', adminOnly: true },
@@ -35,6 +35,7 @@ export class SettingsComponent implements OnInit {
   profil = { prenom: '', nom: '', telephone: '' };
   securite = { ancienMdp: '', nouveauMdp: '', confirmMdp: '' };
   securiteChanging = false;
+  showPwd = { ancien: false, nouveau: false, confirm: false };
   factuLoading = false;
 
   comptesList: UtilisateurDto[] = [];
@@ -82,6 +83,10 @@ export class SettingsComponent implements OnInit {
     if (key === 'comptes') await this.loadComptes();
     if (key === 'facturation') await this.loadFacturationSettings();
     if (key === 'entreprise') await this.loadEntrepriseSettings();
+    if (key === 'securite') {
+      this.securite = { ancienMdp: '', nouveauMdp: '', confirmMdp: '' };
+      this.showPwd = { ancien: false, nouveau: false, confirm: false };
+    }
   }
 
   async loadFacturationSettings(): Promise<void> {
@@ -274,15 +279,58 @@ export class SettingsComponent implements OnInit {
     catch { this.toast.notify('Impossible de supprimer ce compte', 'error'); }
   }
 
+  readonly timezones: { value: string; label: string; offset: string }[] = [
+    { value: 'Africa/Casablanca',    label: 'Maroc (Casablanca)',         offset: 'UTC+1' },
+    { value: 'Africa/Algiers',       label: 'Algérie (Alger)',            offset: 'UTC+1' },
+    { value: 'Africa/Tunis',         label: 'Tunisie (Tunis)',            offset: 'UTC+1' },
+    { value: 'Africa/Cairo',         label: 'Égypte (Le Caire)',          offset: 'UTC+2' },
+    { value: 'Europe/Paris',         label: 'France / Belgique (Paris)',  offset: 'UTC+1/+2' },
+    { value: 'Europe/London',        label: 'Royaume-Uni (Londres)',      offset: 'UTC+0/+1' },
+    { value: 'Europe/Madrid',        label: 'Espagne (Madrid)',           offset: 'UTC+1/+2' },
+    { value: 'Europe/Berlin',        label: 'Allemagne (Berlin)',         offset: 'UTC+1/+2' },
+    { value: 'Europe/Istanbul',      label: 'Turquie (Istanbul)',         offset: 'UTC+3' },
+    { value: 'Asia/Dubai',           label: 'Émirats (Dubaï)',            offset: 'UTC+4' },
+    { value: 'Asia/Riyadh',          label: 'Arabie Saoudite (Riyad)',    offset: 'UTC+3' },
+    { value: 'Asia/Beirut',          label: 'Liban (Beyrouth)',           offset: 'UTC+2/+3' },
+    { value: 'Asia/Karachi',         label: 'Pakistan (Karachi)',         offset: 'UTC+5' },
+    { value: 'Asia/Kolkata',         label: 'Inde (New Delhi)',           offset: 'UTC+5:30' },
+    { value: 'Asia/Shanghai',        label: 'Chine (Shanghai)',           offset: 'UTC+8' },
+    { value: 'Asia/Tokyo',           label: 'Japon (Tokyo)',              offset: 'UTC+9' },
+    { value: 'Australia/Sydney',     label: 'Australie (Sydney)',         offset: 'UTC+10/+11' },
+    { value: 'America/New_York',     label: 'USA Est (New York)',         offset: 'UTC-5/-4' },
+    { value: 'America/Chicago',      label: 'USA Centre (Chicago)',       offset: 'UTC-6/-5' },
+    { value: 'America/Los_Angeles',  label: 'USA Ouest (Los Angeles)',    offset: 'UTC-8/-7' },
+    { value: 'America/Sao_Paulo',    label: 'Brésil (São Paulo)',         offset: 'UTC-3' },
+    { value: 'UTC',                  label: 'UTC (temps universel)',      offset: 'UTC+0' },
+  ];
+
   getDatePreview(): string {
     const d = new Date();
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
+    const tz = this.settings.settings.timezone || 'Africa/Casablanca';
+    const dateParts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(d);
+    const get = (t: string) => dateParts.find((p: Intl.DateTimeFormatPart) => p.type === t)?.value ?? '';
+    const dd = get('day'); const mm = get('month'); const yyyy = get('year');
     const fmt = this.settings.settings.formatDate;
     if (fmt === 'MM/dd/yyyy') return `${mm}/${dd}/${yyyy}`;
     if (fmt === 'yyyy-MM-dd') return `${yyyy}-${mm}-${dd}`;
     return `${dd}/${mm}/${yyyy}`;
+  }
+
+  getTimePreview(): string {
+    const d = new Date();
+    const tz = this.settings.settings.timezone || 'Africa/Casablanca';
+    const h12 = this.settings.settings.heureFormat === '12h';
+    return new Intl.DateTimeFormat('fr-FR', {
+      timeZone: tz, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: h12,
+    }).format(d);
+  }
+
+  getCurrentTimezoneOffset(): string {
+    const tz = this.settings.settings.timezone || 'Africa/Casablanca';
+    const found = this.timezones.find(t => t.value === tz);
+    return found?.offset ?? '';
   }
 
   get refYear(): number { return new Date().getFullYear(); }

@@ -42,6 +42,7 @@ export class FacturesComponent implements OnInit {
   showInfoModal = false;
   showCreateModal = false;
   ventesSansFacture: VenteSansFacture[] = [];
+  loadingVentes = false;
   selectedVenteId: number | null = null;
   dateEmission = '';
   dateEcheance = '';
@@ -215,24 +216,37 @@ export class FacturesComponent implements OnInit {
   }
 
   get ventesFiltrees(): VenteSansFacture[] {
-    if (!this.searchVente) return this.ventesSansFacture;
-    const s = this.searchVente.toLowerCase();
+    if (!this.searchVente.trim()) return this.ventesSansFacture;
+    const s = this.normalize(this.searchVente);
     return this.ventesSansFacture.filter(v =>
-      v.reference.toLowerCase().includes(s) || v.nomClient.toLowerCase().includes(s)
+      this.normalize(v.reference).includes(s) || this.normalize(v.nomClient).includes(s)
     );
+  }
+
+  private normalize(str: string): string {
+    return str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  }
+
+  onSearchVenteChange(): void {
+    if (this.selectedVenteId && !this.ventesFiltrees.find(v => v.id === this.selectedVenteId)) {
+      this.selectedVenteId = null;
+    }
   }
 
   async openCreateModal(): Promise<void> {
     this.showCreateModal = true;
     this.selectedVenteId = null;
     this.searchVente = '';
+    this.ventesSansFacture = [];
     const today = new Date();
     const echeance = new Date();
     echeance.setDate(today.getDate() + this.settings.settings.facturation.delaiPaiement);
     this.dateEmission = today.toISOString().split('T')[0];
     this.dateEcheance = echeance.toISOString().split('T')[0];
+    this.loadingVentes = true;
     try { this.ventesSansFacture = await this.api.factureGetVentesSansFacture(); }
     catch { this.toast.notify('Erreur lors du chargement des ventes', 'error'); }
+    finally { this.loadingVentes = false; }
   }
 
   async createFacture(): Promise<void> {

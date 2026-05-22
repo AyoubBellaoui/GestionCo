@@ -92,4 +92,33 @@ public class JwtService : IJwtService
             return null;
         }
     }
+
+    public int? ExtractUserIdIgnoreExpiry(string token)
+    {
+        try
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.UTF8.GetBytes(_settings.SecretKey);
+
+            tokenHandler.ValidateToken(token, new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                ValidateIssuer = true,
+                ValidIssuer = _settings.Issuer,
+                ValidateAudience = true,
+                ValidAudience = _settings.Audience,
+                ValidateLifetime = false,
+                ClockSkew = TimeSpan.Zero
+            }, out SecurityToken validatedToken);
+
+            var jwtToken = (JwtSecurityToken)validatedToken;
+            var userIdStr = jwtToken.Claims.First(x => x.Type == ClaimTypes.NameIdentifier).Value;
+            return int.Parse(userIdStr);
+        }
+        catch
+        {
+            return null;
+        }
+    }
 }

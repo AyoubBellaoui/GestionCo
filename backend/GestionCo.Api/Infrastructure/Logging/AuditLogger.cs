@@ -25,11 +25,12 @@ public class AuditLogger : IAuditLogger
         object? anciennesValeurs = null,
         object? nouvellesValeurs = null,
         bool estSensible = false,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        int? utilisateurId = null)
     {
         var log = new Log
         {
-            UtilisateurId = _currentUser.UserId,
+            UtilisateurId = utilisateurId ?? _currentUser.UserId,
             Action = action,
             Entite = entite,
             EntiteId = entiteId,

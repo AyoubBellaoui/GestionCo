@@ -61,7 +61,8 @@ public class LoginHandler : IRequestHandler<LoginCommand, AuthResponse>
             "utilisateurs",
             $"Connexion réussie de {user.NomComplet}",
             user.Id,
-            ct: ct);
+            ct: ct,
+            utilisateurId: user.Id);
 
         return new AuthResponse
         {

@@ -7,6 +7,8 @@ const STORAGE_KEY = 'gestionco_settings';
 const DEFAULT_SETTINGS: AppSettings = {
   devise: 'MAD',
   formatDate: 'dd/MM/yyyy',
+  timezone: 'Africa/Casablanca',
+  heureFormat: '24h',
   entreprise: {
     raisonSociale: 'GestionCo. SARL',
     adresse: '12 Boulevard Zerktouni, Casablanca 20250, Maroc',
@@ -43,6 +45,8 @@ function loadFromStorage(): AppSettings {
         entreprise: { ...DEFAULT_SETTINGS.entreprise, ...(parsed.entreprise || {}) },
         notifs: { ...DEFAULT_SETTINGS.notifs, ...(parsed.notifs || {}) },
         facturation: { ...DEFAULT_SETTINGS.facturation, ...(parsed.facturation || {}) },
+        timezone: parsed.timezone || DEFAULT_SETTINGS.timezone,
+        heureFormat: parsed.heureFormat || DEFAULT_SETTINGS.heureFormat,
       };
     }
   } catch { /* ignore */ }
@@ -97,9 +101,11 @@ export class SettingsService {
   formatDateValue(date: Date | string): string {
     const d = typeof date === 'string' ? new Date(date) : date;
     if (isNaN(d.getTime())) return '—';
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
+    const tz = this.settings.timezone || 'Africa/Casablanca';
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' })
+      .formatToParts(d);
+    const get = (t: string) => parts.find(p => p.type === t)?.value ?? '';
+    const dd = get('day'); const mm = get('month'); const yyyy = get('year');
     switch (this.settings.formatDate) {
       case 'MM/dd/yyyy': return `${mm}/${dd}/${yyyy}`;
       case 'yyyy-MM-dd': return `${yyyy}-${mm}-${dd}`;

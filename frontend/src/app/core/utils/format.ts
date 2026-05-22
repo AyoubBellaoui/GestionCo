@@ -3,9 +3,16 @@ const STORAGE_KEY = 'gestionco_settings';
 interface CachedSettings {
   devise: 'MAD' | 'EUR' | 'USD';
   formatDate: 'dd/MM/yyyy' | 'MM/dd/yyyy' | 'yyyy-MM-dd';
+  timezone: string;
+  heureFormat: '24h' | '12h';
 }
 
-const DEFAULT_SETTINGS: CachedSettings = { devise: 'MAD', formatDate: 'dd/MM/yyyy' };
+const DEFAULT_SETTINGS: CachedSettings = {
+  devise: 'MAD',
+  formatDate: 'dd/MM/yyyy',
+  timezone: 'Africa/Casablanca',
+  heureFormat: '24h',
+};
 
 function getCurrentSettings(): CachedSettings {
   try {
@@ -15,6 +22,8 @@ function getCurrentSettings(): CachedSettings {
     return {
       devise: parsed.devise || DEFAULT_SETTINGS.devise,
       formatDate: parsed.formatDate || DEFAULT_SETTINGS.formatDate,
+      timezone: parsed.timezone || DEFAULT_SETTINGS.timezone,
+      heureFormat: parsed.heureFormat || DEFAULT_SETTINGS.heureFormat,
     };
   } catch { return DEFAULT_SETTINGS; }
 }
@@ -35,12 +44,14 @@ export const formatDate = (iso: string | undefined): { main: string; time: strin
   try {
     const d = new Date(iso);
     if (isNaN(d.getTime())) return { main: iso, time: '' };
-    const { formatDate: fmt } = getCurrentSettings();
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    const hh = String(d.getHours()).padStart(2, '0');
-    const min = String(d.getMinutes()).padStart(2, '0');
+    const { formatDate: fmt, timezone, heureFormat } = getCurrentSettings();
+
+    const dateParts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(d);
+    const get = (t: string) => dateParts.find(p => p.type === t)?.value ?? '';
+    const dd = get('day'); const mm = get('month'); const yyyy = get('year');
+
     let main: string;
     if (fmt === 'MM/dd/yyyy') {
       main = `${mm}/${dd}/${yyyy}`;
@@ -48,9 +59,22 @@ export const formatDate = (iso: string | undefined): { main: string; time: strin
       main = `${yyyy}-${mm}-${dd}`;
     } else {
       const months = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'aoû', 'sep', 'oct', 'nov', 'déc'];
-      main = `${d.getDate()} ${months[d.getMonth()]} ${yyyy}`;
+      main = `${parseInt(dd)} ${months[parseInt(mm) - 1]} ${yyyy}`;
     }
-    return { main, time: `${hh}:${min}` };
+
+    const timeParts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: timezone, hour: '2-digit', minute: '2-digit', hour12: heureFormat === '12h',
+    }).formatToParts(d);
+    const getT = (t: string) => timeParts.find(p => p.type === t)?.value ?? '';
+    let time: string;
+    if (heureFormat === '12h') {
+      const period = timeParts.find(p => p.type === 'dayPeriod')?.value ?? '';
+      time = `${getT('hour')}:${getT('minute')} ${period}`;
+    } else {
+      time = `${getT('hour')}:${getT('minute')}`;
+    }
+
+    return { main, time };
   } catch { return { main: iso, time: '' }; }
 };
 

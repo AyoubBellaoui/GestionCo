@@ -58,24 +58,29 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, AuthResp
 }
 
 // ============ LOGOUT ============
-public record LogoutCommand : IRequest<Unit>;
+public record LogoutCommand(string? BearerToken = null) : IRequest<Unit>;
 
 public class LogoutHandler : IRequestHandler<LogoutCommand, Unit>
 {
     private readonly IAppDbContext _db;
     private readonly ICurrentUserService _current;
     private readonly IAuditLogger _audit;
+    private readonly IJwtService _jwt;
 
-    public LogoutHandler(IAppDbContext db, ICurrentUserService current, IAuditLogger audit)
+    public LogoutHandler(IAppDbContext db, ICurrentUserService current, IAuditLogger audit, IJwtService jwt)
     {
-        _db = db; _current = current; _audit = audit;
+        _db = db; _current = current; _audit = audit; _jwt = jwt;
     }
 
     public async Task<Unit> Handle(LogoutCommand req, CancellationToken ct)
     {
-        if (_current.UserId == null) return Unit.Value;
+        // Try current user from valid JWT first, then fallback to parsing the (possibly expired) token
+        var userId = _current.UserId
+            ?? (!string.IsNullOrEmpty(req.BearerToken) ? _jwt.ExtractUserIdIgnoreExpiry(req.BearerToken) : null);
 
-        var user = await _db.Utilisateurs.FirstOrDefaultAsync(u => u.Id == _current.UserId.Value, ct);
+        if (userId == null) return Unit.Value;
+
+        var user = await _db.Utilisateurs.FirstOrDefaultAsync(u => u.Id == userId.Value, ct);
         if (user != null)
         {
             user.RefreshToken = null;

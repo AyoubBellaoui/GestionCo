@@ -350,10 +350,13 @@ export type FacturationSettings = {
 
 export type Devise = 'MAD' | 'EUR' | 'USD';
 export type FormatDate = 'dd/MM/yyyy' | 'MM/dd/yyyy' | 'yyyy-MM-dd';
+export type HeureFormat = '24h' | '12h';
 
 export interface AppSettings {
   devise: Devise;
   formatDate: FormatDate;
+  timezone: string;
+  heureFormat: HeureFormat;
   entreprise: {
     raisonSociale: string;
     adresse: string;

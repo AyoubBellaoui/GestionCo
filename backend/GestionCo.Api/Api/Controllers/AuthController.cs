@@ -30,10 +30,11 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("logout")]
-    [Authorize]
-    public async Task<IActionResult> Logout(CancellationToken ct)
+    [AllowAnonymous]
+    public async Task<IActionResult> Logout([FromHeader(Name = "Authorization")] string? authHeader, CancellationToken ct)
     {
-        await _mediator.Send(new LogoutCommand(), ct);
+        var token = authHeader?.StartsWith("Bearer ") == true ? authHeader["Bearer ".Length..] : null;
+        await _mediator.Send(new LogoutCommand(token), ct);
         return Ok(new { message = "Déconnexion réussie" });
     }
 

@@ -142,19 +142,77 @@
       <!-- APPARENCE -->
       @if (activeTab === 'apparence') {
         <div class="settings-panel">
-          <div class="panel-header"><h2>🎨 Apparence</h2><p>Format de date — appliqué partout dans l'application.</p></div>
+          <div class="panel-header">
+            <h2>🎨 Apparence &amp; Régionalisation</h2>
+            <p>Format de date, heure et fuseau horaire — appliqués partout dans l'application.</p>
+          </div>
+
+          <div class="panel-section-title">📅 Format de date &amp; heure</div>
+
           <div class="settings-row">
-            <div><div class="settings-row-label">📅 Format de date</div><div class="settings-row-desc">Comment afficher les dates partout dans l'app</div></div>
+            <div>
+              <div class="settings-row-label">📅 Format de date</div>
+              <div class="settings-row-desc">Comment afficher les dates dans l'application</div>
+            </div>
             <select class="form-select" style="width:220px" [value]="settings.settings.formatDate" (change)="settings.setDraft('formatDate', $any($event.target).value)">
-              <option value="dd/MM/yyyy">31/12/2026 (FR)</option>
-              <option value="MM/dd/yyyy">12/31/2026 (US)</option>
-              <option value="yyyy-MM-dd">2026-12-31 (ISO)</option>
+              <option value="dd/MM/yyyy">31/12/2026 — Jour/Mois/Année (FR)</option>
+              <option value="MM/dd/yyyy">12/31/2026 — Mois/Jour/Année (US)</option>
+              <option value="yyyy-MM-dd">2026-12-31 — Année-Mois-Jour (ISO)</option>
             </select>
           </div>
-          <div class="info-box" style="margin-top:20px">
-            <div style="font-weight:700;margin-bottom:8px">👁️ Aperçu :</div>
-            <div style="font-size:14px">📅 Date : <strong>{{ getDatePreview() }}</strong></div>
+
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">🕐 Format de l'heure</div>
+              <div class="settings-row-desc">Affichage en 24 heures ou en AM/PM (12 heures)</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <label style="display:flex;align-items:center;gap:8px;padding:8px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px" [style.borderColor]="settings.settings.heureFormat==='24h' ? 'var(--primary)' : 'var(--border)'" [style.background]="settings.settings.heureFormat==='24h' ? 'var(--primary-light)' : 'transparent'">
+                <input type="radio" name="heureFormat" value="24h" [checked]="settings.settings.heureFormat==='24h'" (change)="settings.setDraft('heureFormat', '24h')" />
+                <span>14:30 <small style="color:var(--text-muted)">(24h)</small></span>
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;padding:8px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px" [style.borderColor]="settings.settings.heureFormat==='12h' ? 'var(--primary)' : 'var(--border)'" [style.background]="settings.settings.heureFormat==='12h' ? 'var(--primary-light)' : 'transparent'">
+                <input type="radio" name="heureFormat" value="12h" [checked]="settings.settings.heureFormat==='12h'" (change)="settings.setDraft('heureFormat', '12h')" />
+                <span>02:30 PM <small style="color:var(--text-muted)">(12h)</small></span>
+              </label>
+            </div>
           </div>
+
+          <div class="panel-section-title" style="margin-top:24px">🌍 Fuseau horaire</div>
+
+          <div class="settings-row" style="align-items:flex-start;gap:20px">
+            <div style="flex:1">
+              <div class="settings-row-label">🕰️ Fuseau horaire</div>
+              <div class="settings-row-desc">Toutes les dates et heures sont converties selon ce fuseau</div>
+            </div>
+            <div style="width:320px">
+              <select class="form-select" style="width:100%" [value]="settings.settings.timezone" (change)="settings.setDraft('timezone', $any($event.target).value)">
+                @for (tz of timezones; track tz.value) {
+                  <option [value]="tz.value">{{ tz.label }} ({{ tz.offset }})</option>
+                }
+              </select>
+              <div style="margin-top:6px;font-size:11.5px;color:var(--text-muted)">
+                Fuseau actuel : <strong style="color:var(--primary)">{{ settings.settings.timezone }}</strong>
+                &nbsp;·&nbsp; Décalage : <strong>{{ getCurrentTimezoneOffset() }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live preview card -->
+          <div class="info-box" style="margin-top:24px;padding:16px 20px">
+            <div style="font-weight:700;margin-bottom:12px;font-size:13px">👁️ Aperçu en temps réel</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div style="background:var(--surface2);border-radius:8px;padding:12px">
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Date</div>
+                <div style="font-size:18px;font-weight:700;font-family:monospace;color:var(--primary)">{{ getDatePreview() }}</div>
+              </div>
+              <div style="background:var(--surface2);border-radius:8px;padding:12px">
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Heure locale</div>
+                <div style="font-size:18px;font-weight:700;font-family:monospace;color:var(--primary)">{{ getTimePreview() }}</div>
+              </div>
+            </div>
+          </div>
+
           <div class="panel-actions">
             <button class="btn btn-primary" (click)="handleApply()">💾 Appliquer partout</button>
           </div>
@@ -167,9 +225,45 @@
           <div class="panel-header"><h2>🔒 Sécurité</h2><p>Protégez votre compte avec un mot de passe fort.</p></div>
           <div class="panel-section-title">🔑 Changer le mot de passe</div>
           <div class="form-grid">
-            <div class="form-field full"><label class="label">Mot de passe actuel</label><input type="password" class="form-input" [(ngModel)]="securite.ancienMdp" /></div>
-            <div class="form-field"><label class="label">Nouveau mot de passe</label><input type="password" class="form-input" [(ngModel)]="securite.nouveauMdp" /></div>
-            <div class="form-field"><label class="label">Confirmer le nouveau</label><input type="password" class="form-input" [(ngModel)]="securite.confirmMdp" /></div>
+            <div class="form-field full">
+              <label class="label">Mot de passe actuel</label>
+              <div class="input-wrapper">
+                <input [type]="showPwd.ancien ? 'text' : 'password'" class="form-input" style="width:100%;padding-right:40px" [(ngModel)]="securite.ancienMdp" autocomplete="new-password" readonly (focus)="$any($event.target).removeAttribute('readonly')" />
+                <button type="button" class="password-toggle" (click)="showPwd.ancien=!showPwd.ancien">
+                  @if (showPwd.ancien) {
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  } @else {
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  }
+                </button>
+              </div>
+            </div>
+            <div class="form-field">
+              <label class="label">Nouveau mot de passe</label>
+              <div class="input-wrapper">
+                <input [type]="showPwd.nouveau ? 'text' : 'password'" class="form-input" style="width:100%;padding-right:40px" [(ngModel)]="securite.nouveauMdp" autocomplete="new-password" readonly (focus)="$any($event.target).removeAttribute('readonly')" />
+                <button type="button" class="password-toggle" (click)="showPwd.nouveau=!showPwd.nouveau">
+                  @if (showPwd.nouveau) {
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  } @else {
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  }
+                </button>
+              </div>
+            </div>
+            <div class="form-field">
+              <label class="label">Confirmer le nouveau</label>
+              <div class="input-wrapper">
+                <input [type]="showPwd.confirm ? 'text' : 'password'" class="form-input" style="width:100%;padding-right:40px" [(ngModel)]="securite.confirmMdp" autocomplete="new-password" readonly (focus)="$any($event.target).removeAttribute('readonly')" />
+                <button type="button" class="password-toggle" (click)="showPwd.confirm=!showPwd.confirm">
+                  @if (showPwd.confirm) {
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  } @else {
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  }
+                </button>
+              </div>
+            </div>
           </div>
           <div class="info-box" style="margin-top:16px;font-size:13px">💡 <strong>Recommandations :</strong> Au moins 8 caractères, avec majuscules, chiffres et symboles.</div>
           <div class="panel-actions">

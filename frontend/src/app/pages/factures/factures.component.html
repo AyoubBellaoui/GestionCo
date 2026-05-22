@@ -271,18 +271,29 @@
     <div class="info-box" style="font-size:13px">
       💡 Choisissez une vente <strong>existante sans facture</strong>. La facture sera générée automatiquement avec un numéro unique.
     </div>
-    <div class="form-field">
-      <label class="label">Rechercher une vente</label>
-      <input type="text" class="form-input" placeholder="Référence vente ou nom client..." [(ngModel)]="searchVente" />
-    </div>
+    @if (!loadingVentes && ventesSansFacture.length > 0) {
+      <div class="form-field">
+        <label class="label">Rechercher une vente</label>
+        <div style="position:relative">
+          <input type="text" class="form-input" placeholder="Référence ou nom client..." [(ngModel)]="searchVente" (ngModelChange)="onSearchVenteChange()" style="padding-right:32px" />
+          @if (searchVente) {
+            <button type="button" (click)="searchVente='';onSearchVenteChange()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;line-height:1;padding:0">×</button>
+          }
+        </div>
+      </div>
+    }
     <div class="form-field">
       <label class="label">
         Sélectionner la vente *
-        @if (ventesSansFacture.length > 0) {
-          <span style="color:var(--text-muted);font-weight:400;margin-left:8px">({{ ventesFiltrees.length }} disponible{{ ventesFiltrees.length > 1 ? 's' : '' }})</span>
+        @if (!loadingVentes && ventesSansFacture.length > 0) {
+          <span style="color:var(--text-muted);font-weight:400;margin-left:8px">({{ ventesFiltrees.length }}/{{ ventesSansFacture.length }} disponible{{ ventesFiltrees.length > 1 ? 's' : '' }})</span>
         }
       </label>
-      @if (ventesSansFacture.length === 0) {
+      @if (loadingVentes) {
+        <div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;border:1px solid var(--border);border-radius:8px">
+          <div style="margin-bottom:8px">⏳</div>Chargement des ventes…
+        </div>
+      } @else if (ventesSansFacture.length === 0) {
         <div class="empty-state" style="padding:24px">
           <div class="empty-icon">✅</div>
           <div class="empty-title">Toutes les ventes ont déjà une facture</div>
@@ -291,7 +302,9 @@
       } @else {
         <div style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface2)">
           @if (ventesFiltrees.length === 0) {
-            <div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px">Aucune vente trouvée</div>
+            <div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px">
+              Aucune vente correspondant à "<strong>{{ searchVente }}</strong>"
+            </div>
           } @else {
             @for (v of ventesFiltrees; track v.id) {
               <label style="display:flex;align-items:center;gap:12px;padding:12px;cursor:pointer;border-bottom:1px solid var(--border)" [style.background]="selectedVenteId === v.id ? 'var(--primary-light)' : 'transparent'">

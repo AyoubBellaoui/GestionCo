@@ -19,6 +19,7 @@ public interface IJwtService
     string GenerateAccessToken(Utilisateur user);
     string GenerateRefreshToken();
     int? ValidateAccessToken(string token);
+    int? ExtractUserIdIgnoreExpiry(string token);
 }
 
 public interface IPasswordHasher
@@ -63,7 +64,8 @@ public interface IAuditLogger
         object? anciennesValeurs = null,
         object? nouvellesValeurs = null,
         bool estSensible = false,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        int? utilisateurId = null);
 }
 
 public class EntrepriseInfoDto
