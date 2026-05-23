@@ -106,6 +106,16 @@ public enum StatutDevis
     Converti = 6
 }
 
+public enum StatutCommande
+{
+    EnAttente  = 1,
+    Confirmee  = 2,
+    EnCours    = 3,
+    Livree     = 4,
+    Convertie  = 5,
+    Annulee    = 6
+}
+
 public enum ActionLog
 {
     Create = 1,

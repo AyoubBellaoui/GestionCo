@@ -514,6 +514,58 @@ export interface ConversionDevisResult {
   devisReference: string;
 }
 
+// ============ COMMANDES ============
+export interface LigneCommande {
+  id?: number;
+  produitId: number;
+  nomProduit?: string;
+  referenceProduit?: string;
+  quantite: number;
+  prixUnitaire: number;
+  remise: number;
+  tva: number;
+  total: number;
+}
+
+export interface Commande {
+  id: number;
+  reference: string;
+  clientId: number;
+  nomClient: string;
+  clientInitiales?: string;
+  devisId?: number;
+  devisReference?: string;
+  utilisateurId: number;
+  nomUtilisateur: string;
+  dateCommande: string;
+  dateLivraison?: string;
+  montantTotalHT: number;
+  montantTVA: number;
+  montantTotal: number;
+  statut: string;
+  statutLibelle: string;
+  notes?: string;
+  venteId?: number;
+  venteReference?: string;
+  nombreArticles: number;
+  lignes: LigneCommande[];
+}
+
+export interface ConversionCommandeResult {
+  commandeId: number;
+  commandeReference: string;
+  devisId?: number;
+  devisReference?: string;
+}
+
+export interface CommandeStats {
+  total: number;
+  enAttente: number;
+  confirmees: number;
+  converties: number;
+  montantTotal: number;
+}
+
 // ============ RAPPORTS ============
 export interface PLMois {
   mois: number;

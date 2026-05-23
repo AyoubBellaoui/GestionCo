@@ -408,6 +408,65 @@ public class ParametresEntrepriseConfiguration : IEntityTypeConfiguration<Parame
     }
 }
 
+public class CommandeConfiguration : IEntityTypeConfiguration<Commande>
+{
+    public void Configure(EntityTypeBuilder<Commande> b)
+    {
+        b.ToTable("commandes");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Reference).HasMaxLength(30).IsRequired();
+        b.Property(x => x.MontantTotalHT).HasColumnType("decimal(18,2)");
+        b.Property(x => x.MontantTVA).HasColumnType("decimal(18,2)");
+        b.Property(x => x.MontantTotal).HasColumnType("decimal(18,2)");
+        b.Property(x => x.Statut).HasConversion<int>();
+        b.Property(x => x.Notes).HasMaxLength(1000);
+        b.HasIndex(x => x.Reference).IsUnique();
+
+        b.HasOne(x => x.Client)
+            .WithMany()
+            .HasForeignKey(x => x.ClientId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        b.HasOne(x => x.Utilisateur)
+            .WithMany()
+            .HasForeignKey(x => x.UtilisateurId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        b.HasOne(x => x.Devis)
+            .WithMany()
+            .HasForeignKey(x => x.DevisId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        b.HasOne(x => x.Vente)
+            .WithMany()
+            .HasForeignKey(x => x.VenteId)
+            .OnDelete(DeleteBehavior.SetNull);
+    }
+}
+
+public class LigneCommandeConfiguration : IEntityTypeConfiguration<LigneCommande>
+{
+    public void Configure(EntityTypeBuilder<LigneCommande> b)
+    {
+        b.ToTable("lignes_commande");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.PrixUnitaire).HasColumnType("decimal(18,2)");
+        b.Property(x => x.Remise).HasColumnType("decimal(5,2)");
+        b.Property(x => x.Tva).HasColumnType("decimal(5,2)");
+        b.Ignore(x => x.Total);
+
+        b.HasOne(x => x.Commande)
+            .WithMany(c => c.Lignes)
+            .HasForeignKey(x => x.CommandeId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        b.HasOne(x => x.Produit)
+            .WithMany()
+            .HasForeignKey(x => x.ProduitId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 public class LigneDevisConfiguration : IEntityTypeConfiguration<LigneDevis>
 {
     public void Configure(EntityTypeBuilder<LigneDevis> b)

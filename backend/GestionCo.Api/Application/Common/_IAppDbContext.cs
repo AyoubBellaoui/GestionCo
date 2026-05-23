@@ -27,6 +27,8 @@ public interface IAppDbContext
     DbSet<Notification> Notifications { get; }
     DbSet<DevisEntity> Devis { get; }
     DbSet<LigneDevisEntity> LignesDevis { get; }
+    DbSet<Commande> Commandes { get; }
+    DbSet<LigneCommande> LignesCommande { get; }
     DbSet<ParametresFacturation> ParametresFacturation { get; }
     DbSet<ParametresEntreprise> ParametresEntreprise { get; }
 

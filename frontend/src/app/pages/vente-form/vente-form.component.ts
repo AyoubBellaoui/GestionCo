@@ -5,7 +5,7 @@ import { NgClass } from '@angular/common';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SettingsService } from '../../core/services/settings.service';
-import { Client, Produit, Vente } from '../../core/models';
+import { Client, Produit, Vente, Commande } from '../../core/models';
 import { formatNum } from '../../core/utils/format';
 
 interface NewClientForm {
@@ -40,6 +40,7 @@ interface LigneForm {
 })
 export class VenteFormComponent implements OnInit {
   editId: number | null = null;
+  sourceCommandeId: number | null = null;
   clients: Client[] = [];
   produits: Produit[] = [];
   loadingData = true;
@@ -52,7 +53,7 @@ export class VenteFormComponent implements OnInit {
   submitted = false;
 
   get isEdit(): boolean { return this.editId !== null; }
-  get pageTitle(): string { return this.isEdit ? 'Modifier la vente' : 'Nouvelle vente'; }
+  get pageTitle(): string { return this.isEdit ? 'Modifier la vente' : this.sourceCommandeId ? 'Convertir en vente' : 'Nouvelle vente'; }
 
   newClientModalOpen = false;
   newClientSaving = false;
@@ -97,25 +98,50 @@ export class VenteFormComponent implements OnInit {
         });
       } catch { this.toast.notify('Erreur lors du chargement de la vente', 'error'); }
     } else {
-      const dup: Vente | undefined = history.state?.duplicate;
-      if (dup?.lignes?.length) {
-        this.clientId = dup.clientId;
-        this.lignes = dup.lignes.map(l => {
-          const prod = p.find(x => x.id === l.produitId);
-          return {
-            produitId: l.produitId,
-            nomProduit: l.nomProduit,
-            referenceProduit: l.referenceProduit,
-            quantite: l.quantite,
-            prixUnitaire: l.prixUnitaire,
-            remise: l.remise ?? 0,
-            prixReference: prod?.prixTTC,
-            tva: l.tva,
-            total: l.total,
-            stockDisponible: prod?.quantiteStock,
-          };
-        });
-        this.onClientChange();
+      const commandeIdParam = this.route.snapshot.queryParamMap.get('commandeId');
+      if (commandeIdParam) {
+        this.sourceCommandeId = +commandeIdParam;
+        try {
+          const commande: Commande = await this.api.commandeGet(this.sourceCommandeId);
+          this.clientId = commande.clientId;
+          this.lignes = commande.lignes.map(l => {
+            const prod = p.find(x => x.id === l.produitId);
+            return {
+              produitId: l.produitId,
+              nomProduit: l.nomProduit,
+              referenceProduit: l.referenceProduit,
+              quantite: l.quantite,
+              prixUnitaire: l.prixUnitaire,
+              remise: l.remise ?? 0,
+              prixReference: prod?.prixTTC,
+              tva: l.tva,
+              total: l.total,
+              stockDisponible: prod?.quantiteStock,
+            };
+          });
+          this.onClientChange();
+        } catch { this.toast.notify('Erreur lors du chargement de la commande', 'error'); }
+      } else {
+        const dup: Vente | undefined = history.state?.duplicate;
+        if (dup?.lignes?.length) {
+          this.clientId = dup.clientId;
+          this.lignes = dup.lignes.map(l => {
+            const prod = p.find(x => x.id === l.produitId);
+            return {
+              produitId: l.produitId,
+              nomProduit: l.nomProduit,
+              referenceProduit: l.referenceProduit,
+              quantite: l.quantite,
+              prixUnitaire: l.prixUnitaire,
+              remise: l.remise ?? 0,
+              prixReference: prod?.prixTTC,
+              tva: l.tva,
+              total: l.total,
+              stockDisponible: prod?.quantiteStock,
+            };
+          });
+          this.onClientChange();
+        }
       }
     }
 
@@ -244,6 +270,7 @@ export class VenteFormComponent implements OnInit {
           paiementInitial: this.paiementInitial,
           methodePaiementInitial: this.paiementInitial > 0 ? this.methodePaiement : undefined,
           dateEcheance: this.dateEcheance || undefined,
+          commandeId: this.sourceCommandeId || undefined,
         });
         this.toast.notify('Vente créée avec succès', 'success');
       }

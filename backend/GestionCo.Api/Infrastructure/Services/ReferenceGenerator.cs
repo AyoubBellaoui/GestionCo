@@ -101,6 +101,20 @@ public class ReferenceGenerator : IReferenceGenerator
         return $"{prefix}{ExtractNextNumber(lastRef, prefix, 4):D4}";
     }
 
+    public async Task<string> GenerateCommandeReferenceAsync(CancellationToken ct = default)
+    {
+        var year = DateTime.UtcNow.Year;
+        var prefix = $"CMD-{year}-";
+
+        var lastRef = await _db.Commandes
+            .Where(c => c.Reference.StartsWith(prefix))
+            .OrderByDescending(c => c.Reference)
+            .Select(c => c.Reference)
+            .FirstOrDefaultAsync(ct);
+
+        return $"{prefix}{ExtractNextNumber(lastRef, prefix, 4):D4}";
+    }
+
     private static int ExtractNextNumber(string? lastRef, string prefix, int padding)
     {
         if (string.IsNullOrEmpty(lastRef)) return 1;

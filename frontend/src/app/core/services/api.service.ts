@@ -7,6 +7,7 @@ import {
   UtilisateurDto, CreateUtilisateurPayload, UpdateUtilisateurPayload,
   PagedList, VenteSansFacture, Charge, CategorieCharge, PaiementCharge,
   AppNotification, NotificationSummary, Devis, ConversionDevisResult,
+  Commande, ConversionCommandeResult, CommandeStats,
   PLReport, TVAReport, BalanceAgeeReport, PerformanceCommerciale, SearchResults,
   FacturationSettings, ClientsStats, FournisseursStats, FacturesStats, DevisStats,
   ChargesStats, MouvementsStats, EntrepriseSettings
@@ -359,6 +360,38 @@ export class ApiService {
   devisEmail(id: number, email: string, message?: string, entreprise?: Record<string, string>): Promise<void> {
     return firstValueFrom(this.http.post<void>(`${this.base}/devis/${id}/email`, { email, message, entrepriseInfo: entreprise ?? {} }));
   }
+  // ── COMMANDES ──
+  commandesList(): Promise<Commande[]> {
+    return firstValueFrom(
+      this.http.get<Commande[] | PagedList<Commande>>(`${this.base}/commandes`, { params: LIST_PARAMS })
+        .pipe(map(normalizeList))
+    );
+  }
+  commandesListPaged(p: { page?: number; pageSize?: number; search?: string; statut?: string; clientId?: number; dateDebut?: string; dateFin?: string } = {}): Promise<PagedList<Commande>> {
+    return firstValueFrom(this.http.get<PagedList<Commande>>(`${this.base}/commandes`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
+  }
+  commandeGet(id: number): Promise<Commande> {
+    return firstValueFrom(this.http.get<Commande>(`${this.base}/commandes/${id}`));
+  }
+  commandeCreate(data: any): Promise<Commande> {
+    return firstValueFrom(this.http.post<Commande>(`${this.base}/commandes`, data));
+  }
+  commandeUpdate(id: number, data: any): Promise<Commande> {
+    return firstValueFrom(this.http.put<Commande>(`${this.base}/commandes/${id}`, data));
+  }
+  commandeUpdateStatut(id: number, statut: string): Promise<Commande> {
+    return firstValueFrom(this.http.put<Commande>(`${this.base}/commandes/${id}/statut`, { statut }));
+  }
+  commandeDelete(id: number): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.base}/commandes/${id}`));
+  }
+  commandeStats(): Promise<CommandeStats> {
+    return firstValueFrom(this.http.get<CommandeStats>(`${this.base}/commandes/stats`));
+  }
+  devisConvertirEnCommande(id: number): Promise<ConversionCommandeResult> {
+    return firstValueFrom(this.http.post<ConversionCommandeResult>(`${this.base}/devis/${id}/convertir-commande`, {}));
+  }
+
   factureEmail(id: number, email: string, message?: string, entreprise?: Record<string, string>): Promise<void> {
     return firstValueFrom(this.http.post<void>(`${this.base}/factures/${id}/email`, { email, message, entrepriseInfo: entreprise ?? {} }));
   }

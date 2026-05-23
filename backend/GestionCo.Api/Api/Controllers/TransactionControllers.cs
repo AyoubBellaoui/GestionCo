@@ -1,4 +1,5 @@
 using GestionCo.Api.Application.Achats;
+using GestionCo.Api.Application.Commandes;
 using GestionCo.Api.Application.Charges;
 using GestionCo.Api.Application.Devis;
 using GestionCo.Api.Application.Factures;
@@ -63,6 +64,46 @@ public class VentesController : ControllerBase
 }
 
 public class CancelDto { public string? Raison { get; set; } }
+
+[ApiController]
+[Route("api/commandes")]
+[Authorize(Policy = "AdminOrManager")]
+public class CommandesController : ControllerBase
+{
+    private readonly IMediator _mediator;
+    public CommandesController(IMediator mediator) => _mediator = mediator;
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll([FromQuery] GetCommandesQuery q, CancellationToken ct)
+        => Ok(await _mediator.Send(q, ct));
+
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetCommandeStatsQuery(), ct));
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(int id, CancellationToken ct)
+        => Ok(await _mediator.Send(new GetCommandeByIdQuery(id), ct));
+
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] CreateCommandeDto dto, CancellationToken ct)
+        => Ok(await _mediator.Send(new CreateCommandeCommand(dto), ct));
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateCommandeDto dto, CancellationToken ct)
+        => Ok(await _mediator.Send(new UpdateCommandeCommand(id, dto), ct));
+
+    [HttpPut("{id}/statut")]
+    public async Task<IActionResult> UpdateStatut(int id, [FromBody] UpdateCommandeStatutDto dto, CancellationToken ct)
+        => Ok(await _mediator.Send(new UpdateCommandeStatutCommand(id, dto.Statut), ct));
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    {
+        await _mediator.Send(new DeleteCommandeCommand(id), ct);
+        return Ok(new { message = "Commande supprimée" });
+    }
+}
 
 [ApiController]
 [Route("api/achats")]
@@ -340,6 +381,10 @@ public class DevisController(IMediator mediator, IConfiguration config) : Contro
     [HttpPost("{id}/convertir")]
     public async Task<IActionResult> Convertir(int id, CancellationToken ct)
         => Ok(await mediator.Send(new ConvertirDevisEnVenteCommand(id), ct));
+
+    [HttpPost("{id}/convertir-commande")]
+    public async Task<IActionResult> ConvertirEnCommande(int id, CancellationToken ct)
+        => Ok(await mediator.Send(new ConvertirDevisEnCommandeCommand(id), ct));
 
     [HttpPost("{id}/pdf")]
     public async Task<IActionResult> DownloadPdf(int id, [FromBody] EntrepriseInfoDto? info, CancellationToken ct)

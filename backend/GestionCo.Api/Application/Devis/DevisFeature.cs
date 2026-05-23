@@ -1,4 +1,5 @@
 using FluentValidation;
+using GestionCo.Api.Application.Commandes;
 using GestionCo.Api.Application.Common.Exceptions;
 using GestionCo.Api.Application.Common.Interfaces;
 using GestionCo.Api.Application.Common.Models;
@@ -90,6 +91,7 @@ public record CreateDevisCommand(CreateDevisDto Dto) : IRequest<DevisDto>;
 public record UpdateDevisCommand(int Id, UpdateDevisDto Dto) : IRequest<DevisDto>;
 public record UpdateDevisStatutCommand(int Id, StatutDevis Statut) : IRequest<DevisDto>;
 public record ConvertirDevisEnVenteCommand(int Id) : IRequest<ConversionResultDto>;
+public record ConvertirDevisEnCommandeCommand(int Id) : IRequest<ConversionCommandeResultDto>;
 public record DeleteDevisCommand(int Id) : IRequest;
 
 // ============ VALIDATORS ============
@@ -270,7 +272,7 @@ public class UpdateDevisStatutHandler : IRequestHandler<UpdateDevisStatutCommand
 
         var allowedTransitions = new Dictionary<StatutDevis, List<StatutDevis>>
         {
-            [StatutDevis.Brouillon] = new() { StatutDevis.Envoye },
+            [StatutDevis.Brouillon] = new() { StatutDevis.Envoye, StatutDevis.Accepte, StatutDevis.Refuse },
             [StatutDevis.Envoye]    = new() { StatutDevis.Accepte, StatutDevis.Refuse, StatutDevis.Expire },
         };
 
@@ -430,6 +432,87 @@ public class ConvertirDevisEnVenteHandler : IRequestHandler<ConvertirDevisEnVent
         {
             VenteId = vente.Id,
             VenteReference = vente.Reference,
+            DevisReference = devis.Reference
+        };
+    }
+}
+
+public class ConvertirDevisEnCommandeHandler : IRequestHandler<ConvertirDevisEnCommandeCommand, ConversionCommandeResultDto>
+{
+    private readonly IAppDbContext _db;
+    private readonly IReferenceGenerator _refGen;
+    private readonly ICurrentUserService _current;
+    private readonly IAuditLogger _audit;
+    private readonly INotificationService _notif;
+
+    public ConvertirDevisEnCommandeHandler(IAppDbContext db, IReferenceGenerator refGen,
+        ICurrentUserService current, IAuditLogger audit, INotificationService notif)
+    {
+        _db = db; _refGen = refGen; _current = current; _audit = audit; _notif = notif;
+    }
+
+    public async Task<ConversionCommandeResultDto> Handle(ConvertirDevisEnCommandeCommand req, CancellationToken ct)
+    {
+        var userId = _current.UserId ?? throw new UnauthorizedException();
+
+        var devis = await _db.Devis
+            .Include(d => d.Lignes)
+            .Include(d => d.Client)
+            .FirstOrDefaultAsync(d => d.Id == req.Id, ct)
+            ?? throw new NotFoundException("Devis", req.Id);
+
+        if (devis.Statut != StatutDevis.Accepte)
+            throw new BusinessException("Seul un devis accepté peut être converti en commande");
+
+        var reference = await _refGen.GenerateCommandeReferenceAsync(ct);
+        var now = DateTime.UtcNow;
+
+        var commande = new Commande
+        {
+            Reference = reference,
+            ClientId = devis.ClientId,
+            DevisId = devis.Id,
+            UtilisateurId = userId,
+            DateCommande = now,
+            Notes = devis.Notes,
+            Statut = StatutCommande.EnAttente,
+            Lignes = devis.Lignes.Select(l => new LigneCommande
+            {
+                ProduitId = l.ProduitId,
+                Quantite = l.Quantite,
+                PrixUnitaire = l.PrixUnitaire,
+                Remise = l.Remise,
+                Tva = l.Tva
+            }).ToList()
+        };
+
+        commande.MontantTotalHT = commande.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (1 - l.Remise / 100));
+        commande.MontantTVA = commande.Lignes.Sum(l => l.Quantite * l.PrixUnitaire * (1 - l.Remise / 100) * (l.Tva / 100));
+        commande.MontantTotal = commande.MontantTotalHT + commande.MontantTVA;
+
+        _db.Commandes.Add(commande);
+
+        devis.Statut = StatutDevis.Converti;
+
+        await _db.SaveChangesAsync(ct);
+
+        await _audit.LogAsync(ActionLog.Create, "commande",
+            $"Commande {commande.Reference} créée depuis devis {devis.Reference}",
+            commande.Id, commande.Reference, ct: ct);
+
+        await _notif.CreateAsync(
+            titre: $"Devis converti en commande — {devis.Reference}",
+            message: $"Le devis {devis.Reference} a été converti en commande {commande.Reference} ({commande.MontantTotal:N2} MAD).",
+            type: TypeNotification.Success,
+            categorie: CategorieNotification.Vente,
+            entiteId: commande.Id, entiteReference: commande.Reference,
+            lienUrl: "/commandes", ct: ct);
+
+        return new ConversionCommandeResultDto
+        {
+            CommandeId = commande.Id,
+            CommandeReference = commande.Reference,
+            DevisId = devis.Id,
             DevisReference = devis.Reference
         };
     }

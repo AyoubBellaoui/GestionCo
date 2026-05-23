@@ -1,0 +1,194 @@
+<div class="topbar">
+  <div class="topbar-left" style="display:flex;align-items:center;gap:14px">
+    <button class="back-btn" (click)="router.navigate(['/commandes'])">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    </button>
+    <div>
+      <h1>{{ title }}</h1>
+      <div class="breadcrumb">
+        <span class="breadcrumb-link" (click)="router.navigate(['/commandes'])">Commandes</span>
+        <span class="breadcrumb-sep">/</span>
+        <span>{{ isEdit ? 'Modifier' : 'Nouvelle' }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-ghost" (click)="router.navigate(['/commandes'])">Annuler</button>
+    <button class="btn btn-primary" (click)="save()" [disabled]="saving || loadingData">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      {{ saving ? 'Enregistrement…' : (isEdit ? 'Enregistrer les modifications' : 'Enregistrer la commande') }}
+    </button>
+  </div>
+</div>
+
+<div class="content form-page-content">
+  <div class="form-layout">
+    <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+
+      <!-- Client -->
+      <div class="form-card">
+        <div class="form-section last">
+          <div class="form-section-title">👤 Client</div>
+          <div class="form-section-sub">Sélectionnez le client de la commande</div>
+          <div class="form-group">
+            <label class="form-label">Client <span class="required">*</span></label>
+            <select class="form-select" [(ngModel)]="clientId" [disabled]="loadingData"
+                    [class.invalid]="submitted && !clientId">
+              <option value="">— Sélectionner un client —</option>
+              @for (c of clients; track c.id) { <option [value]="c.id">{{ c.nomClient }}</option> }
+            </select>
+            @if (submitted && !clientId) {
+              <div class="form-error" style="margin-top:4px">Veuillez sélectionner un client</div>
+            }
+            @if (selectedClient) {
+              <div class="form-help">
+                {{ selectedClient.telephone ? '📞 ' + selectedClient.telephone : '' }}
+                {{ selectedClient.email ? ' · ' + selectedClient.email : '' }}
+                {{ selectedClient.ville ? ' · ' + selectedClient.ville : '' }}
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Lignes -->
+      <div class="form-card">
+        <div class="form-section last">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <div class="form-section-title">📋 Lignes de la commande</div>
+            <button class="btn btn-ghost btn-sm" (click)="addLigne()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Ajouter une ligne
+            </button>
+          </div>
+          <div class="form-section-sub">Produits commandés</div>
+          <div class="lignes-table-wrap">
+            <table class="data-table lignes-table">
+              <thead>
+                <tr>
+                  <th>Produit</th>
+                  <th style="width:70px">Qté</th>
+                  <th style="width:160px">Prix achat TTC</th>
+                  <th style="width:160px">Prix vente HT</th>
+                  <th style="width:90px">Remise %</th>
+                  <th style="width:70px">TVA</th>
+                  <th style="width:130px;text-align:right">Total HT</th>
+                  <th style="width:40px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (lignes.length === 0) {
+                  <tr><td colspan="8"><div class="empty-state" style="padding:24px 0"><div class="empty-icon">📋</div><div class="empty-title">Aucune ligne</div><div class="empty-sub">Cliquez sur "Ajouter une ligne" pour commencer</div></div></td></tr>
+                }
+                @for (l of lignes; track $index) {
+                  <tr>
+                    <td>
+                      <select class="form-select" style="height:34px;font-size:13px" [value]="l.produitId"
+                              (change)="updateLigneProduit($index, +$any($event.target).value)"
+                              [class.invalid]="submitted && l.produitId === 0">
+                        <option [value]="0" [selected]="l.produitId === 0">— Produit —</option>
+                        @for (p of produits; track p.id) {
+                          <option [value]="p.id" [selected]="p.id === l.produitId">{{ p.reference }} — {{ p.nom }} ({{ p.quantiteStock }} en stock)</option>
+                        }
+                      </select>
+                      @if (submitted && l.produitId === 0) {
+                        <div class="form-error" style="font-size:10.5px;margin-top:2px">Requis</div>
+                      }
+                    </td>
+                    <td>
+                      <input type="number" [min]="1" class="form-input" style="height:34px"
+                             [value]="l.quantite" (change)="updateLigneQty($index, +$any($event.target).value)"
+                             [class.invalid]="submitted && l.quantite < 1" />
+                    </td>
+                    <td>
+                      <div class="input-group">
+                        <input type="text" disabled class="form-input with-suffix" style="height:34px;background:var(--surface2);color:var(--text-muted)" [value]="l.prixReference !== undefined ? formatNum(l.prixReference) : '—'" />
+                        <span class="input-suffix" style="top:50%">{{ devise }}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="input-group">
+                        <input type="number" min="0" step="0.01" class="form-input with-suffix" style="height:34px"
+                               placeholder="0.00" [value]="l.prixUnitaire || ''"
+                               (change)="updateLignePrix($index, +$any($event.target).value)"
+                               [class.invalid]="submitted && l.prixUnitaire <= 0" />
+                        <span class="input-suffix" style="top:50%">{{ devise }}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="input-group">
+                        <input type="number" [min]="0" [max]="100" step="1" class="form-input with-suffix" style="height:34px"
+                               placeholder="0" [value]="l.remise || 0"
+                               (change)="updateLigneRemise($index, +$any($event.target).value)" />
+                        <span class="input-suffix" style="top:50%">%</span>
+                      </div>
+                    </td>
+                    <td>
+                      <select class="form-select" style="height:34px;font-size:13px" [value]="l.tva" (change)="updateLigneTva($index, +$any($event.target).value)">
+                        <option [value]="0"  [selected]="l.tva === 0">0%</option>
+                        <option [value]="7"  [selected]="l.tva === 7">7%</option>
+                        <option [value]="14" [selected]="l.tva === 14">14%</option>
+                        <option [value]="20" [selected]="l.tva === 20">20%</option>
+                      </select>
+                    </td>
+                    <td style="text-align:right;font-weight:700">
+                      {{ formatNum(l.quantite * l.prixUnitaire * (1 - l.remise / 100)) }} {{ devise }}
+                    </td>
+                    <td>
+                      <button class="btn-icon danger" (click)="removeLigne($index)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          @if (submitted && lignes.length === 0) {
+            <div class="form-error-banner">Ajoutez au moins une ligne de produit</div>
+          }
+          @if (lignes.length > 0) {
+            <div class="totals-row">
+              <div class="total-item"><span class="total-label">Total HT</span><span class="total-value">{{ formatNum(totalHT) }} {{ devise }}</span></div>
+              <div class="total-item"><span class="total-label">TVA</span><span class="total-value">{{ formatNum(totalTVA) }} {{ devise }}</span></div>
+              <div class="total-item highlight"><span class="total-label">Total TTC</span><span class="total-value primary">{{ formatNum(totalTTC) }} {{ devise }}</span></div>
+            </div>
+          }
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="form-sidebar">
+      <div class="form-card">
+        <div class="form-section-title">📅 Livraison & Notes</div>
+        <div class="form-section-sub" style="margin-bottom:14px">Paramètres optionnels de la commande</div>
+        <div class="form-group">
+          <label class="form-label">Date de livraison prévue</label>
+          <input type="date" class="form-input" [(ngModel)]="dateLivraison" />
+          <div class="form-help">Laissez vide si non définie</div>
+        </div>
+        <div class="form-group" style="margin-top:12px">
+          <label class="form-label">Notes</label>
+          <textarea class="form-input" rows="4" placeholder="Instructions de livraison, remarques…" [(ngModel)]="notes" style="resize:vertical"></textarea>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <div class="form-section-title">📋 Résumé</div>
+        <div class="form-section-sub" style="margin-bottom:14px">Aperçu de la commande</div>
+        <div class="preview-rows">
+          <div class="preview-row"><span class="preview-label">Client</span><span [class]="'preview-value' + (!selectedClient ? ' empty' : '')">{{ selectedClient?.nomClient || '—' }}</span></div>
+          <div class="preview-row"><span class="preview-label">Lignes</span><span class="preview-value">{{ lignes.length }} article{{ lignes.length !== 1 ? 's' : '' }}</span></div>
+          <div class="preview-row"><span class="preview-label">Total HT</span><span class="preview-value">{{ formatNum(totalHT) }} {{ devise }}</span></div>
+          <div class="preview-row"><span class="preview-label">TVA</span><span class="preview-value">{{ formatNum(totalTVA) }} {{ devise }}</span></div>
+          <div class="preview-row"><span class="preview-label">Total TTC</span><span class="preview-value price">{{ formatNum(totalTTC) }} {{ devise }}</span></div>
+          @if (dateLivraison) {
+            <div class="preview-row"><span class="preview-label">Livraison</span><span class="preview-value">{{ dateLivraison }}</span></div>
+          }
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>

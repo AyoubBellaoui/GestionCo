@@ -132,6 +132,18 @@ export class DevisComponent implements OnInit {
     }
   }
 
+  async convertirEnCommande(d: Devis): Promise<void> {
+    if (!confirm(`Convertir le devis ${d.reference} en commande ?`)) return;
+    try {
+      const result = await this.api.devisConvertirEnCommande(d.id);
+      this.toast.notify(`Commande ${result.commandeReference} créée avec succès !`, 'success');
+      await this.load();
+      this.router.navigate(['/commandes']);
+    } catch (e: any) {
+      this.toast.notify(e?.error?.message || 'Erreur lors de la conversion', 'error');
+    }
+  }
+
   async supprimer(d: Devis): Promise<void> {
     if (!confirm(`Supprimer le devis ${d.reference} ?`)) return;
     try {

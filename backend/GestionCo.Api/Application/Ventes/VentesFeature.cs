@@ -56,8 +56,9 @@ public class CreateVenteDto
     public DateTime? DateVente { get; set; }
     public DateTime? DateEcheance { get; set; }
     public List<CreateLigneVenteDto> Lignes { get; set; } = new();
-    public decimal? PaiementInitial { get; set; } // pour créer auto un paiement
+    public decimal? PaiementInitial { get; set; }
     public MethodePaiement? MethodePaiementInitial { get; set; }
+    public int? CommandeId { get; set; }
 }
 
 public class CreateLigneVenteDto
@@ -187,6 +188,17 @@ public class CreateVenteHandler : IRequestHandler<CreateVenteCommand, VenteDto>
 
         _db.Ventes.Add(vente);
         await _db.SaveChangesAsync(ct);
+
+        // Lier la commande si fournie
+        if (dto.CommandeId.HasValue)
+        {
+            var commande = await _db.Commandes.FirstOrDefaultAsync(c => c.Id == dto.CommandeId.Value, ct);
+            if (commande != null)
+            {
+                commande.Statut = StatutCommande.Convertie;
+                commande.VenteId = vente.Id;
+            }
+        }
 
         // Décrémenter stock + créer mouvements
         foreach (var ligne in vente.Lignes)

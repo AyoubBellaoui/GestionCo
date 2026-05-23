@@ -36,6 +36,7 @@ public interface IReferenceGenerator
     Task<string> GenerateInvoiceReferenceAsync(CancellationToken ct = default);
     Task<string> GenerateChargeReferenceAsync(CancellationToken ct = default);
     Task<string> GenerateDevisReferenceAsync(CancellationToken ct = default);
+    Task<string> GenerateCommandeReferenceAsync(CancellationToken ct = default);
 }
 
 public interface INotificationService
