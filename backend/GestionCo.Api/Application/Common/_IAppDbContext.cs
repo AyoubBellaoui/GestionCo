@@ -31,6 +31,7 @@ public interface IAppDbContext
     DbSet<LigneCommande> LignesCommande { get; }
     DbSet<ParametresFacturation> ParametresFacturation { get; }
     DbSet<ParametresEntreprise> ParametresEntreprise { get; }
+    DbSet<ParametresSmtp> ParametresSmtp { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -408,6 +408,20 @@ public class ParametresEntrepriseConfiguration : IEntityTypeConfiguration<Parame
     }
 }
 
+public class ParametresSmtpConfiguration : IEntityTypeConfiguration<ParametresSmtp>
+{
+    public void Configure(EntityTypeBuilder<ParametresSmtp> b)
+    {
+        b.ToTable("parametres_smtp");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Host).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Username).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Password).HasMaxLength(500).IsRequired();
+        b.Property(x => x.FromName).HasMaxLength(200);
+        b.Property(x => x.FromAddress).HasMaxLength(200);
+    }
+}
+
 public class CommandeConfiguration : IEntityTypeConfiguration<Commande>
 {
     public void Configure(EntityTypeBuilder<Commande> b)

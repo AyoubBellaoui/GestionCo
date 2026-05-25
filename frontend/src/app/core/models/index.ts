@@ -724,3 +724,13 @@ export type EntrepriseSettings = {
   swift?: string;
   logo?: string;
 };
+
+export type SmtpSettings = {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  fromName: string;
+  fromAddress: string;
+  enableSsl: boolean;
+};

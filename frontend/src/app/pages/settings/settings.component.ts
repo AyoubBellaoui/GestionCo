@@ -6,10 +6,10 @@ import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AuthService } from '../../core/services/auth.service';
 import { SettingsService } from '../../core/services/settings.service';
-import { UtilisateurDto, CreateUtilisateurPayload, UpdateUtilisateurPayload } from '../../core/models';
+import { UtilisateurDto, CreateUtilisateurPayload, UpdateUtilisateurPayload, SmtpSettings } from '../../core/models';
 import { getAvatarClass } from '../../core/utils/format';
 
-type TabKey = 'entreprise' | 'profil' | 'apparence' | 'securite' | 'facturation' | 'comptes' | 'a-propos';
+type TabKey = 'entreprise' | 'profil' | 'apparence' | 'securite' | 'facturation' | 'email' | 'comptes' | 'a-propos';
 
 const TABS: { key: TabKey; label: string; icon: string; desc: string; adminOnly?: boolean }[] = [
   { key: 'entreprise',  label: 'Entreprise',  icon: '🏢', desc: 'Infos légales, ICE, RC, IF' },
@@ -17,6 +17,7 @@ const TABS: { key: TabKey; label: string; icon: string; desc: string; adminOnly?
   { key: 'apparence',   label: 'Apparence',   icon: '🎨', desc: 'Date, heure & fuseau horaire' },
   { key: 'securite',    label: 'Sécurité',    icon: '🔒', desc: 'Mot de passe, sessions' },
   { key: 'facturation', label: 'Facturation', icon: '📋', desc: 'Numérotation, TVA, délais' },
+  { key: 'email',       label: 'Email SMTP',  icon: '📧', desc: 'Serveur d\'envoi des emails', adminOnly: true },
   { key: 'comptes',     label: 'Comptes',     icon: '👥', desc: 'Gérer les accès utilisateurs', adminOnly: true },
   { key: 'a-propos',    label: 'À propos',    icon: 'ℹ️', desc: 'Version & infos système' },
 ];
@@ -37,6 +38,13 @@ export class SettingsComponent implements OnInit {
   securiteChanging = false;
   showPwd = { ancien: false, nouveau: false, confirm: false };
   factuLoading = false;
+
+  smtp: SmtpSettings = { host: '', port: 587, username: '', password: '', fromName: '', fromAddress: '', enableSsl: true };
+  smtpLoading = false;
+  smtpSaving = false;
+  smtpTesting = false;
+  smtpTestEmail = '';
+  showSmtpPassword = false;
 
   comptesList: UtilisateurDto[] = [];
   comptesLoading = false;
@@ -83,6 +91,7 @@ export class SettingsComponent implements OnInit {
     if (key === 'comptes') await this.loadComptes();
     if (key === 'facturation') await this.loadFacturationSettings();
     if (key === 'entreprise') await this.loadEntrepriseSettings();
+    if (key === 'email') await this.loadSmtpSettings();
     if (key === 'securite') {
       this.securite = { ancienMdp: '', nouveauMdp: '', confirmMdp: '' };
       this.showPwd = { ancien: false, nouveau: false, confirm: false };
@@ -218,6 +227,33 @@ export class SettingsComponent implements OnInit {
     if (!confirm('⚠️ Réinitialiser TOUS les paramètres aux valeurs par défaut ? Cette action est irréversible.')) return;
     this.settings.resetSettings();
     this.toast.notify('Paramètres réinitialisés aux valeurs par défaut', 'success');
+  }
+
+  async loadSmtpSettings(): Promise<void> {
+    this.smtpLoading = true;
+    try { this.smtp = await this.api.getSmtpSettings(); }
+    catch { /* keep defaults */ }
+    finally { this.smtpLoading = false; }
+  }
+
+  async handleSaveSmtp(): Promise<void> {
+    this.smtpSaving = true;
+    try {
+      this.smtp = await this.api.updateSmtpSettings(this.smtp);
+      this.toast.notify('Configuration SMTP sauvegardée', 'success');
+    } catch { this.toast.notify('Erreur lors de la sauvegarde SMTP', 'error'); }
+    finally { this.smtpSaving = false; }
+  }
+
+  async handleTestSmtp(): Promise<void> {
+    if (!this.smtpTestEmail.trim()) { this.toast.notify('Saisissez une adresse email de test', 'warning'); return; }
+    this.smtpTesting = true;
+    try {
+      const res = await this.api.testSmtp(this.smtpTestEmail.trim());
+      this.toast.notify(res.message, 'success');
+    } catch (e: any) {
+      this.toast.notify(e?.error?.message || e?.error?.detail || 'Erreur SMTP', 'error');
+    } finally { this.smtpTesting = false; }
   }
 
   async loadComptes(): Promise<void> {

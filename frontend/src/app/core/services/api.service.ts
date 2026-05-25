@@ -10,7 +10,7 @@ import {
   Commande, ConversionCommandeResult, CommandeStats,
   PLReport, TVAReport, BalanceAgeeReport, PerformanceCommerciale, SearchResults,
   FacturationSettings, ClientsStats, FournisseursStats, FacturesStats, DevisStats,
-  ChargesStats, MouvementsStats, EntrepriseSettings
+  ChargesStats, MouvementsStats, EntrepriseSettings, SmtpSettings
 } from '../models';
 import { environment } from '../../../environments/environment';
 
@@ -483,6 +483,17 @@ export class ApiService {
   }
   updateEntrepriseSettings(data: EntrepriseSettings): Promise<EntrepriseSettings> {
     return firstValueFrom(this.http.put<EntrepriseSettings>(`${this.base}/parametres/entreprise`, data));
+  }
+
+  // ── PARAMÈTRES SMTP ──
+  getSmtpSettings(): Promise<SmtpSettings> {
+    return firstValueFrom(this.http.get<SmtpSettings>(`${this.base}/parametres/smtp`));
+  }
+  updateSmtpSettings(data: SmtpSettings): Promise<SmtpSettings> {
+    return firstValueFrom(this.http.put<SmtpSettings>(`${this.base}/parametres/smtp`, data));
+  }
+  testSmtp(toEmail: string): Promise<{ message: string }> {
+    return firstValueFrom(this.http.post<{ message: string }>(`${this.base}/parametres/smtp/test`, { toEmail }));
   }
 
   // ── STATS ──

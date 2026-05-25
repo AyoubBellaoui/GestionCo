@@ -46,6 +46,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<LigneCommande> LignesCommande => Set<LigneCommande>();
     public DbSet<Domain.Entities.ParametresFacturation> ParametresFacturation => Set<Domain.Entities.ParametresFacturation>();
     public DbSet<Domain.Entities.ParametresEntreprise> ParametresEntreprise => Set<Domain.Entities.ParametresEntreprise>();
+    public DbSet<Domain.Entities.ParametresSmtp> ParametresSmtp => Set<Domain.Entities.ParametresSmtp>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

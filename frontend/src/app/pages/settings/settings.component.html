@@ -357,6 +357,95 @@
         </div>
       }
 
+      <!-- EMAIL SMTP -->
+      @if (activeTab === 'email') {
+        <div class="settings-panel">
+          <div class="panel-header">
+            <h2>📧 Configuration Email SMTP</h2>
+            <p>Paramètres du serveur d'envoi pour les devis, factures et notifications.</p>
+          </div>
+
+          @if (smtpLoading) {
+            <div class="loading-row" style="padding:32px;text-align:center">Chargement…</div>
+          } @else {
+            <div class="info-box" style="margin-bottom:20px">
+              ℹ️ Compatible avec <strong>Brevo</strong>, <strong>Mailtrap</strong>, <strong>Outlook</strong> et tout serveur SMTP standard.
+              Pour Gmail, un <strong>App Password</strong> est requis (Compte Google → Sécurité → Mots de passe des applications).
+            </div>
+
+            <div class="panel-section-title">🖥️ Serveur SMTP</div>
+            <div class="form-grid">
+              <div class="form-field">
+                <label class="label">Hôte SMTP *</label>
+                <input class="form-input" placeholder="smtp.brevo.com" [(ngModel)]="smtp.host" />
+                <div class="field-hint">Ex: smtp.brevo.com · smtp.office365.com · smtp.gmail.com</div>
+              </div>
+              <div class="form-field">
+                <label class="label">Port *</label>
+                <input type="number" class="form-input" [(ngModel)]="smtp.port" />
+                <div class="field-hint">587 (STARTTLS) · 465 (SSL) · 25 (non chiffré)</div>
+              </div>
+            </div>
+
+            <div class="panel-section-title">🔐 Authentification</div>
+            <div class="form-grid">
+              <div class="form-field">
+                <label class="label">Nom d'utilisateur *</label>
+                <input class="form-input" placeholder="votre@email.com" [(ngModel)]="smtp.username" autocomplete="off" />
+              </div>
+              <div class="form-field">
+                <label class="label">Mot de passe *</label>
+                <div class="input-wrapper">
+                  <input [type]="showSmtpPassword ? 'text' : 'password'" class="form-input" style="width:100%;padding-right:40px"
+                    [(ngModel)]="smtp.password" autocomplete="new-password" />
+                  <button type="button" class="password-toggle" (click)="showSmtpPassword=!showSmtpPassword">
+                    @if (showSmtpPassword) {
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    } @else {
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    }
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-section-title">✉️ Expéditeur</div>
+            <div class="form-grid">
+              <div class="form-field">
+                <label class="label">Nom affiché</label>
+                <input class="form-input" placeholder="GestionCo. SARL" [(ngModel)]="smtp.fromName" />
+                <div class="field-hint">Nom visible dans la boîte de réception du destinataire</div>
+              </div>
+              <div class="form-field">
+                <label class="label">Adresse expéditeur</label>
+                <input type="email" class="form-input" placeholder="contact@monentreprise.ma" [(ngModel)]="smtp.fromAddress" />
+                <div class="field-hint">Doit correspondre au compte SMTP autorisé</div>
+              </div>
+            </div>
+
+            <div class="panel-actions" style="flex-wrap:wrap;gap:10px">
+              <button class="btn btn-primary" (click)="handleSaveSmtp()" [disabled]="smtpSaving">
+                {{ smtpSaving ? '⏳ Sauvegarde…' : '💾 Sauvegarder' }}
+              </button>
+            </div>
+
+            <div class="panel-section-title" style="margin-top:28px">🧪 Tester la configuration</div>
+            <div class="info-box" style="margin-bottom:14px">
+              Sauvegardez d'abord vos paramètres, puis envoyez un email de test pour vérifier que tout fonctionne.
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+              <div class="form-field" style="flex:1;min-width:220px;margin:0">
+                <label class="label">Email de test</label>
+                <input type="email" class="form-input" placeholder="test@exemple.com" [(ngModel)]="smtpTestEmail" />
+              </div>
+              <button class="btn btn-secondary" (click)="handleTestSmtp()" [disabled]="smtpTesting" style="margin-bottom:1px">
+                {{ smtpTesting ? '⏳ Envoi…' : '📤 Envoyer un email de test' }}
+              </button>
+            </div>
+          }
+        </div>
+      }
+
       <!-- COMPTES -->
       @if (activeTab === 'comptes') {
         <div class="settings-panel">

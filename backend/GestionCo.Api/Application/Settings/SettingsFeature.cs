@@ -1,5 +1,8 @@
+using GestionCo.Api.Application.Common.Exceptions;
 using GestionCo.Api.Application.Common.Interfaces;
 using GestionCo.Api.Domain.Entities;
+using MailKit.Net.Smtp;
+using MailKit.Security;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using ParametresEntrepriseEntity = GestionCo.Api.Domain.Entities.ParametresEntreprise;
@@ -223,4 +226,100 @@ public class UpdateEntrepriseSettingsHandler : IRequestHandler<UpdateEntrepriseS
             Logo          = pe.Logo,
         };
     }
+}
+
+// ── SMTP SETTINGS ────────────────────────────────────────────────────────────
+
+public class SmtpSettingsDto
+{
+    public string Host { get; set; } = "";
+    public int Port { get; set; } = 587;
+    public string Username { get; set; } = "";
+    public string Password { get; set; } = "";
+    public string FromName { get; set; } = "GestionCo. SARL";
+    public string FromAddress { get; set; } = "";
+    public bool EnableSsl { get; set; } = true;
+}
+
+public record GetSmtpSettingsQuery() : IRequest<SmtpSettingsDto>;
+public record UpdateSmtpSettingsCommand(SmtpSettingsDto Dto) : IRequest<SmtpSettingsDto>;
+public record TestSmtpCommand(string ToEmail) : IRequest<string>;
+
+public class GetSmtpSettingsHandler : IRequestHandler<GetSmtpSettingsQuery, SmtpSettingsDto>
+{
+    private readonly IAppDbContext _db;
+    public GetSmtpSettingsHandler(IAppDbContext db) => _db = db;
+
+    public async Task<SmtpSettingsDto> Handle(GetSmtpSettingsQuery request, CancellationToken ct)
+    {
+        var ps = await _db.ParametresSmtp.AsNoTracking().FirstOrDefaultAsync(ct);
+        if (ps == null) return new SmtpSettingsDto();
+        return SmtpMapper.Map(ps);
+    }
+}
+
+public class UpdateSmtpSettingsHandler : IRequestHandler<UpdateSmtpSettingsCommand, SmtpSettingsDto>
+{
+    private readonly IAppDbContext _db;
+    public UpdateSmtpSettingsHandler(IAppDbContext db) => _db = db;
+
+    public async Task<SmtpSettingsDto> Handle(UpdateSmtpSettingsCommand request, CancellationToken ct)
+    {
+        var dto = request.Dto;
+        var ps = await _db.ParametresSmtp.FirstOrDefaultAsync(ct);
+        if (ps == null) { ps = new ParametresSmtp(); _db.ParametresSmtp.Add(ps); }
+
+        ps.Host        = (dto.Host ?? "").Trim();
+        ps.Port        = dto.Port > 0 ? dto.Port : 587;
+        ps.Username    = (dto.Username ?? "").Trim();
+        ps.Password    = dto.Password ?? "";
+        ps.FromName    = (dto.FromName ?? "GestionCo. SARL").Trim();
+        ps.FromAddress = (dto.FromAddress ?? "").Trim();
+        ps.EnableSsl   = dto.EnableSsl;
+        ps.UpdatedAt   = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        return SmtpMapper.Map(ps);
+    }
+}
+
+public class TestSmtpHandler : IRequestHandler<TestSmtpCommand, string>
+{
+    private readonly IAppDbContext _db;
+    public TestSmtpHandler(IAppDbContext db) => _db = db;
+
+    public async Task<string> Handle(TestSmtpCommand request, CancellationToken ct)
+    {
+        var ps = await _db.ParametresSmtp.AsNoTracking().FirstOrDefaultAsync(ct);
+        if (ps == null || string.IsNullOrWhiteSpace(ps.Host) || string.IsNullOrWhiteSpace(ps.Username))
+            throw new BusinessException("SMTP non configuré. Renseignez d'abord les paramètres email.");
+
+        var mime = new MimeKit.MimeMessage();
+        mime.From.Add(new MimeKit.MailboxAddress(ps.FromName, ps.FromAddress));
+        mime.To.Add(new MimeKit.MailboxAddress(request.ToEmail, request.ToEmail));
+        mime.Subject = "Test SMTP — GestionCo.";
+        mime.Body = new MimeKit.TextPart("plain") { Text = "Ce message confirme que votre configuration SMTP fonctionne correctement." };
+
+        using var smtpClient = new SmtpClient();
+        await smtpClient.ConnectAsync(ps.Host, ps.Port, SecureSocketOptions.StartTls, ct);
+        await smtpClient.AuthenticateAsync(ps.Username, ps.Password, ct);
+        await smtpClient.SendAsync(mime, ct);
+        await smtpClient.DisconnectAsync(true, ct);
+
+        return $"Email de test envoyé à {request.ToEmail}";
+    }
+}
+
+internal static class SmtpMapper
+{
+    internal static SmtpSettingsDto Map(ParametresSmtp ps) => new()
+    {
+        Host        = ps.Host,
+        Port        = ps.Port,
+        Username    = ps.Username,
+        Password    = ps.Password,
+        FromName    = ps.FromName,
+        FromAddress = ps.FromAddress,
+        EnableSsl   = ps.EnableSsl,
+    };
 }

@@ -141,4 +141,21 @@ public class ParametresController(IMediator mediator) : ControllerBase
     [HttpPut("entreprise")]
     public async Task<IActionResult> UpdateEntreprise([FromBody] EntrepriseSettingsDto dto, CancellationToken ct)
         => Ok(await mediator.Send(new UpdateEntrepriseSettingsCommand(dto), ct));
+
+    [HttpGet("smtp")]
+    public async Task<IActionResult> GetSmtp(CancellationToken ct)
+        => Ok(await mediator.Send(new GetSmtpSettingsQuery(), ct));
+
+    [HttpPut("smtp")]
+    public async Task<IActionResult> UpdateSmtp([FromBody] SmtpSettingsDto dto, CancellationToken ct)
+        => Ok(await mediator.Send(new UpdateSmtpSettingsCommand(dto), ct));
+
+    [HttpPost("smtp/test")]
+    public async Task<IActionResult> TestSmtp([FromBody] TestSmtpDto dto, CancellationToken ct)
+    {
+        var result = await mediator.Send(new TestSmtpCommand(dto.ToEmail), ct);
+        return Ok(new { message = result });
+    }
 }
+
+public record TestSmtpDto(string ToEmail);
