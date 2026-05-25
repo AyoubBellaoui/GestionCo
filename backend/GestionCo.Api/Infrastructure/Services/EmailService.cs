@@ -17,14 +17,14 @@ public class EmailService : IEmailService
         _db = db; _pdf = pdf;
     }
 
-    private async Task<(string host, int port, string username, string password, string fromName, string fromAddr)>
+    private async Task<(string host, int port, bool enableSsl, string username, string password, string fromName, string fromAddr)>
         LoadSmtpConfig(CancellationToken ct)
     {
         var ps = await _db.ParametresSmtp.AsNoTracking().FirstOrDefaultAsync(ct);
         if (ps == null || string.IsNullOrWhiteSpace(ps.Host) || string.IsNullOrWhiteSpace(ps.Username))
             throw new BusinessException("Email non configuré. Allez dans Paramètres → Email et renseignez votre serveur SMTP.");
 
-        return (ps.Host, ps.Port, ps.Username, ps.Password, ps.FromName, ps.FromAddress);
+        return (ps.Host, ps.Port, ps.EnableSsl, ps.Username, ps.Password, ps.FromName, ps.FromAddress);
     }
 
     public async Task SendDevisAsync(int devisId, string toEmail, string? message = null, EntrepriseInfoDto? info = null, CancellationToken ct = default)
@@ -34,7 +34,7 @@ public class EmailService : IEmailService
             .FirstOrDefaultAsync(d => d.Id == devisId, ct)
             ?? throw new NotFoundException("Devis", devisId);
 
-        var (host, port, username, password, fromName, fromAddr) = await LoadSmtpConfig(ct);
+        var (host, port, enableSsl, username, password, fromName, fromAddr) = await LoadSmtpConfig(ct);
 
         var pdfBytes = await _pdf.GenerateDevisPdfAsync(devisId, info, ct);
 
@@ -59,7 +59,7 @@ public class EmailService : IEmailService
         builder.Attachments.Add($"Devis-{devis.Reference}.pdf", pdfBytes, new ContentType("application", "pdf"));
         mimeMessage.Body = builder.ToMessageBody();
 
-        await Send(host, port, username, password, mimeMessage, ct);
+        await Send(host, port, enableSsl, username, password, mimeMessage, ct);
     }
 
     public async Task SendFactureAsync(int factureId, string toEmail, string? message = null, EntrepriseInfoDto? info = null, CancellationToken ct = default)
@@ -69,7 +69,7 @@ public class EmailService : IEmailService
             .FirstOrDefaultAsync(f => f.Id == factureId, ct)
             ?? throw new NotFoundException("Facture", factureId);
 
-        var (host, port, username, password, fromName, fromAddr) = await LoadSmtpConfig(ct);
+        var (host, port, enableSsl, username, password, fromName, fromAddr) = await LoadSmtpConfig(ct);
 
         var pdfBytes = await _pdf.GenerateInvoicePdfAsync(factureId, info, ct);
         var client   = facture.Vente.Client;
@@ -98,19 +98,26 @@ public class EmailService : IEmailService
         builder.Attachments.Add($"Facture-{facture.NumeroFacture}.pdf", pdfBytes, new ContentType("application", "pdf"));
         mime.Body = builder.ToMessageBody();
 
-        await Send(host, port, username, password, mime, ct);
+        await Send(host, port, enableSsl, username, password, mime, ct);
 
         facture.EstEnvoyeeEmail = true;
         facture.DateEnvoiEmail  = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
     }
 
-    private static async Task Send(string host, int port, string username, string password, MimeMessage mime, CancellationToken ct)
+    private static SecureSocketOptions GetSocketOptions(bool enableSsl, int port) => port switch
+    {
+        465 => SecureSocketOptions.SslOnConnect,
+        _ when enableSsl => SecureSocketOptions.StartTls,
+        _ => SecureSocketOptions.None,
+    };
+
+    private static async Task Send(string host, int port, bool enableSsl, string username, string password, MimeMessage mime, CancellationToken ct)
     {
         try
         {
             using var smtpClient = new SmtpClient();
-            await smtpClient.ConnectAsync(host, port, SecureSocketOptions.StartTls, ct);
+            await smtpClient.ConnectAsync(host, port, GetSocketOptions(enableSsl, port), ct);
             await smtpClient.AuthenticateAsync(username, password, ct);
             await smtpClient.SendAsync(mime, ct);
             await smtpClient.DisconnectAsync(true, ct);

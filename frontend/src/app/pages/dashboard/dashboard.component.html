@@ -115,112 +115,51 @@
       </div>
     </div>
 
-    <div class="db2-kpi-card db2-kpi-impayes">
-      <div class="db2-kpi-label" style="text-transform:uppercase;letter-spacing:.5px;font-size:11px;margin-bottom:8px">⚠️ Impayés</div>
-      <div class="db2-impayes-row danger">
-        <span>📉 Débit</span>
-        <strong>{{ formatNum(montantImpayeDebit) }} MAD</strong>
-      </div>
-      <div class="db2-impayes-row success">
-        <span>💰 Crédit</span>
-        <strong>{{ formatNum(montantImpayeCredit) }} MAD</strong>
-      </div>
-    </div>
 
   </div>
 
   <!-- ③ QUICK ACTIONS ─────────────────────────────────────────── -->
   <div class="db2-actions">
-    <a [routerLink]="['/ventes']"    class="db2-action primary">  <span>🛒</span> Nouvelle vente</a>
-    <a [routerLink]="['/devis']"     class="db2-action info">     <span>📝</span> Nouveau devis</a>
-    <a [routerLink]="['/factures']"  class="db2-action success">  <span>🧾</span> Nouvelle facture</a>
-    <a [routerLink]="['/achats']"    class="db2-action warning">  <span>📥</span> Nouvel achat</a>
-    <a [routerLink]="['/rapports']"  class="db2-action neutral">  <span>📊</span> Voir rapports</a>
+    <a [routerLink]="['/ventes']"   class="db2-action primary">  <span class="db2-action-icon">🛒</span><span class="db2-action-label">Nouvelle vente</span></a>
+    <a [routerLink]="['/devis']"    class="db2-action info">     <span class="db2-action-icon">📝</span><span class="db2-action-label">Nouveau devis</span></a>
+    <a [routerLink]="['/factures']" class="db2-action success">  <span class="db2-action-icon">🧾</span><span class="db2-action-label">Nouvelle facture</span></a>
+    <a [routerLink]="['/achats']"   class="db2-action warning">  <span class="db2-action-icon">📥</span><span class="db2-action-label">Nouvel achat</span></a>
+    <a [routerLink]="['/rapports']" class="db2-action neutral">  <span class="db2-action-icon">📊</span><span class="db2-action-label">Voir rapports</span></a>
   </div>
 
-  <!-- ④ CHARTS ROW ────────────────────────────────────────────── -->
-  <div class="db2-charts-grid">
+  <!-- ④⑤ MAIN GRID ────────────────────────────────────────────── -->
+  <div class="db2-main-grid">
 
-    <!-- Bar chart – 6 mois -->
-    <div class="db2-chart-card">
-      <div class="db2-chart-head">
-        <div>
-          <div class="db2-chart-title">Évolution sur 6 mois</div>
-          <div class="db2-chart-sub">Revenus vs Dépenses (achats + charges)</div>
-        </div>
-        <div class="db2-legend">
-          <span class="db2-legend-item"><span class="db2-dot" style="background:linear-gradient(135deg,#818cf8,var(--primary))"></span>Revenus</span>
-          <span class="db2-legend-item"><span class="db2-dot" style="background:linear-gradient(135deg,#fca5a5,var(--danger))"></span>Dépenses</span>
-        </div>
-      </div>
-      <div class="db2-bar-chart">
-        @for (m of months; track m.label; let i = $index) {
-          <div class="db2-bar-col">
-            <div class="db2-bar-tooltip">
-              <div style="color:#818cf8">CA : {{ formatNum(m.ca) }} MAD</div>
-              <div style="color:#fca5a5">Dep : {{ formatNum(m.dep) }} MAD</div>
-            </div>
-            <div class="db2-bars-wrap">
-              <div class="db2-bar ca" [style.height.%]="m.caH" [style.animation-delay]="(i * 80) + 'ms'"></div>
-              <div class="db2-bar dep" [style.height.%]="m.depH" [style.animation-delay]="(i * 80 + 40) + 'ms'"></div>
-            </div>
-            <div class="db2-bar-lbl">{{ m.label }}</div>
-          </div>
-        }
-      </div>
-    </div>
+    <!-- LEFT: bar chart + top clients + top produits -->
+    <div class="db2-left-col">
 
-    <!-- Donut – répartition -->
-    <div class="db2-chart-card">
-      <div class="db2-chart-title" style="margin-bottom:16px">Répartition du mois</div>
-      @if (donutSegs.length === 0) {
-        <div class="db-no-data">
-          <div style="font-size:32px;margin-bottom:8px">📊</div>
-          <div>Aucune donnée ce mois</div>
-        </div>
-      } @else {
-        <div class="db2-donut-wrap">
-          <div style="position:relative;flex-shrink:0">
-            <svg viewBox="0 0 112 112" width="130" height="130">
-              <circle cx="56" cy="56" r="42" fill="none" stroke="var(--border)" stroke-width="16"/>
-              @for (seg of donutSegs; track seg.label) {
-                <circle cx="56" cy="56" r="42" fill="none"
-                  [attr.stroke]="seg.color"
-                  stroke-width="16"
-                  [attr.stroke-dasharray]="seg.dasharray"
-                  [attr.stroke-dashoffset]="seg.dashoffset"
-                  transform="rotate(-90 56 56)"
-                  stroke-linecap="butt"/>
-              }
-            </svg>
-            <div class="db2-donut-center">
-              <div class="db2-donut-center-pct">{{ donutSegs[0].pct }}%</div>
-              <div class="db2-donut-center-lbl">{{ donutSegs[0].label }}</div>
-            </div>
+      <div class="db2-chart-card">
+        <div class="db2-chart-head">
+          <div>
+            <div class="db2-chart-title">Évolution sur 6 mois</div>
+            <div class="db2-chart-sub">Revenus vs Dépenses (achats + charges)</div>
           </div>
-          <div class="db2-donut-legs">
-            @for (seg of donutSegs; track seg.label) {
-              <div class="db2-donut-leg">
-                <span class="db2-donut-dot" [style.background]="seg.color"></span>
-                <span class="db2-donut-lbl">{{ seg.label }}</span>
-                <div class="db2-donut-right">
-                  <div class="db2-donut-pct">{{ seg.pct }}%</div>
-                  <div class="db2-donut-amt">{{ formatNum(seg.amount) }} MAD</div>
-                </div>
+          <div class="db2-legend">
+            <span class="db2-legend-item"><span class="db2-dot" style="background:linear-gradient(135deg,#818cf8,var(--primary))"></span>Revenus</span>
+            <span class="db2-legend-item"><span class="db2-dot" style="background:linear-gradient(135deg,#fca5a5,var(--danger))"></span>Dépenses</span>
+          </div>
+        </div>
+        <div class="db2-bar-chart">
+          @for (m of months; track m.label; let i = $index) {
+            <div class="db2-bar-col">
+              <div class="db2-bar-tooltip">
+                <div style="color:#818cf8">CA : {{ formatNum(m.ca) }} MAD</div>
+                <div style="color:#fca5a5">Dep : {{ formatNum(m.dep) }} MAD</div>
               </div>
-            }
-          </div>
+              <div class="db2-bars-wrap">
+                <div class="db2-bar ca" [style.height.%]="m.caH" [style.animation-delay]="(i * 80) + 'ms'"></div>
+                <div class="db2-bar dep" [style.height.%]="m.depH" [style.animation-delay]="(i * 80 + 40) + 'ms'"></div>
+              </div>
+              <div class="db2-bar-lbl">{{ m.label }}</div>
+            </div>
+          }
         </div>
-      }
-    </div>
-
-  </div>
-
-  <!-- ⑤ BOTTOM ROW ────────────────────────────────────────────── -->
-  <div class="db2-bottom-grid">
-
-    <!-- LEFT : top clients + top produits stacked -->
-    <div style="display:flex;flex-direction:column;gap:14px">
+      </div>
 
       <div class="db2-section-card">
         <div class="db2-section-head">
@@ -270,10 +209,69 @@
         }
       </div>
 
+      <!-- Dernières ventes -->
+      <div class="db2-section-card">
+        <div class="db2-section-head">
+          <span class="db2-section-title">🕐 Dernières ventes</span>
+          <a [routerLink]="['/ventes']" class="db2-feed-link">Voir tout →</a>
+        </div>
+        @if (dernieresVentes.length === 0) {
+          <div class="db-no-data" style="padding:20px 0">
+            <div style="font-size:28px;margin-bottom:6px">🧾</div>
+            <div>Aucune vente enregistrée</div>
+          </div>
+        }
+        @for (v of dernieresVentes; track v.id) {
+          <div class="db2-feed-row">
+            <div class="db2-feed-ref">{{ v.reference }}</div>
+            <div class="db2-feed-client">{{ v.nomClient }}</div>
+            <div class="db2-feed-date">{{ formatDate(v.dateVente) }}</div>
+            <div class="db2-feed-amount">{{ formatNum(v.montantTotal) }} <small>MAD</small></div>
+            <div [class]="'db2-feed-badge ' + venteStatut(v.statut).cls">{{ venteStatut(v.statut).label }}</div>
+          </div>
+        }
+      </div>
+
     </div>
 
-    <!-- RIGHT : alertes + aujourd'hui + métriques -->
+    <!-- RIGHT col -->
     <div class="db2-right-col">
+
+      <!-- Situation des impayés -->
+      <div class="db2-section-card">
+        <div class="db2-section-head">
+          <span class="db2-section-title">💳 Situation des impayés</span>
+        </div>
+
+        <div class="db2-ibloc receivable">
+          <div class="db2-ibloc-icon receivable">📥</div>
+          <div class="db2-ibloc-body">
+            <div class="db2-ibloc-label">À recevoir</div>
+            <div class="db2-ibloc-sub">{{ stats?.nombreFacturesImpayees || 0 }} facture(s) client</div>
+          </div>
+          <div class="db2-ibloc-amount receivable">
+            {{ formatNum(stats?.montantImpaye) }}<small> MAD</small>
+          </div>
+        </div>
+
+        <div class="db2-ibloc payable">
+          <div class="db2-ibloc-icon payable">📤</div>
+          <div class="db2-ibloc-body">
+            <div class="db2-ibloc-label">À payer</div>
+            <div class="db2-ibloc-sub">{{ nombreAchatsImpayes }} achat(s) · {{ nombreChargesImpayees }} charge(s)</div>
+          </div>
+          <div class="db2-ibloc-amount payable">
+            {{ formatNum(montantImpayeDebit) }}<small> MAD</small>
+          </div>
+        </div>
+
+        <div class="db2-ibloc-net" [ngClass]="(stats?.montantImpaye ?? 0) >= montantImpayeDebit ? 'positive' : 'negative'">
+          <span class="db2-ibloc-net-label">Solde net</span>
+          <span class="db2-ibloc-net-val">
+            {{ (stats?.montantImpaye ?? 0) >= montantImpayeDebit ? '+' : '−' }}{{ formatNum(Math.abs((stats?.montantImpaye ?? 0) - montantImpayeDebit)) }} MAD
+          </span>
+        </div>
+      </div>
 
       <div class="db2-section-card">
         <div class="db2-section-head">
@@ -310,44 +308,127 @@
 
       <div class="db2-section-card">
         <div class="db2-section-head">
-          <span class="db2-section-title">📅 Aujourd'hui</span>
+          <span class="db2-section-title">📊 Statistiques rapides</span>
         </div>
-        <div class="db2-metric-row">
-          <div class="db2-metric-ic" style="background:var(--primary-light)">💰</div>
-          <div class="db2-metric-lbl">CA du jour</div>
-          <div class="db2-metric-val">{{ formatNum(stats?.caDuJour) }} <small>MAD</small></div>
-        </div>
-        <div class="db2-metric-row">
-          <div class="db2-metric-ic" style="background:var(--success-light)">🧾</div>
-          <div class="db2-metric-lbl">Ventes du jour</div>
-          <div class="db2-metric-val">{{ stats?.ventesDuJour || 0 }}</div>
-        </div>
-        <div class="db2-metric-row last">
-          <div class="db2-metric-ic" style="background:var(--info-light)">📦</div>
-          <div class="db2-metric-lbl">Produits catalogue</div>
-          <div class="db2-metric-val">{{ stats?.totalProduits || 0 }}</div>
+        <div class="db2-stats-2col">
+          <div class="db2-stat-cell">
+            <div class="db2-metric-ic" style="background:var(--primary-light)">💰</div>
+            <div>
+              <div class="db2-stat-lbl">CA du jour</div>
+              <div class="db2-stat-val">{{ formatNum(stats?.caDuJour) }} <small>MAD</small></div>
+            </div>
+          </div>
+          <div class="db2-stat-cell">
+            <div class="db2-metric-ic" style="background:var(--success-light)">🧾</div>
+            <div>
+              <div class="db2-stat-lbl">Ventes du jour</div>
+              <div class="db2-stat-val">{{ stats?.ventesDuJour || 0 }}</div>
+            </div>
+          </div>
+          <div class="db2-stat-cell">
+            <div class="db2-metric-ic" style="background:var(--info-light)">👥</div>
+            <div>
+              <div class="db2-stat-lbl">Nouveaux clients</div>
+              <div class="db2-stat-val">{{ stats?.nouveauxClientsDuMois || 0 }}</div>
+            </div>
+          </div>
+          <div class="db2-stat-cell">
+            <div class="db2-metric-ic" style="background:var(--warning-light)">🛒</div>
+            <div>
+              <div class="db2-stat-lbl">Panier moyen</div>
+              <div class="db2-stat-val">{{ formatNum(panierMoyen) }} <small>MAD</small></div>
+            </div>
+          </div>
+          <div class="db2-stat-cell">
+            <div class="db2-metric-ic" style="background:var(--success-light)">📦</div>
+            <div>
+              <div class="db2-stat-lbl">Unités vendues</div>
+              <div class="db2-stat-val">{{ totalQteVendue }}</div>
+            </div>
+          </div>
+          <div class="db2-stat-cell last">
+            <div class="db2-metric-ic" style="background:var(--primary-light)">🔁</div>
+            <div>
+              <div class="db2-stat-lbl">Taux fidélité</div>
+              <div class="db2-stat-val">{{ tauxFidelite }}<small>%</small></div>
+            </div>
+          </div>
         </div>
       </div>
 
+      <!-- Stock à réapprovisionner -->
+      <!-- Répartition du mois -->
+      <div class="db2-chart-card">
+        <div class="db2-chart-title" style="margin-bottom:16px">Répartition du mois</div>
+        @if (donutSegs.length === 0) {
+          <div class="db-no-data">
+            <div style="font-size:32px;margin-bottom:8px">📊</div>
+            <div>Aucune donnée ce mois</div>
+          </div>
+        } @else {
+          <div class="db2-donut-wrap">
+            <div style="position:relative;flex-shrink:0">
+              <svg viewBox="0 0 112 112" width="130" height="130">
+                <circle cx="56" cy="56" r="42" fill="none" stroke="var(--border)" stroke-width="16"/>
+                @for (seg of donutSegs; track seg.label) {
+                  <circle cx="56" cy="56" r="42" fill="none"
+                    [attr.stroke]="seg.color"
+                    stroke-width="16"
+                    [attr.stroke-dasharray]="seg.dasharray"
+                    [attr.stroke-dashoffset]="seg.dashoffset"
+                    transform="rotate(-90 56 56)"
+                    stroke-linecap="butt"/>
+                }
+              </svg>
+              <div class="db2-donut-center">
+                <div class="db2-donut-center-pct">{{ donutSegs[0].pct }}%</div>
+                <div class="db2-donut-center-lbl">{{ donutSegs[0].label }}</div>
+              </div>
+            </div>
+            <div class="db2-donut-legs">
+              @for (seg of donutSegs; track seg.label) {
+                <div class="db2-donut-leg">
+                  <span class="db2-donut-dot" [style.background]="seg.color"></span>
+                  <span class="db2-donut-lbl">{{ seg.label }}</span>
+                  <div class="db2-donut-right">
+                    <div class="db2-donut-pct">{{ seg.pct }}%</div>
+                    <div class="db2-donut-amt">{{ formatNum(seg.amount) }} MAD</div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Stock à réapprovisionner -->
       <div class="db2-section-card">
         <div class="db2-section-head">
-          <span class="db2-section-title">🛒 Métriques ventes</span>
+          <span class="db2-section-title">📦 Stock à réapprovisionner</span>
+          <span class="db2-section-sub">{{ stockAlertes.length }} produit(s)</span>
         </div>
-        <div class="db2-metric-row">
-          <div class="db2-metric-ic" style="background:var(--primary-light)">🛒</div>
-          <div class="db2-metric-lbl">Panier moyen du mois</div>
-          <div class="db2-metric-val">{{ formatNum(panierMoyen) }} <small>MAD</small></div>
-        </div>
-        <div class="db2-metric-row">
-          <div class="db2-metric-ic" style="background:var(--success-light)">📦</div>
-          <div class="db2-metric-lbl">Unités vendues (total)</div>
-          <div class="db2-metric-val">{{ totalQteVendue }}</div>
-        </div>
-        <div class="db2-metric-row last">
-          <div class="db2-metric-ic" style="background:var(--warning-light)">🔁</div>
-          <div class="db2-metric-lbl">Taux fidélité clients</div>
-          <div class="db2-metric-val">{{ tauxFidelite }}<small>%</small></div>
-        </div>
+        @if (stockAlertes.length === 0) {
+          <div class="db-no-data" style="padding:16px 0">
+            <div style="font-size:26px;margin-bottom:6px">✅</div>
+            <div>Tous les stocks sont OK</div>
+          </div>
+        }
+        @for (p of stockAlertes; track p.produitId) {
+          <div class="db2-stock-row">
+            <div class="db2-stock-info">
+              <div class="db2-stock-nom">{{ p.nomProduit }}</div>
+              <div class="db2-stock-ref">{{ p.reference }}</div>
+            </div>
+            <div class="db2-stock-right">
+              <div [class]="'db2-stock-qty ' + (p.estRupture ? 'rupture' : 'faible')">
+                {{ p.quantiteStock }} / {{ p.seuilAlerte }}
+              </div>
+              <div [class]="'db2-stock-badge ' + (p.estRupture ? 'rupture' : 'faible')">
+                {{ p.estRupture ? 'Rupture' : 'Faible' }}
+              </div>
+            </div>
+          </div>
+        }
       </div>
 
     </div>

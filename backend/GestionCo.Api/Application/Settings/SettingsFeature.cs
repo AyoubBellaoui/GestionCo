@@ -300,8 +300,15 @@ public class TestSmtpHandler : IRequestHandler<TestSmtpCommand, string>
         mime.Subject = "Test SMTP — GestionCo.";
         mime.Body = new MimeKit.TextPart("plain") { Text = "Ce message confirme que votre configuration SMTP fonctionne correctement." };
 
+        var socketOptions = ps.Port switch
+        {
+            465 => SecureSocketOptions.SslOnConnect,
+            _ when ps.EnableSsl => SecureSocketOptions.StartTls,
+            _ => SecureSocketOptions.None,
+        };
+
         using var smtpClient = new SmtpClient();
-        await smtpClient.ConnectAsync(ps.Host, ps.Port, SecureSocketOptions.StartTls, ct);
+        await smtpClient.ConnectAsync(ps.Host, ps.Port, socketOptions, ct);
         await smtpClient.AuthenticateAsync(ps.Username, ps.Password, ct);
         await smtpClient.SendAsync(mime, ct);
         await smtpClient.DisconnectAsync(true, ct);

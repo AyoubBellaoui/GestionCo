@@ -131,6 +131,7 @@ public class FullDashboardDto
     public List<TopClientDashDto> TopClients { get; set; } = [];
     public List<TopProduitDto> TopProduits { get; set; } = [];
     public List<StockAlerteDto> StockAlertes { get; set; } = [];
+    public List<DernieresVentesDto> DernieresVentes { get; set; } = [];
 }
 
 public class DashboardHandlers :
@@ -406,6 +407,20 @@ public class GetFullDashboardHandler : IRequestHandler<GetFullDashboardQuery, Fu
             })
             .ToListAsync(ct);
 
+        // Dernières ventes (5 most recent)
+        var dernieresVentes = await _db.Ventes
+            .Include(v => v.Client)
+            .OrderByDescending(v => v.DateVente)
+            .Take(5)
+            .Select(v => new DernieresVentesDto
+            {
+                Id = v.Id, Reference = v.Reference,
+                NomClient = v.Client.NomClient,
+                MontantTotal = v.MontantTotal,
+                DateVente = v.DateVente, Statut = v.Statut
+            })
+            .ToListAsync(ct);
+
         var result = new FullDashboardDto
         {
             CaDuMois = caM, CaDuJour = caJ, VentesDuMois = nbVM, VentesDuJour = nbVJ,
@@ -421,6 +436,7 @@ public class GetFullDashboardHandler : IRequestHandler<GetFullDashboardQuery, Fu
             PanierMoyen = panierMoyen, TotalQteVendue = totalQte,
             Last6Months = bars, DonutItems = donut,
             TopClients = topClients, TopProduits = topProduits, StockAlertes = alertes,
+            DernieresVentes = dernieresVentes,
         };
 
         _cache.Set(CacheKey, result, CacheDuration);

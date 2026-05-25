@@ -8,7 +8,7 @@ import { PaginationComponent } from '../../shared/pagination/pagination.componen
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SettingsService } from '../../core/services/settings.service';
-import { Facture, VenteSansFacture } from '../../core/models';
+import { Facture, VenteSansFacture, Client } from '../../core/models';
 import * as XLSX from 'xlsx';
 import { formatNum, formatDate, getInitials, getAvatarClass, getPayStatus } from '../../core/utils/format';
 
@@ -36,6 +36,7 @@ export class FacturesComponent implements OnInit {
   selectedIds = new Set<number>();
   statsData = { totalMois: 0, totalMoisTrend: null as number | null, totalPaye: 0, payeePct: 0, enAttenteCount: 0, enAttenteMontant: 0, enRetardCount: 0, enRetardMontant: 0, tabCounts: { all: 0, payee: 0, partiel: 0, enAttente: 0, enRetard: 0, annulee: 0 } };
   uniqueClients: string[] = [];
+  clients: Client[] = [];
   private searchTimer: any;
 
   showDetail: Facture | null = null;
@@ -68,8 +69,8 @@ export class FacturesComponent implements OnInit {
 
   private async loadClients(): Promise<void> {
     try {
-      const clients = await this.api.clientsList();
-      this.uniqueClients = clients.map(c => c.nomClient).sort();
+      this.clients = await this.api.clientsList();
+      this.uniqueClients = this.clients.map(c => c.nomClient).sort();
     } catch (err) { console.error('loadClients factures error:', err); }
   }
 
@@ -287,7 +288,7 @@ export class FacturesComponent implements OnInit {
 
   openEmailModal(f: Facture): void {
     this.emailTarget = f;
-    this.emailTo = '';
+    this.emailTo = this.clients.find(c => c.id === f.clientId)?.email || '';
     this.emailMessage = '';
     this.emailModalOpen = true;
   }

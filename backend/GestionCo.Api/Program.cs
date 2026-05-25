@@ -215,6 +215,32 @@ using (var scope = app.Services.CreateScope())
             logger.LogWarning("⚠️  Impossible d'initialiser parametres_entreprise : {Msg}", ex.Message);
         }
 
+        // Seed par défaut pour parametres_smtp (depuis appsettings.json)
+        try
+        {
+            if (!await db.ParametresSmtp.AnyAsync())
+            {
+                var smtpCfg = app.Configuration.GetSection("Smtp");
+                db.ParametresSmtp.Add(new GestionCo.Api.Domain.Entities.ParametresSmtp
+                {
+                    Host        = smtpCfg["Host"]        ?? "",
+                    Port        = int.TryParse(smtpCfg["Port"], out var p) ? p : 587,
+                    Username    = smtpCfg["Username"]    ?? "",
+                    Password    = smtpCfg["Password"]    ?? "",
+                    FromName    = smtpCfg["FromName"]    ?? "GestionCo. SARL",
+                    FromAddress = smtpCfg["FromAddress"] ?? "",
+                    EnableSsl   = smtpCfg["EnableSsl"]   != "false",
+                    UpdatedAt   = DateTime.UtcNow,
+                });
+                await db.SaveChangesAsync();
+                logger.LogInformation("✅ Paramètres SMTP initialisés depuis appsettings");
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("⚠️  Impossible d'initialiser parametres_smtp : {Msg}", ex.Message);
+        }
+
         // Seed des données de démo
         logger.LogInformation("🌱 Insertion des données de démo...");
         await SeedData.SeedAsync(db, hasher);
@@ -423,6 +449,20 @@ static async Task ApplyManualTablesAsync(AppDbContext db, ILogger logger)
                 [UpdatedAt]    DATETIME2 NOT NULL DEFAULT GETUTCDATE()
             )
             INSERT INTO [parametres_entreprise] ([RaisonSociale],[UpdatedAt]) VALUES ('GestionCo. SARL',GETUTCDATE())
+            """),
+
+        ("parametres_smtp", """
+            CREATE TABLE [parametres_smtp] (
+                [Id]          INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                [Host]        NVARCHAR(200) NOT NULL DEFAULT '',
+                [Port]        INT           NOT NULL DEFAULT 587,
+                [Username]    NVARCHAR(200) NOT NULL DEFAULT '',
+                [Password]    NVARCHAR(500) NOT NULL DEFAULT '',
+                [FromName]    NVARCHAR(200) NOT NULL DEFAULT 'GestionCo. SARL',
+                [FromAddress] NVARCHAR(200) NOT NULL DEFAULT '',
+                [EnableSsl]   BIT           NOT NULL DEFAULT 1,
+                [UpdatedAt]   DATETIME2     NOT NULL DEFAULT GETUTCDATE()
+            )
             """),
     };
 

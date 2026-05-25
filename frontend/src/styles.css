@@ -263,7 +263,7 @@ input, select, textarea { font-family: inherit; }
 [data-theme="dark"] .theme-toggle:hover { color: #fbbf24; border-color: #fbbf24; background: #2a1e0b; }
 .notif-dot { position: absolute; top: 7px; right: 7px; width: 8px; height: 8px; background: var(--danger); border-radius: 50%; border: 2px solid var(--surface); }
 
-.content { flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 18px; }
+.content { flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 12px; }
 
 /* ============ STATS ============ */
 .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
@@ -2473,7 +2473,7 @@ kbd {
 .db2-marge-fill.neg { background: linear-gradient(90deg,#ef4444,#dc2626); }
 
 /* ── KPI row ── */
-.db2-kpi-row { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; animation: fadeUp 0.4s 0.08s ease both; }
+.db2-kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; animation: fadeUp 0.4s 0.08s ease both; }
 
 .db2-kpi-card {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
@@ -2509,13 +2509,15 @@ kbd {
   animation: fadeUp 0.4s 0.14s ease both;
 }
 .db2-action {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 20px; border-radius: 10px;
-  font-size: 13.5px; font-weight: 600; text-decoration: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  padding: 14px 20px; border-radius: 12px;
+  font-size: 13px; font-weight: 600; text-decoration: none;
   transition: all .2s; border: 1.5px solid transparent;
-  flex: 1; justify-content: center; white-space: nowrap; min-width: 130px;
+  flex: 1; white-space: nowrap; min-width: 120px; min-height: 70px;
 }
-.db2-action:hover { transform: translateY(-2px); box-shadow: 0 5px 18px rgba(0,0,0,.13); }
+.db2-action:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.16); }
+.db2-action-icon  { font-size: 22px; line-height: 1; }
+.db2-action-label { font-size: 12px; font-weight: 600; opacity: .92; }
 .db2-action.primary { background: var(--primary);  color: #fff; }
 .db2-action.primary:hover { background: var(--primary-dark); }
 .db2-action.info    { background: #0ea5e9; color: #fff; }
@@ -2527,8 +2529,9 @@ kbd {
 .db2-action.neutral { background: var(--surface); color: var(--text); border-color: var(--border); }
 .db2-action.neutral:hover { background: var(--bg); }
 
-/* ── Charts grid ── */
-.db2-charts-grid { display: grid; grid-template-columns: 1fr 300px; gap: 14px; align-items: start; animation: fadeUp 0.4s 0.2s ease both; }
+/* ── Main grid (left col: bar chart + tables | right col: donut + cards) ── */
+.db2-main-grid { display: grid; grid-template-columns: 1fr 300px; gap: 14px; align-items: start; animation: fadeUp 0.4s 0.2s ease both; }
+.db2-left-col  { display: flex; flex-direction: column; gap: 14px; }
 
 .db2-chart-card  { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
 .db2-chart-head  { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
@@ -2581,8 +2584,8 @@ kbd {
 .db2-donut-center-pct { font-size: 20px; font-weight: 800; color: var(--text); line-height: 1; }
 .db2-donut-center-lbl { font-size: 10px; color: var(--text-muted); font-weight: 600; margin-top: 2px; white-space: nowrap; }
 
-/* ── Bottom grid ── */
-.db2-bottom-grid { display: grid; grid-template-columns: 1fr 290px; gap: 14px; align-items: start; animation: fadeUp 0.4s 0.3s ease both; }
+/* ── Bottom grid (kept for skeleton fallback) ── */
+.db2-bottom-grid { display: grid; grid-template-columns: 1fr 290px; gap: 14px; align-items: start; }
 .db2-section-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
 .db2-section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .db2-section-title { font-size: 14px; font-weight: 700; color: var(--text); }
@@ -2625,24 +2628,96 @@ kbd {
 .db2-metric-val { font-size: 13.5px; font-weight: 700; color: var(--text); }
 .db2-metric-val small { font-size: 10.5px; font-weight: 500; color: var(--text-muted); }
 
+/* ── Stock reappro card ── */
+.db2-stock-row   { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.db2-stock-row:last-child { border-bottom: none; }
+.db2-stock-info  { flex: 1; min-width: 0; }
+.db2-stock-nom   { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.db2-stock-ref   { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+.db2-stock-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.db2-stock-qty   { font-size: 12px; font-weight: 700; }
+.db2-stock-qty.rupture { color: var(--danger); }
+.db2-stock-qty.faible  { color: #b45309; }
+.db2-stock-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+.db2-stock-badge.rupture { background: var(--danger-light);  color: var(--danger); }
+.db2-stock-badge.faible  { background: var(--warning-light); color: #b45309; }
+
+/* ── Impayés situation card ── */
+.db2-ibloc { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+.db2-ibloc-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.db2-ibloc-icon.receivable { background: var(--success-light); }
+.db2-ibloc-icon.payable    { background: var(--danger-light); }
+.db2-ibloc-body { flex: 1; min-width: 0; }
+.db2-ibloc-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.db2-ibloc-sub   { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.db2-ibloc-amount { font-size: 13.5px; font-weight: 700; white-space: nowrap; }
+.db2-ibloc-amount.receivable { color: #16a34a; }
+.db2-ibloc-amount.payable    { color: var(--danger); }
+.db2-ibloc-amount small { font-size: 10px; font-weight: 500; opacity: .75; }
+.db2-ibloc-net {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 10px; padding: 8px 12px; border-radius: 8px;
+}
+.db2-ibloc-net.positive { background: var(--success-light); }
+.db2-ibloc-net.negative { background: var(--danger-light); }
+.db2-ibloc-net-label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.db2-ibloc-net-val   { font-size: 14px; font-weight: 800; }
+.db2-ibloc-net.positive .db2-ibloc-net-val { color: #16a34a; }
+.db2-ibloc-net.negative .db2-ibloc-net-val { color: var(--danger); }
+
+/* ── Stats 2-col grid (merged quick stats card) ── */
+.db2-stats-2col { display: grid; grid-template-columns: 1fr 1fr; }
+.db2-stat-cell  { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-bottom: 1px solid var(--border); }
+.db2-stat-cell.last, .db2-stat-cell:nth-last-child(-n+2):not(.db2-stat-cell ~ .db2-stat-cell) { border-bottom: none; }
+.db2-stats-2col .db2-stat-cell:nth-last-child(1),
+.db2-stats-2col .db2-stat-cell:nth-last-child(2) { border-bottom: none; }
+.db2-stat-lbl   { font-size: 11.5px; font-weight: 500; color: var(--text-muted); margin-bottom: 2px; }
+.db2-stat-val   { font-size: 13px; font-weight: 700; color: var(--text); }
+.db2-stat-val small { font-size: 10px; font-weight: 500; color: var(--text-muted); }
+
+/* ── Dernières ventes feed ── */
+.db2-ventes-feed { }
+.db2-feed-link  { font-size: 12px; font-weight: 600; color: var(--primary); text-decoration: none; }
+.db2-feed-link:hover { text-decoration: underline; }
+.db2-feed-row {
+  display: grid; grid-template-columns: 110px 1fr 70px auto auto;
+  align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.db2-feed-row:last-child { border-bottom: none; }
+.db2-feed-ref    { font-size: 12.5px; font-weight: 700; color: var(--primary); font-family: monospace; }
+.db2-feed-client { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.db2-feed-date   { font-size: 11.5px; color: var(--text-muted); text-align: right; }
+.db2-feed-amount { font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap; text-align: right; }
+.db2-feed-amount small { font-size: 10.5px; font-weight: 500; color: var(--text-muted); }
+.db2-feed-badge {
+  font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+}
+.db2-feed-badge.paid      { background: var(--success-light); color: #15803d; }
+.db2-feed-badge.pending   { background: var(--warning-light); color: #b45309; }
+.db2-feed-badge.cancelled { background: var(--border); color: var(--text-muted); }
+
 /* ── Responsive db2 ── */
 @media (max-width: 1200px) {
-  .db2-kpi-row { grid-template-columns: repeat(3,1fr); }
+  .db2-kpi-row { grid-template-columns: repeat(2,1fr); }
 }
 @media (max-width: 900px) {
   .db2-hero-body    { grid-template-columns: 1fr; gap: 8px; }
   .db2-hero-op      { display: none; }
   .db2-kpi-row      { grid-template-columns: repeat(2,1fr); }
-  .db2-charts-grid  { grid-template-columns: 1fr; }
-  .db2-bottom-grid  { grid-template-columns: 1fr; }
+  .db2-main-grid    { grid-template-columns: 1fr; }
   .db2-right-col    { flex-direction: row; flex-wrap: wrap; }
   .db2-right-col .db2-section-card { flex: 1; min-width: 200px; }
   .db2-skel-kpi     { grid-template-columns: repeat(3,1fr); }
+  .db2-feed-row     { grid-template-columns: 90px 1fr auto auto; }
+  .db2-feed-date    { display: none; }
 }
 @media (max-width: 600px) {
   .db2-kpi-row { grid-template-columns: 1fr 1fr; }
   .db2-actions { gap: 8px; }
-  .db2-action  { min-width: 45%; font-size: 12.5px; }
+  .db2-action  { min-width: 80px; }
+  .db2-feed-row { grid-template-columns: 80px 1fr auto; }
+  .db2-feed-amount { display: none; }
 }
 
 /* ── Dark mode db2 overrides ── */

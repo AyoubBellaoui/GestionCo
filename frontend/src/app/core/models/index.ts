@@ -39,6 +39,7 @@ export interface DonutItem  { label: string; amount: number; color: string; }
 export interface TopClientDash { clientId: number; nomClient: string; initiales: string; totalDepense: number; }
 export interface TopProduitDash { produitId: number; nomProduit: string; image?: string; quantiteVendue: number; montantTotal: number; }
 export interface StockAlerte { produitId: number; nomProduit: string; reference: string; image?: string; quantiteStock: number; seuilAlerte: number; estRupture: boolean; }
+export interface DerniereVente { id: number; reference: string; nomClient: string; montantTotal: number; dateVente: string; statut: string; }
 
 export interface FullDashboard {
   caDuMois: number; caDuJour: number; ventesDuMois: number; ventesDuJour: number;
@@ -56,6 +57,7 @@ export interface FullDashboard {
   topClients: TopClientDash[];
   topProduits: TopProduitDash[];
   stockAlertes: StockAlerte[];
+  dernieresVentes: DerniereVente[];
 }
 
 // ============ PRODUITS ============

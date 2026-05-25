@@ -3,7 +3,7 @@ import { NgClass } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
 import { ApiService } from '../../core/services/api.service';
-import { FullDashboard } from '../../core/models';
+import { FullDashboard, DerniereVente } from '../../core/models';
 import { formatNum } from '../../core/utils/format';
 
 interface MonthBar  { label: string; ca: number; dep: number; caH: number; depH: number; }
@@ -71,6 +71,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
   get nombreAchatsImpayes()    { return this.d?.nombreAchatsImpayes    ?? 0; }
   get nombreChargesImpayees()  { return this.d?.nombreChargesImpayees  ?? 0; }
   get nombreFacturesImpayees() { return this.d?.nombreFacturesImpayees ?? 0; }
+  get dernieresVentes(): DerniereVente[] { return this.d?.dernieresVentes ?? []; }
+  get stockAlertes()   { return this.d?.stockAlertes ?? []; }
+  readonly Math = Math;
+
+  venteStatut(s: string): { label: string; cls: string } {
+    if (s === 'Paye')   return { label: 'Payé',       cls: 'paid' };
+    if (s === 'Annule') return { label: 'Annulé',     cls: 'cancelled' };
+    return                     { label: 'En attente', cls: 'pending' };
+  }
+
+  formatDate(iso: string): string {
+    return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+  }
 
   private readonly _avCls = ['avatar-1','avatar-2','avatar-3','avatar-4','avatar-5'];
 
