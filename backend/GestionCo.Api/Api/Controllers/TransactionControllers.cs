@@ -97,6 +97,10 @@ public class CommandesController : ControllerBase
     public async Task<IActionResult> UpdateStatut(int id, [FromBody] UpdateCommandeStatutDto dto, CancellationToken ct)
         => Ok(await _mediator.Send(new UpdateCommandeStatutCommand(id, dto.Statut), ct));
 
+    [HttpPut("{id}/etat-livraison")]
+    public async Task<IActionResult> UpdateEtatLivraison(int id, [FromBody] UpdateCommandeEtatLivraisonDto dto, CancellationToken ct)
+        => Ok(await _mediator.Send(new UpdateCommandeEtatLivraisonCommand(id, dto.EtatLivraison), ct));
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {

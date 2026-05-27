@@ -132,8 +132,15 @@
 
       <div class="modal-body" style="display:flex;flex-direction:column;gap:18px">
 
-        <!-- Info chips -->
+        <!-- Info chips + thumbnail -->
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          @if (detailProduit.image) {
+            <div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--surface2);display:flex;align-items:center;justify-content:center;border:1px solid var(--border);cursor:zoom-in" title="Voir en pleine résolution" (click)="openLightbox(detailProduit.image)">
+              <img [src]="detailProduit.image" [alt]="detailProduit.nom" style="width:100%;height:100%;object-fit:cover"
+                   (error)="$any($event.target).style.display='none'; $any($event.target).nextElementSibling.style.display='flex'" />
+              <span style="font-size:16px;display:none;width:100%;height:100%;align-items:center;justify-content:center">📦</span>
+            </div>
+          }
           @if (detailProduit.categorieNom) {
             <span class="items-badge" style="font-size:12px">{{ detailProduit.categorieIcone || '🏷️' }} {{ detailProduit.categorieNom }}</span>
           }
@@ -263,6 +270,14 @@
         <button class="btn btn-primary" (click)="editDetail()">✏️ Modifier</button>
       </div>
     </div>
+  </div>
+}
+
+<!-- ══ LIGHTBOX IMAGE PLEINE RÉSOLUTION ══ -->
+@if (lightboxSrc) {
+  <div (click)="closeLightbox()" style="position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;padding:20px">
+    <button (click)="closeLightbox()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .15s" title="Fermer (Échap)">✕</button>
+    <img [src]="lightboxSrc" style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.6);cursor:default" (click)="$event.stopPropagation()" />
   </div>
 }
 

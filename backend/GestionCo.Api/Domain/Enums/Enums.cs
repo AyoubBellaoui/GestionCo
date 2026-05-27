@@ -108,12 +108,18 @@ public enum StatutDevis
 
 public enum StatutCommande
 {
-    EnAttente  = 1,
-    Confirmee  = 2,
-    EnCours    = 3,
-    Livree     = 4,
-    Convertie  = 5,
-    Annulee    = 6
+    Brouillon = 1,
+    Confirmee = 2,
+    Convertie = 5,
+    Annulee   = 6
+}
+
+public enum EtatLivraison
+{
+    NonCommence   = 1,
+    EnPreparation = 2,
+    EnLivraison   = 3,
+    Livre         = 4
 }
 
 public enum ActionLog

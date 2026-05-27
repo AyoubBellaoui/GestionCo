@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NgClass } from '@angular/common';
@@ -34,6 +34,9 @@ export class ProduitsComponent implements OnInit {
   // Detail modal
   detailModal = false;
   detailProduit: Produit | null = null;
+
+  // Lightbox
+  lightboxSrc: string | null = null;
 
   // Ajustement modal
   ajustModal = false;
@@ -180,6 +183,15 @@ export class ProduitsComponent implements OnInit {
   closeDetail(): void {
     this.detailModal = false;
     this.detailProduit = null;
+  }
+
+  openLightbox(src: string): void { this.lightboxSrc = src; }
+  closeLightbox(): void { this.lightboxSrc = null; }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.lightboxSrc) { this.closeLightbox(); return; }
+    if (this.detailModal) this.closeDetail();
   }
 
   editDetail(): void {

@@ -546,6 +546,8 @@ export interface Commande {
   montantTotal: number;
   statut: string;
   statutLibelle: string;
+  etatLivraison: string;
+  etatLivraisonLibelle: string;
   notes?: string;
   venteId?: number;
   venteReference?: string;

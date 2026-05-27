@@ -250,6 +250,8 @@ input, select, textarea { font-family: inherit; }
 .btn-ghost:hover { background: var(--surface2); color: var(--text); }
 .btn-danger { background: var(--danger); color: #fff; }
 .btn-danger:hover { background: #dc2626; }
+.btn-success { background: #16a34a; color: #fff; }
+.btn-success:hover { background: #15803d; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(22,163,74,0.3); }
 .btn-sm { padding: 6px 12px; font-size: 12.5px; }
 .btn-icon { padding: 7px; border-radius: 6px; background: transparent; color: var(--text-muted); border: none; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; justify-content: center; }
 .btn-icon:hover { background: var(--surface2); color: var(--text); }

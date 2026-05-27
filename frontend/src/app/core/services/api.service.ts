@@ -382,6 +382,9 @@ export class ApiService {
   commandeUpdateStatut(id: number, statut: string): Promise<Commande> {
     return firstValueFrom(this.http.put<Commande>(`${this.base}/commandes/${id}/statut`, { statut }));
   }
+  commandeUpdateEtatLivraison(id: number, etatLivraison: string): Promise<Commande> {
+    return firstValueFrom(this.http.put<Commande>(`${this.base}/commandes/${id}/etat-livraison`, { etatLivraison }));
+  }
   commandeDelete(id: number): Promise<void> {
     return firstValueFrom(this.http.delete<void>(`${this.base}/commandes/${id}`));
   }

@@ -65,13 +65,22 @@ export class CommandesComponent implements OnInit {
 
   statutInfo(c: Commande): { label: string; cls: string } {
     switch (c.statut) {
-      case 'EnAttente':  return { label: 'En attente', cls: 'neutral' };
+      case 'Brouillon':  return { label: 'Brouillon', cls: 'neutral' };
       case 'Confirmee':  return { label: 'Confirmée', cls: 'medium' };
-      case 'EnCours':    return { label: 'En cours', cls: 'medium' };
-      case 'Livree':     return { label: 'Livrée', cls: 'good' };
       case 'Convertie':  return { label: 'Convertie ✓', cls: 'partial' };
       case 'Annulee':    return { label: 'Annulée', cls: 'bad' };
       default:           return { label: c.statut, cls: 'neutral' };
+    }
+  }
+
+  etatLivraisonInfo(c: Commande): { label: string; cls: string } | null {
+    if (c.statut !== 'Confirmee') return null;
+    switch (c.etatLivraison) {
+      case 'NonCommence':   return { label: 'Non commencé', cls: 'neutral' };
+      case 'EnPreparation': return { label: 'En préparation', cls: 'medium' };
+      case 'EnLivraison':   return { label: 'En livraison', cls: 'partial' };
+      case 'Livre':         return { label: 'Livré', cls: 'good' };
+      default:              return null;
     }
   }
 
@@ -90,12 +99,32 @@ export class CommandesComponent implements OnInit {
   }
 
   async changerStatut(c: Commande, statut: string): Promise<void> {
-    const labels: Record<string, string> = { Confirmee: 'confirmée', EnCours: 'en cours', Livree: 'livrée', Annulee: 'annulée' };
-    if (!confirm(`Marquer la commande ${c.reference} comme ${labels[statut] || statut} ?`)) return;
+    const labels: Record<string, string> = { Confirmee: 'confirmée', Annulee: 'annulée ✗' };
+    const msg = statut === 'Annulee'
+      ? `Annuler la commande ${c.reference} ? Cette action est irréversible.`
+      : `Marquer la commande ${c.reference} comme ${labels[statut] || statut} ?`;
+    if (!confirm(msg)) return;
     try {
       await this.api.commandeUpdateStatut(c.id, statut);
       this.toast.notify(`Commande ${labels[statut] || statut}`, 'success');
       this.load();
+    } catch (e: any) { this.toast.notify(e?.error?.message || 'Erreur lors de la mise à jour', 'error'); }
+  }
+
+  async changerEtatLivraison(c: Commande, etat: string): Promise<void> {
+    const labels: Record<string, string> = {
+      EnPreparation: 'en préparation',
+      EnLivraison: 'en cours de livraison',
+      Livre: 'livrée',
+    };
+    if (!confirm(`Passer la commande ${c.reference} à l'état "${labels[etat] || etat}" ?`)) return;
+    try {
+      await this.api.commandeUpdateEtatLivraison(c.id, etat);
+      this.toast.notify(`État de livraison mis à jour`, 'success');
+      this.load();
+      if (etat === 'Livre' && confirm(`Livraison de ${c.reference} confirmée ✓\n\nCréer la vente maintenant ?`)) {
+        this.router.navigate(['/ventes/nouvelle'], { queryParams: { commandeId: c.id } });
+      }
     } catch (e: any) { this.toast.notify(e?.error?.message || 'Erreur lors de la mise à jour', 'error'); }
   }
 

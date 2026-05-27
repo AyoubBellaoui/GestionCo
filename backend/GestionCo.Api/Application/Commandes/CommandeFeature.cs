@@ -28,6 +28,8 @@ public class CommandeDto
     public decimal MontantTotal { get; set; }
     public StatutCommande Statut { get; set; }
     public string StatutLibelle => Statut.ToString();
+    public EtatLivraison EtatLivraison { get; set; }
+    public string EtatLivraisonLibelle => EtatLivraison.ToString();
     public string? Notes { get; set; }
     public int? VenteId { get; set; }
     public string? VenteReference { get; set; }
@@ -79,6 +81,11 @@ public class UpdateCommandeStatutDto
     public StatutCommande Statut { get; set; }
 }
 
+public class UpdateCommandeEtatLivraisonDto
+{
+    public EtatLivraison EtatLivraison { get; set; }
+}
+
 public class ConversionCommandeResultDto
 {
     public int CommandeId { get; set; }
@@ -91,6 +98,7 @@ public class ConversionCommandeResultDto
 public record CreateCommandeCommand(CreateCommandeDto Dto) : IRequest<CommandeDto>;
 public record UpdateCommandeCommand(int Id, UpdateCommandeDto Dto) : IRequest<CommandeDto>;
 public record UpdateCommandeStatutCommand(int Id, StatutCommande Statut) : IRequest<CommandeDto>;
+public record UpdateCommandeEtatLivraisonCommand(int Id, EtatLivraison EtatLivraison) : IRequest<CommandeDto>;
 public record DeleteCommandeCommand(int Id) : IRequest;
 
 // ============ QUERIES ============
@@ -169,6 +177,7 @@ internal static class CommandeLoadHelper
         MontantTVA = c.MontantTVA,
         MontantTotal = c.MontantTotal,
         Statut = c.Statut,
+        EtatLivraison = c.EtatLivraison,
         Notes = c.Notes,
         VenteId = c.VenteId,
         VenteReference = c.Vente?.Reference,
@@ -228,7 +237,8 @@ public class CreateCommandeHandler : IRequestHandler<CreateCommandeCommand, Comm
             DateCommande = dto.DateCommande ?? now,
             DateLivraison = dto.DateLivraison,
             Notes = dto.Notes?.Trim(),
-            Statut = StatutCommande.EnAttente,
+            Statut = StatutCommande.Brouillon,
+            EtatLivraison = EtatLivraison.NonCommence,
             Lignes = dto.Lignes.Select(l => new LigneCommande
             {
                 ProduitId = l.ProduitId,
@@ -345,9 +355,8 @@ public class UpdateCommandeStatutHandler : IRequestHandler<UpdateCommandeStatutC
 
         var allowedTransitions = new Dictionary<StatutCommande, List<StatutCommande>>
         {
-            [StatutCommande.EnAttente] = new() { StatutCommande.Confirmee, StatutCommande.Annulee },
-            [StatutCommande.Confirmee] = new() { StatutCommande.EnCours, StatutCommande.Annulee },
-            [StatutCommande.EnCours]   = new() { StatutCommande.Livree, StatutCommande.Annulee },
+            [StatutCommande.Brouillon] = new() { StatutCommande.Confirmee, StatutCommande.Annulee },
+            [StatutCommande.Confirmee] = new() { StatutCommande.Annulee },
         };
 
         if (!allowedTransitions.TryGetValue(commande.Statut, out var allowed) || !allowed.Contains(req.Statut))
@@ -359,6 +368,50 @@ public class UpdateCommandeStatutHandler : IRequestHandler<UpdateCommandeStatutC
 
         await _audit.LogAsync(ActionLog.Update, "commande",
             $"Statut commande {commande.Reference} : {ancienStatut} → {req.Statut}",
+            commande.Id, commande.Reference, ct: ct);
+
+        return await CommandeLoadHelper.LoadDto(_db, commande.Id, ct);
+    }
+}
+
+public class UpdateCommandeEtatLivraisonHandler : IRequestHandler<UpdateCommandeEtatLivraisonCommand, CommandeDto>
+{
+    private readonly IAppDbContext _db;
+    private readonly ICurrentUserService _current;
+    private readonly IAuditLogger _audit;
+
+    public UpdateCommandeEtatLivraisonHandler(IAppDbContext db, ICurrentUserService current, IAuditLogger audit)
+    {
+        _db = db; _current = current; _audit = audit;
+    }
+
+    public async Task<CommandeDto> Handle(UpdateCommandeEtatLivraisonCommand req, CancellationToken ct)
+    {
+        if (_current.UserId == null) throw new UnauthorizedException();
+
+        var commande = await _db.Commandes
+            .FirstOrDefaultAsync(c => c.Id == req.Id, ct)
+            ?? throw new NotFoundException("Commande", req.Id);
+
+        if (commande.Statut != StatutCommande.Confirmee)
+            throw new BusinessException("L'état de livraison ne peut être modifié que pour une commande confirmée");
+
+        var allowedTransitions = new Dictionary<EtatLivraison, List<EtatLivraison>>
+        {
+            [EtatLivraison.NonCommence]   = new() { EtatLivraison.EnPreparation },
+            [EtatLivraison.EnPreparation] = new() { EtatLivraison.EnLivraison },
+            [EtatLivraison.EnLivraison]   = new() { EtatLivraison.Livre },
+        };
+
+        if (!allowedTransitions.TryGetValue(commande.EtatLivraison, out var allowed) || !allowed.Contains(req.EtatLivraison))
+            throw new BusinessException($"Transition {commande.EtatLivraison} → {req.EtatLivraison} non autorisée");
+
+        var ancien = commande.EtatLivraison;
+        commande.EtatLivraison = req.EtatLivraison;
+        await _db.SaveChangesAsync(ct);
+
+        await _audit.LogAsync(ActionLog.Update, "commande",
+            $"État livraison {commande.Reference} : {ancien} → {req.EtatLivraison}",
             commande.Id, commande.Reference, ct: ct);
 
         return await CommandeLoadHelper.LoadDto(_db, commande.Id, ct);
@@ -464,8 +517,8 @@ public class GetCommandeStatsHandler : IRequestHandler<GetCommandeStatsQuery, Co
         return new CommandeStatsDto
         {
             Total = all.Count,
-            EnAttente = all.Count(c => c.Statut == StatutCommande.EnAttente),
-            Confirmees = all.Count(c => c.Statut == StatutCommande.Confirmee || c.Statut == StatutCommande.EnCours || c.Statut == StatutCommande.Livree),
+            EnAttente = all.Count(c => c.Statut == StatutCommande.Brouillon),
+            Confirmees = all.Count(c => c.Statut == StatutCommande.Confirmee),
             Converties = all.Count(c => c.Statut == StatutCommande.Convertie),
             MontantTotal = all.Where(c => c.Statut != StatutCommande.Annulee).Sum(c => c.MontantTotal)
         };

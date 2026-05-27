@@ -24,7 +24,8 @@ public class Commande : AuditableEntity
     public decimal MontantTVA { get; set; }
     public decimal MontantTotal { get; set; }
 
-    public StatutCommande Statut { get; set; } = StatutCommande.EnAttente;
+    public StatutCommande Statut { get; set; } = StatutCommande.Brouillon;
+    public EtatLivraison EtatLivraison { get; set; } = EtatLivraison.NonCommence;
     public string? Notes { get; set; }
 
     public int? VenteId { get; set; }

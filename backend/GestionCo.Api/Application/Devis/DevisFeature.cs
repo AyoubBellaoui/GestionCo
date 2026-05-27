@@ -475,7 +475,8 @@ public class ConvertirDevisEnCommandeHandler : IRequestHandler<ConvertirDevisEnC
             UtilisateurId = userId,
             DateCommande = now,
             Notes = devis.Notes,
-            Statut = StatutCommande.EnAttente,
+            Statut = StatutCommande.Brouillon,
+            EtatLivraison = EtatLivraison.NonCommence,
             Lignes = devis.Lignes.Select(l => new LigneCommande
             {
                 ProduitId = l.ProduitId,
