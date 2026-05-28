@@ -45,6 +45,7 @@ export class SettingsComponent implements OnInit {
   smtpTesting = false;
   smtpTestEmail = '';
   showSmtpPassword = false;
+  showSmtpGuide = false;
 
   comptesList: UtilisateurDto[] = [];
   comptesLoading = false;

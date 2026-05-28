@@ -3,6 +3,7 @@ using GestionCo.Api.Application.Auth.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace GestionCo.Api.Api.Controllers;
 
@@ -15,6 +16,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting("login")]
     public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginRequest req, CancellationToken ct)
     {
         var result = await _mediator.Send(new LoginCommand(req.Email, req.Password), ct);
@@ -23,6 +25,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("refresh")]
     [AllowAnonymous]
+    [EnableRateLimiting("login")]
     public async Task<ActionResult<AuthResponse>> Refresh([FromBody] RefreshTokenRequest req, CancellationToken ct)
     {
         var result = await _mediator.Send(new RefreshTokenCommand(req.AccessToken, req.RefreshToken), ct);

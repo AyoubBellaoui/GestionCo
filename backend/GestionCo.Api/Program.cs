@@ -13,10 +13,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+var isDev = builder.Environment.IsDevelopment();
 
 // ============ DATABASE ============
 // Connection string depuis appsettings.json (clé "Default")
@@ -54,15 +57,47 @@ builder.Services.AddHostedService<RecurringChargesJob>();
 builder.Services.AddHostedService<VenteEcheanceJob>();
 builder.Services.AddMemoryCache();
 
+// ============ RATE LIMITING ============
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("login", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(15);
+        opt.PermitLimit = 5;
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
+    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.Headers["Retry-After"] = "900";
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsync(
+            "{\"message\":\"Trop de tentatives de connexion. Réessayez dans 15 minutes.\"}",
+            cancellationToken);
+    };
+});
+
 // ============ JWT AUTH ============
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()
     ?? throw new InvalidOperationException("JwtSettings manquant");
+
+// En production, refuse une clé faible ou la clé de dev par défaut
+if (!isDev)
+{
+    var key = jwtSettings.SecretKey;
+    if (string.IsNullOrWhiteSpace(key) || key.Length < 32
+        || key.Contains("DoNotUse") || key.Contains("PFE") || key.Contains("CHANGE_ME"))
+        throw new InvalidOperationException(
+            "JwtSettings:SecretKey n'est pas sécurisée pour la production. " +
+            "Override via la variable d'environnement : JwtSettings__SecretKey");
+}
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        options.RequireHttpsMetadata = false;
+        options.RequireHttpsMetadata = !isDev;
         options.SaveToken = true;
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -283,7 +318,14 @@ using (var scope = app.Services.CreateScope())
 }
 
 // ============ PIPELINE ============
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
+
 app.UseCors("AllowFrontend");
+app.UseRateLimiter();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())

@@ -368,6 +368,83 @@
           @if (smtpLoading) {
             <div class="loading-row" style="padding:32px;text-align:center">Chargement…</div>
           } @else {
+
+            <!-- Guide toggle -->
+            <div style="margin-bottom:16px">
+              <button type="button" (click)="showSmtpGuide=!showSmtpGuide"
+                style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 16px;cursor:pointer;color:var(--text);font-size:13px;font-weight:600;width:100%;text-align:left;transition:background .15s">
+                <span style="font-size:16px">📖</span>
+                <span>Comment configurer l'envoi d'emails ?</span>
+                <span style="margin-left:auto;font-size:11px;color:var(--text-muted)">{{ showSmtpGuide ? '▲ Masquer' : '▼ Voir le guide' }}</span>
+              </button>
+
+              @if (showSmtpGuide) {
+                <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;padding:20px;background:var(--surface);font-size:13px;line-height:1.7">
+
+                  <div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--primary)">🚀 Étapes pour configurer SMTP</div>
+
+                  <!-- Step 1 -->
+                  <div style="display:flex;gap:12px;margin-bottom:16px">
+                    <div style="min-width:24px;height:24px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0">1</div>
+                    <div>
+                      <div style="font-weight:600;margin-bottom:4px">Choisissez votre fournisseur email</div>
+                      <div style="color:var(--text-muted)">Utilisez l'adresse email de votre entreprise. Les fournisseurs courants :</div>
+                      <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">
+                        <span style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:12px">📧 Gmail → smtp.gmail.com : 587</span>
+                        <span style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:12px">📧 Outlook → smtp.office365.com : 587</span>
+                        <span style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:12px">📧 Brevo → smtp-relay.brevo.com : 587</span>
+                        <span style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:12px">📧 OVH → ssl0.ovh.net : 587</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Step 2 -->
+                  <div style="display:flex;gap:12px;margin-bottom:16px">
+                    <div style="min-width:24px;height:24px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0">2</div>
+                    <div>
+                      <div style="font-weight:600;margin-bottom:4px">⚠️ Si vous utilisez Gmail — créez un App Password</div>
+                      <div style="color:var(--text-muted);margin-bottom:6px">Gmail bloque votre mot de passe habituel pour les apps tierces. Vous devez créer un <strong>mot de passe d'application</strong> :</div>
+                      <div style="background:var(--surface2);border-radius:8px;padding:12px;border-left:3px solid var(--primary)">
+                        <div>1. Allez sur <strong>myaccount.google.com</strong></div>
+                        <div>2. Cliquez sur <strong>Sécurité</strong></div>
+                        <div>3. Activez la <strong>validation en 2 étapes</strong> (obligatoire)</div>
+                        <div>4. Cherchez <strong>"Mots de passe des applications"</strong></div>
+                        <div>5. Créez un nouveau mot de passe → choisissez <em>Autre (nom personnalisé)</em> → tapez "GestionCo"</div>
+                        <div>6. Copiez le code de <strong>16 caractères</strong> généré → collez-le dans le champ <em>Mot de passe</em> ci-dessous</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Step 3 -->
+                  <div style="display:flex;gap:12px;margin-bottom:16px">
+                    <div style="min-width:24px;height:24px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0">3</div>
+                    <div>
+                      <div style="font-weight:600;margin-bottom:4px">Remplissez les champs ci-dessous</div>
+                      <div style="color:var(--text-muted)">
+                        <strong>Hôte</strong> et <strong>Port</strong> selon votre fournisseur ·
+                        <strong>Nom d'utilisateur</strong> = votre adresse email ·
+                        <strong>Mot de passe</strong> = App Password (Gmail) ou mot de passe habituel ·
+                        <strong>Adresse expéditeur</strong> = même adresse email
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Step 4 -->
+                  <div style="display:flex;gap:12px;margin-bottom:4px">
+                    <div style="min-width:24px;height:24px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0">4</div>
+                    <div>
+                      <div style="font-weight:600;margin-bottom:4px">Sauvegardez, puis testez</div>
+                      <div style="color:var(--text-muted)">Cliquez sur <strong>Sauvegarder</strong>, entrez une adresse de test en bas de page, puis cliquez <strong>Envoyer un email de test</strong>. Si vous recevez l'email, tout est prêt !</div>
+                    </div>
+                  </div>
+
+                  <div style="margin-top:16px;padding:10px 14px;background:rgba(var(--warning-rgb,234,179,8),.1);border:1px solid rgba(var(--warning-rgb,234,179,8),.3);border-radius:8px;font-size:12px;color:var(--text-muted)">
+                    💡 <strong>Problème fréquent :</strong> Si le test échoue avec "Authentication failed", vérifiez que vous utilisez bien l'App Password (16 caractères) et non votre mot de passe Gmail habituel.
+                  </div>
+                </div>
+              }
+            </div>
+
             <div class="info-box" style="margin-bottom:20px">
               ℹ️ Compatible avec <strong>Brevo</strong>, <strong>Mailtrap</strong>, <strong>Outlook</strong> et tout serveur SMTP standard.
               Pour Gmail, un <strong>App Password</strong> est requis (Compte Google → Sécurité → Mots de passe des applications).
