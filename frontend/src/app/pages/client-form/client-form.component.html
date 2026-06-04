@@ -53,12 +53,12 @@
           <div class="form-grid">
             <div class="form-field full">
               <label class="label">{{ isEntreprise ? 'Raison sociale' : 'Nom complet' }} *</label>
-              <input class="form-input" [(ngModel)]="form.nomClient" [placeholder]="isEntreprise ? 'Société Atlas SARL' : 'Karim El Amrani'" />
+              <input class="form-input" [(ngModel)]="form.nomClient" />
             </div>
             @if (isEntreprise) {
               <div class="form-field full">
                 <label class="label">Personne de contact</label>
-                <input class="form-input" [(ngModel)]="form.personneContact" placeholder="M. Karim Atlas" />
+                <input class="form-input" [(ngModel)]="form.personneContact" />
               </div>
             }
           </div>
@@ -73,14 +73,14 @@
             <div class="form-grid">
               <div class="form-field">
                 <label class="label">ICE (15 chiffres)</label>
-                <input class="form-input" [(ngModel)]="form.ice" placeholder="001234567890012" maxlength="15" style="font-family:monospace" />
+                <input class="form-input" [(ngModel)]="form.ice" maxlength="15" style="font-family:monospace" />
                 @if (form.ice && form.ice.length > 0 && form.ice.length !== 15) {
                   <div class="field-hint" style="color:var(--warning)">⚠️ {{ form.ice.length }}/15 chiffres</div>
                 }
               </div>
               <div class="form-field">
                 <label class="label">RC (Registre Commerce)</label>
-                <input class="form-input" [(ngModel)]="form.rc" placeholder="125678" />
+                <input class="form-input" [(ngModel)]="form.rc" />
               </div>
             </div>
           </div>
@@ -94,11 +94,11 @@
           <div class="form-grid">
             <div class="form-field">
               <label class="label">Email</label>
-              <input type="email" class="form-input" [(ngModel)]="form.email" placeholder="contact@atlas.ma" />
+              <input type="email" class="form-input" [(ngModel)]="form.email" />
             </div>
             <div class="form-field">
               <label class="label">Téléphone</label>
-              <input class="form-input" [(ngModel)]="form.telephone" placeholder="+212 5 22 34 56 78" />
+              <app-phone-input [(ngModel)]="form.telephone"></app-phone-input>
             </div>
           </div>
         </div>
@@ -111,14 +111,11 @@
           <div class="form-grid">
             <div class="form-field full">
               <label class="label">Adresse complète</label>
-              <input class="form-input" [(ngModel)]="form.adresse" placeholder="25 Rue Hassan II" />
+              <input class="form-input" [(ngModel)]="form.adresse" />
             </div>
             <div class="form-field full">
               <label class="label">Ville</label>
-              <select class="form-select" [(ngModel)]="form.ville">
-                <option value="">— Sélectionner —</option>
-                @for (v of villes; track v) { <option [value]="v">{{ v }}</option> }
-              </select>
+              <app-city-input [(ngModel)]="form.ville"></app-city-input>
             </div>
           </div>
         </div>
@@ -150,8 +147,7 @@
               <div style="display:flex;align-items:center;gap:10px">
                 <input type="number" min="0" max="365" class="form-input" style="max-width:120px"
                        [value]="form.delaiPaiement ?? ''"
-                       (input)="form.delaiPaiement = $any($event.target).value ? +$any($event.target).value : undefined"
-                       placeholder="ex: 60" />
+                       (input)="form.delaiPaiement = $any($event.target).value ? +$any($event.target).value : undefined" />
                 <span style="font-size:13px;color:var(--text-secondary)">jours</span>
               </div>
               <div class="field-hint">

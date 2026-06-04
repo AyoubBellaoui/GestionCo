@@ -49,7 +49,7 @@
       <span class="search-icon">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </span>
-      <input class="search-input" placeholder="Référence, client…" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+      <input class="search-input" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
     </div>
     <select class="filter-select" [(ngModel)]="statusFilter" (ngModelChange)="onFilterChange()">
       <option value="">Tous les statuts</option>
@@ -149,14 +149,11 @@
                   </button>
                   @if (d.statut === 'Brouillon') {
                     <button class="btn-icon" (click)="router.navigate(['/devis', d.id, 'modifier'])" title="Modifier"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                    <button class="btn-icon danger" (click)="supprimer(d)" title="Supprimer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg></button>
                   }
+                  <button class="btn-icon danger" (click)="supprimer(d)" title="Supprimer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg></button>
                   @if ((d.statut === 'Brouillon' || d.statut === 'Envoye') && !d.estExpire) {
                     <button class="btn btn-ghost btn-sm" style="color:var(--color-success)" (click)="accepter(d)">✅ Accepter</button>
                     <button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" (click)="refuser(d)">❌ Refuser</button>
-                  }
-                  @if (d.statut === 'Brouillon') {
-                    <button class="btn btn-ghost btn-sm" style="color:var(--text-muted)" (click)="marquerEnvoye(d)" title="Marquer comme envoyé">📤 Envoyé</button>
                   }
                   @if (d.statut === 'Accepte') {
                     <button class="btn btn-primary btn-sm" (click)="convertirEnCommande(d)">📋 Converti en commande</button>
@@ -194,11 +191,11 @@
       <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
         <div class="form-group" style="margin:0">
           <label class="form-label">Adresse email du destinataire <span class="required">*</span></label>
-          <input class="form-input" type="email" placeholder="client@exemple.ma" [(ngModel)]="emailTo" />
+          <input class="form-input" type="email" [(ngModel)]="emailTo" />
         </div>
         <div class="form-group" style="margin:0">
           <label class="form-label">Message personnalisé <span style="color:var(--text-muted);font-weight:400;font-size:11px">(optionnel)</span></label>
-          <textarea class="form-input" rows="3" placeholder="Bonjour, veuillez trouver ci-joint…" [(ngModel)]="emailMessage" style="resize:vertical"></textarea>
+          <textarea class="form-input" rows="3" [(ngModel)]="emailMessage" style="resize:vertical"></textarea>
         </div>
         <div style="font-size:12px;color:var(--text-muted);background:var(--surface2);padding:10px 12px;border-radius:8px">
           Le PDF du devis sera automatiquement joint. Le statut passera à <strong>Envoyé</strong>.

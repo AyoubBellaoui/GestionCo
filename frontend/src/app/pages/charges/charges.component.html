@@ -22,7 +22,7 @@
   <div class="toolbar">
     <div class="search-wrapper">
       <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-      <input class="search-input" placeholder="Rechercher par référence, titre..." [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+      <input class="search-input" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
     </div>
     <input type="date" class="form-input" style="width:200px" [(ngModel)]="selectedDate" (ngModelChange)="onFilterChange()" />
     <select class="filter-select" [(ngModel)]="categorieFilter" (ngModelChange)="onFilterChange()">
@@ -266,7 +266,7 @@
       <div class="form-row-2" style="margin-bottom:14px">
         <div class="form-field">
           <label class="label">Titre *</label>
-          <input type="text" class="form-input" placeholder="Titre de la charge" [(ngModel)]="editTitre" />
+          <input type="text" class="form-input" [(ngModel)]="editTitre" />
         </div>
         <div class="form-field">
           <label class="label">Date</label>
@@ -276,7 +276,7 @@
 
       <div class="form-field" style="margin-bottom:14px">
         <label class="label">Description</label>
-        <textarea class="form-textarea" rows="2" placeholder="Description optionnelle…" [(ngModel)]="editDescription"></textarea>
+        <textarea class="form-textarea" rows="2" [(ngModel)]="editDescription"></textarea>
       </div>
 
       <div class="form-row-2" style="margin-bottom:14px">
@@ -313,7 +313,7 @@
         </div>
         <div class="form-field">
           <label class="label">Référence justificatif</label>
-          <input type="text" class="form-input" placeholder="Ex: FAC-2026-001…" [(ngModel)]="editJustificatif" />
+          <input type="text" class="form-input" [(ngModel)]="editJustificatif" />
         </div>
       </div>
 
@@ -382,7 +382,7 @@
       <div style="display:flex;gap:8px;align-items:flex-end">
         <div style="flex:1">
           <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Nom *</label>
-          <input type="text" class="form-input" placeholder="Ex: Loyer, Électricité..." [(ngModel)]="newCatNom" (keyup.enter)="saveNewCat()" />
+          <input type="text" class="form-input" [(ngModel)]="newCatNom" (keyup.enter)="saveNewCat()" />
         </div>
         <button class="btn btn-primary" (click)="saveNewCat()" [disabled]="newCatSaving || !newCatNom.trim()">
           {{ newCatSaving ? '…' : '+ Ajouter' }}

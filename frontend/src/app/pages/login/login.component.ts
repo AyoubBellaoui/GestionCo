@@ -41,7 +41,7 @@ export class LoginComponent {
     this.error = null;
     try {
       const res = await this.api.login(this.email, this.password);
-      this.auth.setAuth(res.accessToken, res.user);
+      this.auth.setAuth(res.accessToken, res.refreshToken, res.user);
       this.toast.notify('Connexion réussie', 'success');
       this.router.navigate(['/']);
     } catch (err: any) {

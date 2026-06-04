@@ -107,7 +107,7 @@
       <span class="search-icon">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </span>
-      <input class="search-input" placeholder="Rechercher par n° facture, client, ICE…" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+      <input class="search-input" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
     </div>
 
     <input type="date" class="form-input" style="width:200px" [(ngModel)]="selectedDate" (ngModelChange)="onFilterChange()" />
@@ -275,7 +275,7 @@
       <div class="form-field">
         <label class="label">Rechercher une vente</label>
         <div style="position:relative">
-          <input type="text" class="form-input" placeholder="Référence ou nom client..." [(ngModel)]="searchVente" (ngModelChange)="onSearchVenteChange()" style="padding-right:32px" />
+          <input type="text" class="form-input" [(ngModel)]="searchVente" (ngModelChange)="onSearchVenteChange()" style="padding-right:32px" />
           @if (searchVente) {
             <button type="button" (click)="searchVente='';onSearchVenteChange()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;line-height:1;padding:0">×</button>
           }
@@ -388,11 +388,11 @@
     }
     <div class="form-field">
       <label class="label">Adresse email du destinataire *</label>
-      <input type="email" class="form-input" placeholder="client@example.com" [(ngModel)]="emailTo" />
+      <input type="email" class="form-input" [(ngModel)]="emailTo" />
     </div>
     <div class="form-field">
       <label class="label">Message personnalisé <span style="color:var(--text-muted)">(optionnel)</span></label>
-      <textarea class="form-input" rows="3" placeholder="Bonjour, veuillez trouver ci-joint…" [(ngModel)]="emailMessage" style="resize:vertical"></textarea>
+      <textarea class="form-input" rows="3" [(ngModel)]="emailMessage" style="resize:vertical"></textarea>
     </div>
     <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text-muted)">
       Le PDF de la facture sera automatiquement joint à l'email.

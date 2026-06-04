@@ -62,7 +62,7 @@
             </div>
             <div class="form-field">
               <label class="label">Téléphone</label>
-              <input class="form-input" [value]="settings.settings.entreprise.telephone" (input)="settings.setDraftEntreprise({telephone: $any($event.target).value})" />
+              <app-phone-input [ngModel]="settings.settings.entreprise.telephone" (ngModelChange)="settings.setDraftEntreprise({telephone: $event})"></app-phone-input>
             </div>
             <div class="form-field">
               <label class="label">Email</label>
@@ -133,7 +133,7 @@
             <div class="form-field"><label class="label">Prénom</label><input class="form-input" [(ngModel)]="profil.prenom" /></div>
             <div class="form-field"><label class="label">Nom</label><input class="form-input" [(ngModel)]="profil.nom" /></div>
             <div class="form-field"><label class="label">Email</label><input type="email" class="form-input" [value]="auth.user?.email || ''" disabled /></div>
-            <div class="form-field"><label class="label">Téléphone</label><input class="form-input" [(ngModel)]="profil.telephone" placeholder="+212 6 XX XX XX XX" /></div>
+            <div class="form-field"><label class="label">Téléphone</label><app-phone-input [(ngModel)]="profil.telephone"></app-phone-input></div>
           </div>
           <div class="panel-actions"><button class="btn btn-primary" (click)="handleSaveProfil()">💾 Enregistrer</button></div>
         </div>
@@ -454,7 +454,7 @@
             <div class="form-grid">
               <div class="form-field">
                 <label class="label">Hôte SMTP *</label>
-                <input class="form-input" placeholder="smtp.brevo.com" [(ngModel)]="smtp.host" />
+                <input class="form-input" [(ngModel)]="smtp.host" />
                 <div class="field-hint">Ex: smtp.brevo.com · smtp.office365.com · smtp.gmail.com</div>
               </div>
               <div class="form-field">
@@ -468,7 +468,7 @@
             <div class="form-grid">
               <div class="form-field">
                 <label class="label">Nom d'utilisateur *</label>
-                <input class="form-input" placeholder="votre@email.com" [(ngModel)]="smtp.username" autocomplete="off" />
+                <input class="form-input" [(ngModel)]="smtp.username" autocomplete="off" />
               </div>
               <div class="form-field">
                 <label class="label">Mot de passe *</label>
@@ -490,12 +490,12 @@
             <div class="form-grid">
               <div class="form-field">
                 <label class="label">Nom affiché</label>
-                <input class="form-input" placeholder="GestionCo. SARL" [(ngModel)]="smtp.fromName" />
+                <input class="form-input" [(ngModel)]="smtp.fromName" />
                 <div class="field-hint">Nom visible dans la boîte de réception du destinataire</div>
               </div>
               <div class="form-field">
                 <label class="label">Adresse expéditeur</label>
-                <input type="email" class="form-input" placeholder="contact@monentreprise.ma" [(ngModel)]="smtp.fromAddress" />
+                <input type="email" class="form-input" [(ngModel)]="smtp.fromAddress" />
                 <div class="field-hint">Doit correspondre au compte SMTP autorisé</div>
               </div>
             </div>
@@ -513,7 +513,7 @@
             <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
               <div class="form-field" style="flex:1;min-width:220px;margin:0">
                 <label class="label">Email de test</label>
-                <input type="email" class="form-input" placeholder="test@exemple.com" [(ngModel)]="smtpTestEmail" />
+                <input type="email" class="form-input" [(ngModel)]="smtpTestEmail" />
               </div>
               <button class="btn btn-secondary" (click)="handleTestSmtp()" [disabled]="smtpTesting" style="margin-bottom:1px">
                 {{ smtpTesting ? '⏳ Envoi…' : '📤 Envoyer un email de test' }}
@@ -533,7 +533,7 @@
           <div class="toolbar" style="border:none;padding:0 0 16px;background:transparent;animation:none">
             <div class="search-wrapper">
               <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-              <input class="search-input" placeholder="Rechercher par nom ou email…" [(ngModel)]="comptesSearch" />
+              <input class="search-input" [(ngModel)]="comptesSearch" />
             </div>
             <select class="filter-select" [(ngModel)]="comptesRoleFilter">
               <option value="">Tous les rôles</option>
@@ -648,7 +648,7 @@
               <option value="Gestionnaire">💼 Gestionnaire</option>
             </select>
           </div>
-          <div class="form-field"><label class="label">Téléphone</label><input class="form-input" [(ngModel)]="compteForm.telephone" placeholder="+212 6 XX XX XX XX" /></div>
+          <div class="form-field"><label class="label">Téléphone</label><app-phone-input [(ngModel)]="compteForm.telephone"></app-phone-input></div>
           @if (comptesModalMode === 'edit') {
             <div class="form-field full">
               <div style="display:flex;align-items:center;gap:12px">

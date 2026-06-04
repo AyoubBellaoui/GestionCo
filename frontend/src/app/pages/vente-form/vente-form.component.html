@@ -98,14 +98,13 @@
                     </td>
                     <td>
                       <div class="input-group">
-                        <input type="text" disabled class="form-input with-suffix" style="height:34px;background:var(--surface2);color:var(--text-muted)" [value]="l.prixReference !== undefined ? formatNum(l.prixReference) : '—'" placeholder="Sélectionner un produit" />
+                        <input type="text" disabled class="form-input with-suffix" style="height:34px;background:var(--surface2);color:var(--text-muted)" [value]="l.prixReference !== undefined ? formatNum(l.prixReference) : '—'" />
                         <span class="input-suffix" style="top:50%">MAD</span>
                       </div>
                     </td>
                     <td>
                       <div class="input-group">
-                        <input type="number" [min]="0" step="0.01" class="form-input with-suffix" style="height:34px"
-                               placeholder="0.00" [value]="l.prixUnitaire || ''"
+                        <input type="number" [min]="0" step="0.01" class="form-input with-suffix" style="height:34px" [value]="l.prixUnitaire || ''"
                                (change)="updateLignePrix($index, +$any($event.target).value)"
                                [class.invalid]="submitted && l.prixUnitaire <= 0" />
                         <span class="input-suffix" style="top:50%">MAD</span>
@@ -116,8 +115,7 @@
                     </td>
                     <td>
                       <div class="input-group">
-                        <input type="number" [min]="0" [max]="100" step="1" class="form-input with-suffix" style="height:34px"
-                               placeholder="0" [value]="l.remise || 0"
+                        <input type="number" [min]="0" [max]="100" step="1" class="form-input with-suffix" style="height:34px" [value]="l.remise || 0"
                                (change)="updateLigneRemise($index, +$any($event.target).value)" />
                         <span class="input-suffix" style="top:50%">%</span>
                       </div>
@@ -256,7 +254,7 @@
       <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
         <div class="form-group" style="margin:0">
           <label class="form-label">Nom / Raison sociale <span class="required">*</span></label>
-          <input class="form-input" placeholder="Ex: Société Atlas SARL" [(ngModel)]="newClientForm.nomClient" />
+          <input class="form-input" [(ngModel)]="newClientForm.nomClient" />
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div class="form-group" style="margin:0">
@@ -268,28 +266,28 @@
           </div>
           <div class="form-group" style="margin:0">
             <label class="form-label">Ville</label>
-            <input class="form-input" placeholder="Ex: Casablanca" [(ngModel)]="newClientForm.ville" />
+            <app-city-input [(ngModel)]="newClientForm.ville"></app-city-input>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div class="form-group" style="margin:0">
             <label class="form-label">Téléphone</label>
-            <input class="form-input" placeholder="+212 6 xx xx xx xx" [(ngModel)]="newClientForm.telephone" />
+            <app-phone-input [(ngModel)]="newClientForm.telephone"></app-phone-input>
           </div>
           <div class="form-group" style="margin:0">
             <label class="form-label">Email</label>
-            <input class="form-input" type="email" placeholder="client@exemple.ma" [(ngModel)]="newClientForm.email" />
+            <input class="form-input" type="email" [(ngModel)]="newClientForm.email" />
           </div>
         </div>
         @if (newClientForm.type === 'Entreprise') {
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div class="form-group" style="margin:0">
               <label class="form-label">ICE</label>
-              <input class="form-input" placeholder="15 chiffres" [(ngModel)]="newClientForm.ice" />
+              <input class="form-input" [(ngModel)]="newClientForm.ice" />
             </div>
             <div class="form-group" style="margin:0">
               <label class="form-label">Personne contact</label>
-              <input class="form-input" placeholder="Ex: M. Karim Atlas" [(ngModel)]="newClientForm.personneContact" />
+              <input class="form-input" [(ngModel)]="newClientForm.personneContact" />
             </div>
           </div>
         }

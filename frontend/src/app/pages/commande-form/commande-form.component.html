@@ -108,8 +108,7 @@
                     </td>
                     <td>
                       <div class="input-group">
-                        <input type="number" min="0" step="0.01" class="form-input with-suffix" style="height:34px"
-                               placeholder="0.00" [value]="l.prixUnitaire || ''"
+                        <input type="number" min="0" step="0.01" class="form-input with-suffix" style="height:34px" [value]="l.prixUnitaire || ''"
                                (change)="updateLignePrix($index, +$any($event.target).value)"
                                [class.invalid]="submitted && l.prixUnitaire <= 0" />
                         <span class="input-suffix" style="top:50%">{{ devise }}</span>
@@ -117,8 +116,7 @@
                     </td>
                     <td>
                       <div class="input-group">
-                        <input type="number" [min]="0" [max]="100" step="1" class="form-input with-suffix" style="height:34px"
-                               placeholder="0" [value]="l.remise || 0"
+                        <input type="number" [min]="0" [max]="100" step="1" class="form-input with-suffix" style="height:34px" [value]="l.remise || 0"
                                (change)="updateLigneRemise($index, +$any($event.target).value)" />
                         <span class="input-suffix" style="top:50%">%</span>
                       </div>
@@ -171,7 +169,7 @@
         </div>
         <div class="form-group" style="margin-top:12px">
           <label class="form-label">Notes</label>
-          <textarea class="form-input" rows="4" placeholder="Instructions de livraison, remarques…" [(ngModel)]="notes" style="resize:vertical"></textarea>
+          <textarea class="form-input" rows="4" [(ngModel)]="notes" style="resize:vertical"></textarea>
         </div>
       </div>
 

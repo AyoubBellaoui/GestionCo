@@ -22,7 +22,7 @@
   <div class="toolbar">
     <div class="search-wrapper">
       <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-      <input class="search-input" placeholder="Rechercher par référence, nom…" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+      <input class="search-input" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
     </div>
     <select class="filter-select" [(ngModel)]="categorieFilter" (ngModelChange)="onFilterChange()">
       <option value="">Toutes catégories</option>
@@ -374,19 +374,19 @@
         <!-- Quantité -->
         <div class="form-field">
           <label class="form-label">Quantité <span style="color:var(--danger)">*</span></label>
-          <input type="number" min="1" class="form-input" [(ngModel)]="ajustForm.quantite" placeholder="Ex : 10" />
+          <input type="number" min="1" class="form-input" [(ngModel)]="ajustForm.quantite" />
         </div>
 
         <!-- Raison -->
         <div class="form-field">
           <label class="form-label">Raison <span style="color:var(--danger)">*</span></label>
-          <input class="form-input" [(ngModel)]="ajustForm.raison" placeholder="Ex : Inventaire physique, Casse, Retour fournisseur…" />
+          <input class="form-input" [(ngModel)]="ajustForm.raison" />
         </div>
 
         <!-- Commentaire -->
         <div class="form-field">
           <label class="form-label">Commentaire <span style="font-weight:400;color:var(--text-muted)">(optionnel)</span></label>
-          <textarea class="form-input" rows="2" [(ngModel)]="ajustForm.commentaire" placeholder="Détails supplémentaires…" style="height:auto;padding:8px 12px;resize:none"></textarea>
+          <textarea class="form-input" rows="2" [(ngModel)]="ajustForm.commentaire" style="height:auto;padding:8px 12px;resize:none"></textarea>
         </div>
 
       </div>

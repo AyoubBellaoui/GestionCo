@@ -31,16 +31,27 @@ export class AuthService {
     this.loadingSubject.next(false);
   }
 
-  setAuth(token: string, user: User): void {
+  setAuth(token: string, refreshToken: string, user: User): void {
     localStorage.setItem('gc_token', token);
+    localStorage.setItem('gc_refresh', refreshToken);
     localStorage.setItem('gc_user', JSON.stringify(user));
     this.userSubject.next(user);
   }
 
+  updateTokens(token: string, refreshToken: string): void {
+    localStorage.setItem('gc_token', token);
+    localStorage.setItem('gc_refresh', refreshToken);
+  }
+
   clearAuth(): void {
     localStorage.removeItem('gc_token');
+    localStorage.removeItem('gc_refresh');
     localStorage.removeItem('gc_user');
     this.userSubject.next(null);
+  }
+
+  getRefreshToken(): string | null {
+    return localStorage.getItem('gc_refresh');
   }
 
   logout(): void {

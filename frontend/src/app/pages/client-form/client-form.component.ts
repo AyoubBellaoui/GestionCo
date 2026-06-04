@@ -2,16 +2,16 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgClass } from '@angular/common';
+import { PhoneInputComponent } from '../../shared/phone-input/phone-input.component';
+import { CityInputComponent } from '../../shared/city-input/city-input.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Client } from '../../core/models';
 
-const VILLES = ['Casablanca', 'Rabat', 'Marrakech', 'Tanger', 'Agadir', 'Fès', 'Meknès', 'Oujda', 'Tétouan', 'Salé'];
-
 @Component({
   selector: 'app-client-form',
   standalone: true,
-  imports: [FormsModule, NgClass],
+  imports: [FormsModule, NgClass, PhoneInputComponent, CityInputComponent],
   templateUrl: './client-form.component.html',
 })
 export class ClientFormComponent implements OnInit {
@@ -19,7 +19,6 @@ export class ClientFormComponent implements OnInit {
   isEdit = false;
   loading = false;
   saving = false;
-  villes = VILLES;
 
   form: Partial<Client> = {
     nomClient: '', type: 'Entreprise', ice: '', rc: '', adresse: '', ville: '',

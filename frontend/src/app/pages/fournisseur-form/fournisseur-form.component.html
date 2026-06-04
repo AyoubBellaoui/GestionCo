@@ -42,11 +42,11 @@
             </div>
             <div class="form-field full">
               <label class="label">Nom / Raison sociale *</label>
-              <input class="form-input" [(ngModel)]="form.nom" placeholder="TechImport Maroc SARL" />
+              <input class="form-input" [(ngModel)]="form.nom" />
             </div>
             <div class="form-field full">
               <label class="label">Personne de contact</label>
-              <input class="form-input" [(ngModel)]="form.personneContact" placeholder="M. Karim Atlas" />
+              <input class="form-input" [(ngModel)]="form.personneContact" />
             </div>
           </div>
         </div>
@@ -59,15 +59,15 @@
           <div class="form-grid">
             <div class="form-field">
               <label class="label">Email</label>
-              <input type="email" class="form-input" [(ngModel)]="form.email" placeholder="contact@techimport.ma" />
+              <input type="email" class="form-input" [(ngModel)]="form.email" />
             </div>
             <div class="form-field">
               <label class="label">Téléphone</label>
-              <input class="form-input" [(ngModel)]="form.telephone" placeholder="+212 5 22 30 40 50" />
+              <app-phone-input [(ngModel)]="form.telephone"></app-phone-input>
             </div>
             <div class="form-field full">
               <label class="label">Site web</label>
-              <input class="form-input" [(ngModel)]="form.siteWeb" placeholder="https://www.techimport.ma" />
+              <input class="form-input" [(ngModel)]="form.siteWeb" />
             </div>
           </div>
         </div>
@@ -79,7 +79,7 @@
         <div class="form-card-body">
           <div class="form-field full">
             <label class="label">Adresse complète</label>
-            <input class="form-input" [(ngModel)]="form.adresse" placeholder="25 Zone Industrielle Sidi Maarouf, Casablanca" />
+            <input class="form-input" [(ngModel)]="form.adresse" />
           </div>
         </div>
       </div>

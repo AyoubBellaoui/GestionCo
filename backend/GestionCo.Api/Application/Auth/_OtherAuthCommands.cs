@@ -23,7 +23,8 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, AuthResp
 
     public async Task<AuthResponse> Handle(RefreshTokenCommand req, CancellationToken ct)
     {
-        var userId = _jwt.ValidateAccessToken(req.AccessToken);
+        // Use ExtractUserIdIgnoreExpiry so we can refresh tokens that have already expired
+        var userId = _jwt.ExtractUserIdIgnoreExpiry(req.AccessToken);
         if (userId == null)
             throw new UnauthorizedException("Token invalide");
 

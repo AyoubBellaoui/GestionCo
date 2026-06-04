@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { PhoneInputComponent } from '../../shared/phone-input/phone-input.component';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -11,7 +12,7 @@ const ICONES = ['🏢', '🏭', '📦', '🚚', '💻', '🪑', '⚡', '🔧', '
 @Component({
   selector: 'app-fournisseur-form',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, PhoneInputComponent],
   templateUrl: './fournisseur-form.component.html',
 })
 export class FournisseurFormComponent implements OnInit {

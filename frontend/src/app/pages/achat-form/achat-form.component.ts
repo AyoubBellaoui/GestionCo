@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { PhoneInputComponent } from '../../shared/phone-input/phone-input.component';
 import { Router, ActivatedRoute } from '@angular/router';
 import { NgClass } from '@angular/common';
 import { ApiService } from '../../core/services/api.service';
@@ -30,7 +31,7 @@ interface LigneForm {
 @Component({
   selector: 'app-achat-form',
   standalone: true,
-  imports: [FormsModule, NgClass],
+  imports: [FormsModule, NgClass, PhoneInputComponent],
   templateUrl: './achat-form.component.html',
 })
 export class AchatFormComponent implements OnInit {

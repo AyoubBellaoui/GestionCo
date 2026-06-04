@@ -39,7 +39,6 @@
           <div class="form-group full-col">
             <label class="form-label">Nom du produit <span class="required">*</span></label>
             <input class="form-input" [value]="form.nom || ''" (input)="setField('nom', $any($event.target).value)"
-                   placeholder='Ex : Ordinateur portable ProMax 15"'
                    [class.invalid]="submitted && !form.nom?.trim()" />
             @if (submitted && !form.nom?.trim()) {
               <div class="form-error" style="margin-top:4px">Le nom du produit est requis</div>
@@ -54,7 +53,7 @@
           }
           <div class="form-group full-col">
             <label class="form-label">Description</label>
-            <textarea class="form-textarea" [value]="form.description || ''" (input)="setField('description', $any($event.target).value)" placeholder="Décrivez le produit…"></textarea>
+            <textarea class="form-textarea" [value]="form.description || ''" (input)="setField('description', $any($event.target).value)"></textarea>
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { Component, NgZone, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { PhoneInputComponent } from '../../shared/phone-input/phone-input.component';
 import { NgClass } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
 import { ApiService } from '../../core/services/api.service';
@@ -25,7 +26,7 @@ const TABS: { key: TabKey; label: string; icon: string; desc: string; adminOnly?
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [TopbarComponent, FormsModule, NgClass],
+  imports: [TopbarComponent, FormsModule, NgClass, PhoneInputComponent],
   templateUrl: './settings.component.html',
 })
 export class SettingsComponent implements OnInit {

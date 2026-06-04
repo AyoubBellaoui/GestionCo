@@ -41,7 +41,7 @@
   <div class="toolbar">
     <div class="search-wrapper">
       <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-      <input class="search-input" placeholder="Rechercher une catégorie..." [(ngModel)]="search" />
+      <input class="search-input" [(ngModel)]="search" />
     </div>
     <div class="toolbar-divider"></div>
     <button class="btn btn-ghost btn-sm" (click)="search=''">🔄 Réinitialiser</button>
@@ -94,11 +94,11 @@
     </div>
     <div class="form-field">
       <label class="label">Nom de la catégorie *</label>
-      <input class="form-input" [(ngModel)]="form.nom" placeholder="Ex : Électronique, Mobilier, Alimentation..." />
+      <input class="form-input" [(ngModel)]="form.nom" />
     </div>
     <div class="form-field">
       <label class="label">Description (optionnel)</label>
-      <textarea class="form-input" [(ngModel)]="form.description" placeholder="Description de la catégorie" rows="3" style="min-height:70px;padding:10px 12px;resize:vertical"></textarea>
+      <textarea class="form-input" [(ngModel)]="form.description" rows="3" style="min-height:70px;padding:10px 12px;resize:vertical"></textarea>
     </div>
     <div class="info-box" style="font-size:12px">
       💡 Tu pourras associer des produits à cette catégorie depuis le formulaire de produit.

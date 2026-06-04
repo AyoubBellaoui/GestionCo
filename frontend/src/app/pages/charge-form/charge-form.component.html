@@ -32,7 +32,7 @@
             <div class="form-grid-2">
               <div class="form-group full-col">
                 <label class="form-label">Titre <span class="required">*</span></label>
-                <input type="text" class="form-input" placeholder="Ex: Loyer mensuel, Facture électricité..."
+                <input type="text" class="form-input"
                        [(ngModel)]="titre" [class.invalid]="submitted && !titre.trim()" />
                 @if (submitted && !titre.trim()) {
                   <div class="form-error" style="margin-top:4px">Le titre est requis</div>
@@ -40,7 +40,7 @@
               </div>
               <div class="form-group full-col">
                 <label class="form-label">Description <span class="form-hint-inline">(optionnel)</span></label>
-                <textarea class="form-textarea" rows="3" placeholder="Détails sur cette charge…" [(ngModel)]="description"></textarea>
+                <textarea class="form-textarea" rows="3" [(ngModel)]="description"></textarea>
               </div>
               <div class="form-group">
                 <label class="form-label">Date de la charge</label>
@@ -49,8 +49,7 @@
               <div class="form-group">
                 <label class="form-label">Montant <span class="required">*</span></label>
                 <div class="input-group">
-                  <input type="number" class="form-input with-suffix" min="0.01" step="0.01" [(ngModel)]="montant"
-                         placeholder="0.00" [class.invalid]="submitted && (!montant || montant <= 0)" />
+                  <input type="number" class="form-input with-suffix" min="0.01" step="0.01" [(ngModel)]="montant" [class.invalid]="submitted && (!montant || montant <= 0)" />
                   <span class="input-suffix">MAD</span>
                 </div>
                 @if (submitted && (!montant || montant <= 0)) {
@@ -99,7 +98,7 @@
                 <div style="display:flex;gap:8px;align-items:flex-end">
                   <div style="flex:1">
                     <label class="form-label" style="margin-bottom:4px">Nom <span class="required">*</span></label>
-                    <input type="text" class="form-input" placeholder="Ex: Loyer, Électricité…" [(ngModel)]="newCatNom" (keyup.enter)="saveNewCat()" />
+                    <input type="text" class="form-input" [(ngModel)]="newCatNom" (keyup.enter)="saveNewCat()" />
                   </div>
                   <button class="btn btn-primary btn-sm" (click)="saveNewCat()" [disabled]="newCatSaving || !newCatNom.trim()">
                     {{ newCatSaving ? '…' : '+ Créer' }}
@@ -157,7 +156,7 @@
             <div class="form-section-title">📎 Justificatif</div>
             <div class="form-group">
               <label class="form-label">Référence / N° de facture</label>
-              <input type="text" class="form-input" placeholder="Ex: FAC-2026-001, ticket-caisse…" [(ngModel)]="justificatif" />
+              <input type="text" class="form-input" [(ngModel)]="justificatif" />
               <div class="form-help">Indiquez la référence du document justificatif</div>
             </div>
           </div>
@@ -204,7 +203,7 @@
               <label class="form-label">Montant payé maintenant</label>
               <div class="input-group">
                 <input type="number" class="form-input with-suffix" min="0" [max]="montant" step="0.01"
-                       [(ngModel)]="paiementInitial" (change)="capPaiement()" placeholder="0.00" />
+                       [(ngModel)]="paiementInitial" (change)="capPaiement()" />
                 <span class="input-suffix">MAD</span>
               </div>
             </div>

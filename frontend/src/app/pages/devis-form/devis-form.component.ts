@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { PhoneInputComponent } from '../../shared/phone-input/phone-input.component';
+import { CityInputComponent } from '../../shared/city-input/city-input.component';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgClass } from '@angular/common';
 import { ApiService } from '../../core/services/api.service';
@@ -35,7 +37,7 @@ interface LigneForm {
 @Component({
   selector: 'app-devis-form',
   standalone: true,
-  imports: [FormsModule, NgClass],
+  imports: [FormsModule, NgClass, PhoneInputComponent, CityInputComponent],
   templateUrl: './devis-form.component.html',
 })
 export class DevisFormComponent implements OnInit {
