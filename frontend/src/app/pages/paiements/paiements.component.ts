@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgClass } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
+import { DateRangeComponent } from '../../shared/date-range/date-range.component';
 import { ApiService } from '../../core/services/api.service';
 import { Paiement, PaiementAchat, Vente, Achat } from '../../core/models';
 import { formatNum, formatDate, getInitials, getAvatarClass, getPayStatus } from '../../core/utils/format';
@@ -9,7 +10,7 @@ import { formatNum, formatDate, getInitials, getAvatarClass, getPayStatus } from
 @Component({
   selector: 'app-paiements',
   standalone: true,
-  imports: [TopbarComponent, FormsModule, NgClass],
+  imports: [TopbarComponent, FormsModule, NgClass, DateRangeComponent],
   templateUrl: './paiements.component.html',
 })
 export class PaiementsComponent implements OnInit {
@@ -22,7 +23,8 @@ export class PaiementsComponent implements OnInit {
   loading = true;
 
   search = '';
-  selectedDate = '';
+  dateFrom = '';
+  dateTo = '';
   methodeFilter = '';
   statutFilter = '';
 
@@ -68,10 +70,11 @@ export class PaiementsComponent implements OnInit {
         !p.nomClient.toLowerCase().includes(this.search.toLowerCase())) return false;
       if (this.methodeFilter && p.methode !== this.methodeFilter) return false;
       if (this.statutFilter && p.statut !== this.statutFilter) return false;
-      if (this.selectedDate) {
+      if (this.dateFrom || this.dateTo) {
         const d = new Date(p.datePaiement);
         const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        if (dStr !== this.selectedDate) return false;
+        if (this.dateFrom && dStr < this.dateFrom) return false;
+        if (this.dateTo && dStr > this.dateTo) return false;
       }
       return true;
     });
@@ -128,10 +131,11 @@ export class PaiementsComponent implements OnInit {
         !p.nomFournisseur.toLowerCase().includes(this.search.toLowerCase())) return false;
       if (this.methodeFilter && p.methode !== this.methodeFilter) return false;
       if (this.statutFilter && p.statut !== this.statutFilter) return false;
-      if (this.selectedDate) {
+      if (this.dateFrom || this.dateTo) {
         const d = new Date(p.datePaiement);
         const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        if (dStr !== this.selectedDate) return false;
+        if (this.dateFrom && dStr < this.dateFrom) return false;
+        if (this.dateTo && dStr > this.dateTo) return false;
       }
       return true;
     });
@@ -205,7 +209,7 @@ export class PaiementsComponent implements OnInit {
 
   resetFilters(): void {
     this.search = '';
-    this.selectedDate = '';
+    this.dateFrom = ''; this.dateTo = '';
     this.methodeFilter = '';
     this.statutFilter = '';
   }

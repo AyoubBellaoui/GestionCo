@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule, NgClass } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
+import { DateRangeComponent } from '../../shared/date-range/date-range.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -13,7 +14,7 @@ import { SettingsService } from '../../core/services/settings.service';
 @Component({
   selector: 'app-commandes',
   standalone: true,
-  imports: [CommonModule, TopbarComponent, PaginationComponent, FormsModule, NgClass],
+  imports: [CommonModule, TopbarComponent, PaginationComponent, FormsModule, NgClass, DateRangeComponent],
   templateUrl: './commandes.component.html',
 })
 export class CommandesComponent implements OnInit {
@@ -24,7 +25,8 @@ export class CommandesComponent implements OnInit {
   search = '';
   statusFilter = '';
   clientFilter = '';
-  selectedDate = '';
+  dateFrom = '';
+  dateTo = '';
   page = 1;
   pageSize = 10;
   statsData = { total: 0, enAttente: 0, confirmees: 0, converties: 0, montantTotal: 0 };
@@ -51,8 +53,8 @@ export class CommandesComponent implements OnInit {
         search: this.search || undefined,
         statut: this.statusFilter || undefined,
         clientId: this.clientFilter ? Number(this.clientFilter) : undefined,
-        dateDebut: this.selectedDate || undefined,
-        dateFin: this.selectedDate || undefined,
+        dateDebut: this.dateFrom || undefined,
+        dateFin: this.dateTo || undefined,
       });
       this.commandesList = result.items;
       this.totalCount = result.totalCount;
@@ -91,7 +93,7 @@ export class CommandesComponent implements OnInit {
   onFilterChange(): void { this.page = 1; this.load(); }
   onPage(p: number): void { this.page = p; this.load(); }
   onPageSize(ps: number): void { this.pageSize = ps; this.page = 1; this.load(); }
-  resetFilters(): void { this.search = ''; this.statusFilter = ''; this.clientFilter = ''; this.selectedDate = ''; this.page = 1; this.load(); }
+  resetFilters(): void { this.search = ''; this.statusFilter = ''; this.clientFilter = ''; this.dateFrom = ''; this.dateTo = ''; this.page = 1; this.load(); }
 
   async convertirEnVente(c: Commande): Promise<void> {
     if (!confirm(`Convertir la commande ${c.reference} en vente ?`)) return;

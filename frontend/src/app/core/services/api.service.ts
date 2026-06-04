@@ -441,7 +441,7 @@ export class ApiService {
   achatsListPaged(p: { page?: number; pageSize?: number; search?: string; fournisseurId?: number; dateDebut?: string; dateFin?: string; statut?: string } = {}): Promise<PagedList<Achat>> {
     return firstValueFrom(this.http.get<PagedList<Achat>>(`${this.base}/achats`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
   }
-  facturesListPaged(p: { page?: number; pageSize?: number; search?: string; statut?: string; clientId?: number; dateFilter?: string; estEnRetard?: boolean; sortField?: string; sortDir?: string } = {}): Promise<PagedList<Facture>> {
+  facturesListPaged(p: { page?: number; pageSize?: number; search?: string; statut?: string; clientId?: number; dateDebut?: string; dateFin?: string; estEnRetard?: boolean; sortField?: string; sortDir?: string } = {}): Promise<PagedList<Facture>> {
     return firstValueFrom(this.http.get<PagedList<Facture>>(`${this.base}/factures`, { params: buildParams({ page: 1, pageSize: 10, ...p }) }));
   }
   clientsListPaged(p: { page?: number; pageSize?: number; search?: string; type?: string } = {}): Promise<PagedList<Client>> {

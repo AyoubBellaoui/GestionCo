@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
+import { DateRangeComponent } from '../../shared/date-range/date-range.component';
 import { ModalComponent } from '../../shared/modal/modal.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { ApiService } from '../../core/services/api.service';
@@ -15,7 +16,7 @@ import { formatNum, formatDate, getInitials, getAvatarClass, getPayStatus } from
 @Component({
   selector: 'app-achats',
   standalone: true,
-  imports: [CommonModule, TopbarComponent, ModalComponent, PaginationComponent, FormsModule],
+  imports: [CommonModule, TopbarComponent, ModalComponent, PaginationComponent, FormsModule, DateRangeComponent],
   templateUrl: './achats.component.html',
 })
 export class AchatsComponent implements OnInit {
@@ -27,7 +28,8 @@ export class AchatsComponent implements OnInit {
   search = '';
   statusFilter = '';
   fournisseurFilter = '';
-  selectedDate = '';
+  dateFrom = '';
+  dateTo = '';
   page = 1;
   pageSize = 10;
   total = 0;
@@ -85,8 +87,8 @@ export class AchatsComponent implements OnInit {
         search: this.search || undefined,
         statut: this.statusFilter || undefined,
         fournisseurId: this.fournisseurFilter ? Number(this.fournisseurFilter) : undefined,
-        dateDebut: this.selectedDate || undefined,
-        dateFin: this.selectedDate || undefined,
+        dateDebut: this.dateFrom || undefined,
+        dateFin: this.dateTo || undefined,
       });
       this.items = result.items;
       this.total = result.totalCount;
@@ -109,7 +111,7 @@ export class AchatsComponent implements OnInit {
   }
 
   resetFilters(): void {
-    this.search = ''; this.statusFilter = ''; this.fournisseurFilter = ''; this.selectedDate = ''; this.page = 1;
+    this.search = ''; this.statusFilter = ''; this.fournisseurFilter = ''; this.dateFrom = ''; this.dateTo = ''; this.page = 1;
     this.load();
   }
 

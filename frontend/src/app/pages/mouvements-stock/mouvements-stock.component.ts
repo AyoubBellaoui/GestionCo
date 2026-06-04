@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgClass } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
+import { DateRangeComponent } from '../../shared/date-range/date-range.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { ApiService } from '../../core/services/api.service';
 import { MouvementStock } from '../../core/models';
@@ -10,7 +11,7 @@ import { formatNum, formatDate } from '../../core/utils/format';
 @Component({
   selector: 'app-mouvements-stock',
   standalone: true,
-  imports: [TopbarComponent, PaginationComponent, FormsModule, NgClass],
+  imports: [TopbarComponent, PaginationComponent, FormsModule, NgClass, DateRangeComponent],
   templateUrl: './mouvements-stock.component.html',
 })
 export class MouvementsStockComponent implements OnInit {
@@ -18,7 +19,8 @@ export class MouvementsStockComponent implements OnInit {
   totalCount = 0;
   loading = true;
   search = '';
-  selectedDate = '';
+  dateFrom = '';
+  dateTo = '';
   typeFilter = '';
   page = 1;
   pageSize = 25;
@@ -39,8 +41,8 @@ export class MouvementsStockComponent implements OnInit {
         page: this.page, pageSize: this.pageSize,
         search: this.search || undefined,
         type: this.typeFilter || undefined,
-        dateDebut: this.selectedDate || undefined,
-        dateFin: this.selectedDate || undefined,
+        dateDebut: this.dateFrom || undefined,
+        dateFin: this.dateTo || undefined,
       });
       this.mouvements = result.items;
       this.totalCount = result.totalCount;
@@ -84,5 +86,5 @@ export class MouvementsStockComponent implements OnInit {
 
   Math = Math;
 
-  resetFilters(): void { this.search = ''; this.selectedDate = ''; this.typeFilter = ''; this.page = 1; this.load(); }
+  resetFilters(): void { this.search = ''; this.dateFrom = ''; this.dateTo = ''; this.typeFilter = ''; this.page = 1; this.load(); }
 }

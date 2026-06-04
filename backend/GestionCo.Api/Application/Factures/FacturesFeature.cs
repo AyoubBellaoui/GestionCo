@@ -37,7 +37,8 @@ public record GetFacturesQuery(
     int? ClientId = null,
     bool? EstEnRetard = null,
     string? ClientNom = null,
-    string? DateFilter = null,
+    string? DateDebut = null,
+    string? DateFin = null,
     string? SortField = null,
     string? SortDir = null
 ) : IRequest<PagedList<FactureDto>>;
@@ -81,8 +82,10 @@ public class GetFacturesHandler : IRequestHandler<GetFacturesQuery, PagedList<Fa
         if (q.Statut.HasValue) query = query.Where(f => f.Statut == q.Statut);
         if (q.ClientId.HasValue) query = query.Where(f => f.Vente.ClientId == q.ClientId);
         if (!string.IsNullOrWhiteSpace(q.ClientNom)) query = query.Where(f => f.Vente.Client.NomClient.ToLower().Contains(q.ClientNom.ToLower()));
-        if (!string.IsNullOrWhiteSpace(q.DateFilter) && DateTime.TryParse(q.DateFilter, out var dateFrom))
-            query = query.Where(f => f.DateEmission >= dateFrom.Date && f.DateEmission < dateFrom.Date.AddDays(1));
+        if (!string.IsNullOrWhiteSpace(q.DateDebut) && DateTime.TryParse(q.DateDebut, out var debut))
+            query = query.Where(f => f.DateEmission.Date >= debut.Date);
+        if (!string.IsNullOrWhiteSpace(q.DateFin) && DateTime.TryParse(q.DateFin, out var fin))
+            query = query.Where(f => f.DateEmission.Date <= fin.Date);
         if (q.EstEnRetard == true)
         {
             var now = DateTime.UtcNow;

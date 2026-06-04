@@ -110,7 +110,7 @@
       <input class="search-input" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
     </div>
 
-    <input type="date" class="form-input" style="width:200px" [(ngModel)]="selectedDate" (ngModelChange)="onFilterChange()" />
+    <app-date-range [(from)]="dateFrom" [(to)]="dateTo" (rangeChange)="onFilterChange()"></app-date-range>
 
     <select class="filter-select" [(ngModel)]="clientFilter" (ngModelChange)="onFilterChange()">
       <option value="">Tous clients</option>

@@ -64,7 +64,7 @@
       <option value="">Tous les clients</option>
       @for (c of clients; track c.id) { <option [value]="c.id">{{ c.nomClient }}</option> }
     </select>
-    <input type="date" class="form-input" style="width:200px" [(ngModel)]="selectedDate" (ngModelChange)="onFilterChange()" />
+    <app-date-range [(from)]="dateFrom" [(to)]="dateTo" (rangeChange)="onFilterChange()"></app-date-range>
     <div class="toolbar-divider"></div>
     <button class="btn btn-ghost btn-sm" (click)="resetFilters()">🔄 Réinitialiser</button>
   </div>

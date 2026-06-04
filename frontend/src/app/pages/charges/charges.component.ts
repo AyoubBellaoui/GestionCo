@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
+import { DateRangeComponent } from '../../shared/date-range/date-range.component';
 import { ModalComponent } from '../../shared/modal/modal.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { ApiService } from '../../core/services/api.service';
@@ -13,7 +14,7 @@ import { formatNum, formatDate, getPayStatus } from '../../core/utils/format';
 @Component({
   selector: 'app-charges',
   standalone: true,
-  imports: [CommonModule, TopbarComponent, ModalComponent, PaginationComponent, FormsModule],
+  imports: [CommonModule, TopbarComponent, ModalComponent, PaginationComponent, FormsModule, DateRangeComponent],
   templateUrl: './charges.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -28,7 +29,8 @@ export class ChargesComponent implements OnInit {
   search = '';
   statusFilter = '';
   categorieFilter = '';
-  selectedDate = '';
+  dateFrom = '';
+  dateTo = '';
   page = 1;
   pageSize = 10;
   statsData = { totalMois: 0, count: 0, impayes: 0, nbImpayes: 0, totalGlobal: 0 };
@@ -94,8 +96,8 @@ export class ChargesComponent implements OnInit {
         search: this.search || undefined,
         statut: this.statusFilter || undefined,
         categorieId: this.categorieFilter ? Number(this.categorieFilter) : undefined,
-        dateDebut: this.selectedDate || undefined,
-        dateFin: this.selectedDate || undefined,
+        dateDebut: this.dateFrom || undefined,
+        dateFin: this.dateTo || undefined,
       });
       this.charges = result.items;
       this.totalCount = result.totalCount;
@@ -137,7 +139,7 @@ export class ChargesComponent implements OnInit {
     this.search = '';
     this.statusFilter = '';
     this.categorieFilter = '';
-    this.selectedDate = '';
+    this.dateFrom = ''; this.dateTo = '';
     this.page = 1;
     this.load();
   }

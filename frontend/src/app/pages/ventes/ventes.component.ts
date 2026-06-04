@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule, NgClass } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
+import { DateRangeComponent } from '../../shared/date-range/date-range.component';
 import { ModalComponent } from '../../shared/modal/modal.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { ApiService } from '../../core/services/api.service';
@@ -17,7 +18,7 @@ type DateRange = 'today' | '7d' | '30d' | '12m' | 'all';
 @Component({
   selector: 'app-ventes',
   standalone: true,
-  imports: [CommonModule, TopbarComponent, ModalComponent, PaginationComponent, FormsModule, NgClass],
+  imports: [CommonModule, TopbarComponent, ModalComponent, PaginationComponent, FormsModule, NgClass, DateRangeComponent],
   templateUrl: './ventes.component.html',
 })
 export class VentesComponent implements OnInit {
@@ -28,7 +29,8 @@ export class VentesComponent implements OnInit {
   statusFilter = '';
   clientFilter = '';
   dateRange: DateRange = 'all';
-  selectedDate = '';
+  dateFrom = '';
+  dateTo = '';
   page = 1;
   pageSize = 10;
   total = 0;
@@ -86,8 +88,9 @@ export class VentesComponent implements OnInit {
       const days = ranges[this.dateRange];
       let dateDebut: string | undefined;
       let dateFin: string | undefined;
-      if (this.selectedDate) {
-        dateDebut = dateFin = this.selectedDate;
+      if (this.dateFrom || this.dateTo) {
+        dateDebut = this.dateFrom || undefined;
+        dateFin = this.dateTo || undefined;
       } else if (days > 0) {
         dateDebut = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
       }
@@ -124,7 +127,7 @@ export class VentesComponent implements OnInit {
 
   resetFilters(): void {
     this.search = ''; this.statusFilter = ''; this.clientFilter = '';
-    this.dateRange = '30d'; this.selectedDate = ''; this.page = 1;
+    this.dateRange = '30d'; this.dateFrom = ''; this.dateTo = ''; this.page = 1;
     this.load();
   }
 

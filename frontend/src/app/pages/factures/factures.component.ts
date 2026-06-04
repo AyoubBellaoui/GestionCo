@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NgClass } from '@angular/common';
 import { TopbarComponent } from '../../shared/topbar/topbar.component';
+import { DateRangeComponent } from '../../shared/date-range/date-range.component';
 import { ModalComponent } from '../../shared/modal/modal.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { ApiService } from '../../core/services/api.service';
@@ -18,7 +19,7 @@ type SortField = '' | 'numero' | 'client' | 'dateEmission' | 'montant';
 @Component({
   selector: 'app-factures',
   standalone: true,
-  imports: [TopbarComponent, ModalComponent, PaginationComponent, FormsModule, NgClass],
+  imports: [TopbarComponent, ModalComponent, PaginationComponent, FormsModule, NgClass, DateRangeComponent],
   templateUrl: './factures.component.html',
 })
 export class FacturesComponent implements OnInit {
@@ -29,7 +30,8 @@ export class FacturesComponent implements OnInit {
   pageSize = 15;
   search = '';
   activeTab: Tab = 'all';
-  selectedDate = '';
+  dateFrom = '';
+  dateTo = '';
   clientFilter = '';
   sortField: SortField = '';
   sortDir: 'asc' | 'desc' = 'desc';
@@ -92,7 +94,8 @@ export class FacturesComponent implements OnInit {
       const result = await this.api.facturesListPaged({
         page: this.page, pageSize: this.pageSize,
         search: this.search || undefined,
-        dateFilter: this.selectedDate || undefined,
+        dateDebut: this.dateFrom || undefined,
+        dateFin: this.dateTo || undefined,
         sortField: this.sortField || undefined,
         sortDir: this.sortDir || undefined,
         ...tabParams,
@@ -328,7 +331,7 @@ export class FacturesComponent implements OnInit {
   resetFilters(): void {
     this.search = '';
     this.activeTab = 'all';
-    this.selectedDate = '';
+    this.dateFrom = ''; this.dateTo = '';
     this.clientFilter = '';
     this.sortField = '';
     this.selectedIds = new Set();
