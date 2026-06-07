@@ -628,7 +628,7 @@
 <!-- Modal compte -->
 @if (comptesModalOpen) {
   <div class="modal-backdrop">
-    <div class="modal">
+    <div class="modal" style="max-width: 660px">
       <div class="modal-header">
         <div class="modal-title">{{ comptesModalMode === 'create' ? '➕ Nouveau compte' : '✏️ Modifier le compte' }}</div>
         <button class="modal-close" (click)="comptesModalOpen=false" [disabled]="comptesSaving">×</button>

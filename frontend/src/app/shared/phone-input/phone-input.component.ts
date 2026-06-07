@@ -231,7 +231,7 @@ const COUNTRIES: Country[] = [
     }
     .phone-country-select {
       flex-shrink: 0;
-      height: 40px;
+      height: 38px;
       padding: 0 8px;
       border: 1px solid var(--border);
       border-right: none;
@@ -256,6 +256,7 @@ const COUNTRIES: Country[] = [
     .phone-number-input {
       border-radius: 0 var(--radius, 8px) var(--radius, 8px) 0 !important;
       flex: 1;
+      height: 38px;
     }
   `],
   providers: [{
