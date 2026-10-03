@@ -112,7 +112,7 @@ public class UtilisateursController : ControllerBase
 
 [ApiController]
 [Route("api/search")]
-[Authorize]
+[Authorize(Policy = "AdminOrManager")]
 public class SearchController(IMediator mediator) : ControllerBase
 {
     [HttpGet]

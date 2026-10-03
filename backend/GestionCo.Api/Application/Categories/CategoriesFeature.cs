@@ -93,6 +93,12 @@ public class DeleteCategorieHandler : IRequestHandler<DeleteCategorieCommand, Un
     {
         var c = await _db.Categories.FirstOrDefaultAsync(x => x.Id == req.Id, ct)
             ?? throw new NotFoundException("Catégorie", req.Id);
+
+        // RG-C2 : une catégorie ne peut être supprimée que si elle ne contient aucun produit
+        var nbProduits = await _db.Produits.CountAsync(p => p.CategorieId == req.Id, ct);
+        if (nbProduits > 0)
+            throw new BusinessException($"Cette catégorie contient {nbProduits} produit(s). Supprimez-les ou déplacez-les d'abord.");
+
         _db.Categories.Remove(c);
         await _db.SaveChangesAsync(ct);
         return Unit.Value;

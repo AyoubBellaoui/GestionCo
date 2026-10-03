@@ -193,6 +193,7 @@ public class FacturesController : ControllerBase
         => Ok(await _mediator.Send(q, ct));
 
     [HttpGet("stats")]
+    [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> GetStats(CancellationToken ct)
         => Ok(await _mediator.Send(new GetFacturesStatsQuery(), ct));
 
@@ -292,7 +293,7 @@ public class ChargesController : ControllerBase
 
 [ApiController]
 [Route("api/notifications")]
-[Authorize]
+[Authorize(Policy = "AdminOrManager")]
 public class NotificationsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -461,7 +462,7 @@ public class SendDevisEmailDto
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = "AdminOrManager")]
 public class ReportsController(IMediator mediator, IPdfService pdf, IConfiguration config) : ControllerBase
 {
     private string EntrepriseName => config["EntrepriseInfo:RaisonSociale"] ?? "GestionCo.";

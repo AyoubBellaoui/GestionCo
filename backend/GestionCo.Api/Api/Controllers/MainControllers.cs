@@ -150,7 +150,7 @@ public class FournisseursController : ControllerBase
 
 [ApiController]
 [Route("api/categories")]
-[Authorize]
+[Authorize(Policy = "AdminOrManager")]
 public class CategoriesController : ControllerBase
 {
     private readonly IMediator _mediator;
