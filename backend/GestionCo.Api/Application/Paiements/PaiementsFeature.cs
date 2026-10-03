@@ -2,6 +2,7 @@ using FluentValidation;
 using GestionCo.Api.Application.Common.Exceptions;
 using GestionCo.Api.Application.Common.Interfaces;
 using GestionCo.Api.Application.Common.Models;
+using GestionCo.Api.Application.Common.Security;
 using GestionCo.Api.Domain.Entities;
 using GestionCo.Api.Domain.Enums;
 using MediatR;
@@ -129,13 +130,22 @@ public record GetPaiementsQuery(
 public class GetPaiementsHandler : IRequestHandler<GetPaiementsQuery, PagedList<PaiementDto>>
 {
     private readonly IAppDbContext _db;
-    public GetPaiementsHandler(IAppDbContext db) => _db = db;
+    private readonly ICurrentUserService _current;
+
+    public GetPaiementsHandler(IAppDbContext db, ICurrentUserService current)
+    {
+        _db = db; _current = current;
+    }
 
     public async Task<PagedList<PaiementDto>> Handle(GetPaiementsQuery q, CancellationToken ct)
     {
         var query = _db.Paiements
             .Include(p => p.Vente).ThenInclude(v => v.Client)
             .AsQueryable();
+
+        // Filtre client si rôle Client : uniquement les paiements de ses ventes
+        var scopeClientId = await ClientScope.GetClientIdAsync(_db, _current, ct);
+        if (scopeClientId.HasValue) query = query.Where(p => p.Vente.ClientId == scopeClientId.Value);
 
         if (!string.IsNullOrWhiteSpace(q.Search))
         {

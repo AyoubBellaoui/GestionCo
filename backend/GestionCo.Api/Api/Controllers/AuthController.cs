@@ -1,9 +1,10 @@
 using GestionCo.Api.Application.Auth.Commands;
 using GestionCo.Api.Application.Auth.DTOs;
+using GestionCo.Api.Application.Common.Exceptions;
+using GestionCo.Api.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 
 namespace GestionCo.Api.Api.Controllers;
 
@@ -12,19 +13,41 @@ namespace GestionCo.Api.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IMediator _mediator;
-    public AuthController(IMediator mediator) => _mediator = mediator;
+    private readonly ILoginAttemptLimiter _attempts;
 
-    [HttpPost("login")]
-    [AllowAnonymous]
-    [EnableRateLimiting("login")]
-    public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginRequest req, CancellationToken ct)
+    public AuthController(IMediator mediator, ILoginAttemptLimiter attempts)
     {
-        var result = await _mediator.Send(new LoginCommand(req.Email, req.Password), ct);
-        return Ok(result);
+        _mediator = mediator; _attempts = attempts;
     }
 
-    // Pas de limitation de débit : le renouvellement exige un refresh token valide (rotation),
-    // et ne doit pas consommer le quota des tentatives de connexion (RG-S2)
+    // RG-S2 : seuls les mots de passe erronés sont comptés (5 par IP sur 15 minutes) ;
+    // une connexion réussie n'est jamais bloquée et remet le compteur à zéro
+    [HttpPost("login")]
+    [AllowAnonymous]
+    public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginRequest req, CancellationToken ct)
+    {
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "inconnue";
+        if (_attempts.IsBlocked(ip, out var retryAfter))
+        {
+            Response.Headers["Retry-After"] = ((int)Math.Ceiling(retryAfter.TotalSeconds)).ToString();
+            return StatusCode(StatusCodes.Status429TooManyRequests,
+                new { message = "Trop de tentatives de connexion. Réessayez dans 15 minutes." });
+        }
+
+        try
+        {
+            var result = await _mediator.Send(new LoginCommand(req.Email, req.Password), ct);
+            _attempts.Reset(ip);
+            return Ok(result);
+        }
+        catch (UnauthorizedException)
+        {
+            _attempts.RecordFailure(ip);
+            throw;
+        }
+    }
+
+    // Pas de limitation : le renouvellement exige un refresh token valide (rotation)
     [HttpPost("refresh")]
     [AllowAnonymous]
     public async Task<ActionResult<AuthResponse>> Refresh([FromBody] RefreshTokenRequest req, CancellationToken ct)

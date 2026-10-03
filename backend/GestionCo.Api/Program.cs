@@ -13,10 +13,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
-using Microsoft.AspNetCore.RateLimiting;
 using System.Text;
 using System.Text.Json.Serialization;
-using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 var isDev = builder.Environment.IsDevelopment();
@@ -57,26 +55,9 @@ builder.Services.AddHostedService<RecurringChargesJob>();
 builder.Services.AddHostedService<VenteEcheanceJob>();
 builder.Services.AddMemoryCache();
 
-// ============ RATE LIMITING ============
-builder.Services.AddRateLimiter(options =>
-{
-    options.AddFixedWindowLimiter("login", opt =>
-    {
-        opt.Window = TimeSpan.FromMinutes(15);
-        opt.PermitLimit = 5;
-        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        opt.QueueLimit = 0;
-    });
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.OnRejected = async (context, cancellationToken) =>
-    {
-        context.HttpContext.Response.Headers["Retry-After"] = "900";
-        context.HttpContext.Response.ContentType = "application/json";
-        await context.HttpContext.Response.WriteAsync(
-            "{\"message\":\"Trop de tentatives de connexion. Réessayez dans 15 minutes.\"}",
-            cancellationToken);
-    };
-});
+// ============ LIMITATION DES CONNEXIONS (RG-S2) ============
+// 5 mots de passe erronés par IP sur 15 minutes ; les connexions réussies ne sont pas limitées
+builder.Services.AddSingleton<ILoginAttemptLimiter, LoginAttemptLimiter>();
 
 // ============ JWT AUTH ============
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()
@@ -325,7 +306,6 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowFrontend");
-app.UseRateLimiter();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())

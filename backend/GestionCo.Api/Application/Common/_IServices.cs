@@ -28,6 +28,14 @@ public interface IPasswordHasher
     bool Verify(string password, string hash);
 }
 
+// RG-S2 : limitation des mots de passe erronés (les connexions réussies ne sont pas limitées)
+public interface ILoginAttemptLimiter
+{
+    bool IsBlocked(string ip, out TimeSpan retryAfter);
+    void RecordFailure(string ip);
+    void Reset(string ip);
+}
+
 public interface IReferenceGenerator
 {
     Task<string> GenerateProductReferenceAsync(CancellationToken ct = default);

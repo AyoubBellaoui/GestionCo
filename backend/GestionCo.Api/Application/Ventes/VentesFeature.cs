@@ -2,6 +2,7 @@ using FluentValidation;
 using GestionCo.Api.Application.Common.Exceptions;
 using GestionCo.Api.Application.Common.Interfaces;
 using GestionCo.Api.Application.Common.Models;
+using GestionCo.Api.Application.Common.Security;
 using GestionCo.Api.Domain.Entities;
 using GestionCo.Api.Domain.Enums;
 using MediatR;
@@ -591,11 +592,22 @@ public record GetVenteDatesQuery : IRequest<List<string>>;
 public class GetVenteDatesHandler : IRequestHandler<GetVenteDatesQuery, List<string>>
 {
     private readonly IAppDbContext _db;
-    public GetVenteDatesHandler(IAppDbContext db) => _db = db;
+    private readonly ICurrentUserService _current;
+
+    public GetVenteDatesHandler(IAppDbContext db, ICurrentUserService current)
+    {
+        _db = db; _current = current;
+    }
 
     public async Task<List<string>> Handle(GetVenteDatesQuery req, CancellationToken ct)
     {
-        var dates = await _db.Ventes
+        var query = _db.Ventes.AsQueryable();
+
+        // Filtre client si rôle Client : uniquement les dates de ses ventes
+        var scopeClientId = await ClientScope.GetClientIdAsync(_db, _current, ct);
+        if (scopeClientId.HasValue) query = query.Where(v => v.ClientId == scopeClientId.Value);
+
+        var dates = await query
             .Select(v => v.DateVente.Date)
             .Distinct()
             .OrderBy(d => d)
@@ -635,15 +647,8 @@ public class GetVentesHandler : IRequestHandler<GetVentesQuery, PagedList<VenteD
             .AsQueryable();
 
         // Si client, filtrer sur ses propres ventes uniquement
-        if (_current.Role == RoleUtilisateur.Client && _current.UserId.HasValue)
-        {
-            var clientId = await _db.Utilisateurs
-                .Where(u => u.Id == _current.UserId.Value)
-                .Select(u => u.ClientId)
-                .FirstOrDefaultAsync(ct);
-            if (clientId.HasValue) query = query.Where(v => v.ClientId == clientId);
-            else query = query.Where(v => false); // Pas de client lié → rien
-        }
+        var scopeClientId = await ClientScope.GetClientIdAsync(_db, _current, ct);
+        if (scopeClientId.HasValue) query = query.Where(v => v.ClientId == scopeClientId.Value);
 
         if (!string.IsNullOrWhiteSpace(q.Search))
         {
@@ -677,16 +682,27 @@ public record GetVenteByIdQuery(int Id) : IRequest<VenteDto>;
 public class GetVenteByIdHandler : IRequestHandler<GetVenteByIdQuery, VenteDto>
 {
     private readonly IAppDbContext _db;
-    public GetVenteByIdHandler(IAppDbContext db) => _db = db;
+    private readonly ICurrentUserService _current;
+
+    public GetVenteByIdHandler(IAppDbContext db, ICurrentUserService current)
+    {
+        _db = db; _current = current;
+    }
 
     public async Task<VenteDto> Handle(GetVenteByIdQuery q, CancellationToken ct)
     {
-        var vente = await _db.Ventes
+        var query = _db.Ventes
             .AsNoTracking()
             .Include(v => v.Client).Include(v => v.Utilisateur)
             .Include(v => v.Lignes).ThenInclude(l => l.Produit)
             .Include(v => v.Facture)
-            .FirstOrDefaultAsync(v => v.Id == q.Id, ct)
+            .AsQueryable();
+
+        // Même filtre que la liste : un client ne consulte que ses ventes (404 sinon)
+        var scopeClientId = await ClientScope.GetClientIdAsync(_db, _current, ct);
+        if (scopeClientId.HasValue) query = query.Where(v => v.ClientId == scopeClientId.Value);
+
+        var vente = await query.FirstOrDefaultAsync(v => v.Id == q.Id, ct)
             ?? throw new NotFoundException("Vente", q.Id);
         return VenteMapper.ToDto(vente);
     }

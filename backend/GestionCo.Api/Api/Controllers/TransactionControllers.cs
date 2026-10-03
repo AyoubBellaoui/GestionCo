@@ -48,6 +48,7 @@ public class VentesController : ControllerBase
         => Ok(await _mediator.Send(new UpdateVenteCommand(id, dto), ct));
 
     [HttpPost("{id}/paiements")]
+    [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> AddPaiement(int id, [FromBody] AddPaiementVenteDto dto, CancellationToken ct)
     {
         dto.VenteId = id;
@@ -65,9 +66,10 @@ public class VentesController : ControllerBase
 
 public class CancelDto { public string? Raison { get; set; } }
 
+// Lecture ouverte au rôle Client (ses commandes uniquement, filtrées dans les handlers) ; écriture réservée Admin/Gestionnaire
 [ApiController]
 [Route("api/commandes")]
-[Authorize(Policy = "AdminOrManager")]
+[Authorize]
 public class CommandesController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -78,6 +80,7 @@ public class CommandesController : ControllerBase
         => Ok(await _mediator.Send(q, ct));
 
     [HttpGet("stats")]
+    [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> GetStats(CancellationToken ct)
         => Ok(await _mediator.Send(new GetCommandeStatsQuery(), ct));
 
@@ -86,22 +89,27 @@ public class CommandesController : ControllerBase
         => Ok(await _mediator.Send(new GetCommandeByIdQuery(id), ct));
 
     [HttpPost]
+    [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> Create([FromBody] CreateCommandeDto dto, CancellationToken ct)
         => Ok(await _mediator.Send(new CreateCommandeCommand(dto), ct));
 
     [HttpPut("{id}")]
+    [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateCommandeDto dto, CancellationToken ct)
         => Ok(await _mediator.Send(new UpdateCommandeCommand(id, dto), ct));
 
     [HttpPut("{id}/statut")]
+    [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> UpdateStatut(int id, [FromBody] UpdateCommandeStatutDto dto, CancellationToken ct)
         => Ok(await _mediator.Send(new UpdateCommandeStatutCommand(id, dto.Statut), ct));
 
     [HttpPut("{id}/etat-livraison")]
+    [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> UpdateEtatLivraison(int id, [FromBody] UpdateCommandeEtatLivraisonDto dto, CancellationToken ct)
         => Ok(await _mediator.Send(new UpdateCommandeEtatLivraisonCommand(id, dto.EtatLivraison), ct));
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         await _mediator.Send(new DeleteCommandeCommand(id), ct);
@@ -153,9 +161,10 @@ public class AchatsController : ControllerBase
         => Ok(await _mediator.Send(q, ct));
 }
 
+// Lecture ouverte au rôle Client (paiements de ses ventes uniquement) ; enregistrement réservé Admin/Gestionnaire
 [ApiController]
 [Route("api/paiements")]
-[Authorize(Policy = "AdminOrManager")]
+[Authorize]
 public class PaiementsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -166,6 +175,7 @@ public class PaiementsController : ControllerBase
         => Ok(await _mediator.Send(q, ct));
 
     [HttpPost]
+    [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> Create([FromBody] CreatePaiementDto dto, CancellationToken ct)
         => Ok(await _mediator.Send(new CreatePaiementCommand(dto), ct));
 }
