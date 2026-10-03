@@ -345,9 +345,10 @@ public class CategoriesChargeController : ControllerBase
     }
 }
 
+// Lecture ouverte au rôle Client (ses devis uniquement, filtrés dans les handlers) ; écriture réservée Admin/Gestionnaire
 [ApiController]
 [Route("api/devis")]
-[Authorize(Policy = "AdminOrManager")]
+[Authorize]
 public class DevisController(IMediator mediator, IConfiguration config) : ControllerBase
 {
     private string ComputeShareToken(int id)
@@ -363,6 +364,7 @@ public class DevisController(IMediator mediator, IConfiguration config) : Contro
         => Ok(await mediator.Send(q, ct));
 
     [HttpGet("stats")]
+    [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> GetStats(CancellationToken ct)
         => Ok(await mediator.Send(new GetDevisStatsQuery(), ct));
 
@@ -371,22 +373,27 @@ public class DevisController(IMediator mediator, IConfiguration config) : Contro
         => Ok(await mediator.Send(new GetDevisByIdQuery(id), ct));
 
     [HttpPost]
+    [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> Create([FromBody] CreateDevisDto dto, CancellationToken ct)
         => Ok(await mediator.Send(new CreateDevisCommand(dto), ct));
 
     [HttpPut("{id}")]
+    [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateDevisDto dto, CancellationToken ct)
         => Ok(await mediator.Send(new UpdateDevisCommand(id, dto), ct));
 
     [HttpPut("{id}/statut")]
+    [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> UpdateStatut(int id, [FromBody] UpdateDevisStatutDto dto, CancellationToken ct)
         => Ok(await mediator.Send(new UpdateDevisStatutCommand(id, dto.Statut), ct));
 
     [HttpPost("{id}/convertir")]
+    [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> Convertir(int id, CancellationToken ct)
         => Ok(await mediator.Send(new ConvertirDevisEnVenteCommand(id), ct));
 
     [HttpPost("{id}/convertir-commande")]
+    [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> ConvertirEnCommande(int id, CancellationToken ct)
         => Ok(await mediator.Send(new ConvertirDevisEnCommandeCommand(id), ct));
 
@@ -399,6 +406,7 @@ public class DevisController(IMediator mediator, IConfiguration config) : Contro
     }
 
     [HttpGet("{id}/share-link")]
+    [Authorize(Policy = "AdminOrManager")]
     public IActionResult GetShareLink(int id)
     {
         var token = ComputeShareToken(id);
@@ -418,6 +426,7 @@ public class DevisController(IMediator mediator, IConfiguration config) : Contro
     }
 
     [HttpPost("{id}/email")]
+    [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> SendEmail(int id, [FromBody] SendDevisEmailDto dto, CancellationToken ct)
     {
         await mediator.Send(new EnvoyerDevisEmailCommand(id, dto.Email, dto.Message, dto.EntrepriseInfo), ct);
@@ -425,6 +434,7 @@ public class DevisController(IMediator mediator, IConfiguration config) : Contro
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         await mediator.Send(new DeleteDevisCommand(id), ct);

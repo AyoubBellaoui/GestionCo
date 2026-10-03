@@ -18,7 +18,10 @@ export class AuthService {
   get isGestionnaire(): boolean { return this.userSubject.value?.role === 'Gestionnaire'; }
   get isAdminOrManager(): boolean { return this.isAdmin || this.isGestionnaire; }
 
-  constructor() { this.init(); }
+  constructor() {
+    this.init();
+    window.addEventListener('storage', e => this.onOtherTabChange(e));
+  }
 
   private init(): void {
     const stored = localStorage.getItem('gc_user');
@@ -29,6 +32,26 @@ export class AuthService {
       }
     }
     this.loadingSubject.next(false);
+  }
+
+  // One session per browser: follow a login / logout done in another tab
+  // (a token refresh in another tab keeps the same user and changes nothing here)
+  private onOtherTabChange(e: StorageEvent): void {
+    if (e.key !== null && e.key !== 'gc_token' && e.key !== 'gc_user') return;
+    let other: User | null = null;
+    try {
+      other = localStorage.getItem('gc_token') ? JSON.parse(localStorage.getItem('gc_user') || 'null') : null;
+    } catch { other = null; }
+
+    const current = this.userSubject.value;
+    if (!other) {
+      if (current) {
+        this.userSubject.next(null);
+        window.location.href = '/login';
+      }
+    } else if (!current || other.id !== current.id) {
+      window.location.href = '/';
+    }
   }
 
   setAuth(token: string, refreshToken: string, user: User): void {

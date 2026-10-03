@@ -19,6 +19,7 @@ public class CreateProduitValidator : AbstractValidator<CreateProduitCommand>
     {
         RuleFor(x => x.Dto.Nom).NotEmpty().MaximumLength(200);
         RuleFor(x => x.Dto.PrixHT).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.Dto.PrixVenteHT).GreaterThanOrEqualTo(0);
         RuleFor(x => x.Dto.TVA).InclusiveBetween(0, 30);
         RuleFor(x => x.Dto.QuantiteStock).GreaterThanOrEqualTo(0);
         RuleFor(x => x.Dto.SeuilAlerte).GreaterThanOrEqualTo(0);
@@ -158,6 +159,8 @@ public class BulkImportProduitsHandler : IRequestHandler<BulkImportProduitsComma
             { result.Errors.Add(new BulkImportRowError { Row = row, Message = "Nom trop long (max 200 caractères)" }); continue; }
             if (dto.PrixHT < 0)
             { result.Errors.Add(new BulkImportRowError { Row = row, Message = "Prix HT invalide" }); continue; }
+            if (dto.PrixVenteHT < 0)
+            { result.Errors.Add(new BulkImportRowError { Row = row, Message = "Prix de vente HT invalide" }); continue; }
 
             var tva = dto.TVA == 0 ? 20m : dto.TVA;
             var tvaVente = dto.TVAVente == 0 ? 20m : dto.TVAVente;
@@ -229,6 +232,7 @@ public class UpdateProduitValidator : AbstractValidator<UpdateProduitCommand>
         RuleFor(x => x.Dto.Id).GreaterThan(0);
         RuleFor(x => x.Dto.Nom).NotEmpty().MaximumLength(200);
         RuleFor(x => x.Dto.PrixHT).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.Dto.PrixVenteHT).GreaterThanOrEqualTo(0);
     }
 }
 

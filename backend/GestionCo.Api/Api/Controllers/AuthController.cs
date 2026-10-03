@@ -23,9 +23,10 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
+    // Pas de limitation de débit : le renouvellement exige un refresh token valide (rotation),
+    // et ne doit pas consommer le quota des tentatives de connexion (RG-S2)
     [HttpPost("refresh")]
     [AllowAnonymous]
-    [EnableRateLimiting("login")]
     public async Task<ActionResult<AuthResponse>> Refresh([FromBody] RefreshTokenRequest req, CancellationToken ct)
     {
         var result = await _mediator.Send(new RefreshTokenCommand(req.AccessToken, req.RefreshToken), ct);

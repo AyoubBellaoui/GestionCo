@@ -1,6 +1,7 @@
 using GestionCo.Api.Application.Common.Exceptions;
 using GestionCo.Api.Application.Common.Interfaces;
 using GestionCo.Api.Application.Common.Models;
+using GestionCo.Api.Application.Common.Security;
 using GestionCo.Api.Domain.Entities;
 using GestionCo.Api.Domain.Enums;
 using MediatR;
@@ -61,14 +62,8 @@ public class GetFacturesHandler : IRequestHandler<GetFacturesQuery, PagedList<Fa
             .AsQueryable();
 
         // Filtre client si rôle Client
-        if (_current.Role == RoleUtilisateur.Client && _current.UserId.HasValue)
-        {
-            var clientId = await _db.Utilisateurs
-                .Where(u => u.Id == _current.UserId.Value)
-                .Select(u => u.ClientId).FirstOrDefaultAsync(ct);
-            if (clientId.HasValue) query = query.Where(f => f.Vente.ClientId == clientId);
-            else query = query.Where(f => false);
-        }
+        var scopeClientId = await ClientScope.GetClientIdAsync(_db, _current, ct);
+        if (scopeClientId.HasValue) query = query.Where(f => f.Vente.ClientId == scopeClientId.Value);
 
         if (!string.IsNullOrWhiteSpace(q.Search))
         {
@@ -119,14 +114,25 @@ public record GetFactureByIdQuery(int Id) : IRequest<FactureDto>;
 public class GetFactureByIdHandler : IRequestHandler<GetFactureByIdQuery, FactureDto>
 {
     private readonly IAppDbContext _db;
-    public GetFactureByIdHandler(IAppDbContext db) => _db = db;
+    private readonly ICurrentUserService _current;
+
+    public GetFactureByIdHandler(IAppDbContext db, ICurrentUserService current)
+    {
+        _db = db; _current = current;
+    }
 
     public async Task<FactureDto> Handle(GetFactureByIdQuery q, CancellationToken ct)
     {
-        var f = await _db.Factures
+        var query = _db.Factures
             .AsNoTracking()
             .Include(f => f.Vente).ThenInclude(v => v.Client)
-            .FirstOrDefaultAsync(f => f.Id == q.Id, ct)
+            .AsQueryable();
+
+        // Même filtre que la liste : un client ne consulte que ses factures (404 sinon)
+        var scopeClientId = await ClientScope.GetClientIdAsync(_db, _current, ct);
+        if (scopeClientId.HasValue) query = query.Where(f => f.Vente.ClientId == scopeClientId.Value);
+
+        var f = await query.FirstOrDefaultAsync(f => f.Id == q.Id, ct)
             ?? throw new NotFoundException("Facture", q.Id);
         return FactureMapper.ToDto(f);
     }
