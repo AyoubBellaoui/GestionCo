@@ -24,15 +24,15 @@
       <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
       <input class="search-input" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
     </div>
-    <select class="filter-select" [(ngModel)]="categorieFilter" (ngModelChange)="onFilterChange()">
-      <option value="">Toutes catégories</option>
-      @for (c of categories; track c.id) { <option [value]="c.id">{{ c.icone || '📂' }} {{ c.nom }}</option> }
-    </select>
     <select class="filter-select" [(ngModel)]="stockFilter" (ngModelChange)="onFilterChange()">
       <option value="">Tous stocks</option>
       <option value="ok">Disponible</option>
       <option value="low">Stock faible</option>
       <option value="out">Rupture</option>
+    </select>
+    <select class="filter-select" [(ngModel)]="categorieFilter" (ngModelChange)="onFilterChange()">
+      <option value="">Toutes catégories</option>
+      @for (c of categories; track c.id) { <option [value]="c.id">{{ c.icone || '📂' }} {{ c.nom }}</option> }
     </select>
     <div class="toolbar-divider"></div>
     <button class="btn btn-ghost btn-sm" (click)="resetFilters()">🔄 Réinitialiser</button>

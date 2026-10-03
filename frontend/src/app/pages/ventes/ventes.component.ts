@@ -127,7 +127,7 @@ export class VentesComponent implements OnInit {
 
   resetFilters(): void {
     this.search = ''; this.statusFilter = ''; this.clientFilter = '';
-    this.dateRange = '30d'; this.dateFrom = ''; this.dateTo = ''; this.page = 1;
+    this.dateRange = 'all'; this.dateFrom = ''; this.dateTo = ''; this.page = 1;
     this.load();
   }
 

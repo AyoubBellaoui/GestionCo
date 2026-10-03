@@ -37,7 +37,7 @@ export class FacturesComponent implements OnInit {
   sortDir: 'asc' | 'desc' = 'desc';
   selectedIds = new Set<number>();
   statsData = { totalMois: 0, totalMoisTrend: null as number | null, totalPaye: 0, payeePct: 0, enAttenteCount: 0, enAttenteMontant: 0, enRetardCount: 0, enRetardMontant: 0, tabCounts: { all: 0, payee: 0, partiel: 0, enAttente: 0, enRetard: 0, annulee: 0 } };
-  uniqueClients: string[] = [];
+  uniqueClients: Client[] = [];
   clients: Client[] = [];
   private searchTimer: any;
 
@@ -72,7 +72,7 @@ export class FacturesComponent implements OnInit {
   private async loadClients(): Promise<void> {
     try {
       this.clients = await this.api.clientsList();
-      this.uniqueClients = this.clients.map(c => c.nomClient).sort();
+      this.uniqueClients = [...this.clients].sort((a, b) => a.nomClient.localeCompare(b.nomClient));
     } catch (err) { console.error('loadClients factures error:', err); }
   }
 
@@ -94,6 +94,7 @@ export class FacturesComponent implements OnInit {
       const result = await this.api.facturesListPaged({
         page: this.page, pageSize: this.pageSize,
         search: this.search || undefined,
+        clientId: this.clientFilter ? Number(this.clientFilter) : undefined,
         dateDebut: this.dateFrom || undefined,
         dateFin: this.dateTo || undefined,
         sortField: this.sortField || undefined,
@@ -334,6 +335,7 @@ export class FacturesComponent implements OnInit {
     this.dateFrom = ''; this.dateTo = '';
     this.clientFilter = '';
     this.sortField = '';
+    this.sortDir = 'desc';
     this.selectedIds = new Set();
     this.page = 1;
     this.load();

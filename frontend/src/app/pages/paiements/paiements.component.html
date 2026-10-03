@@ -32,18 +32,18 @@
         <input class="search-input" [(ngModel)]="search" />
       </div>
       <app-date-range [(from)]="dateFrom" [(to)]="dateTo"></app-date-range>
+      <select class="filter-select" [(ngModel)]="statutFilter">
+        <option value="">Tous statuts</option>
+        <option value="Confirme">Payé</option>
+        <option value="EnAttente">En attente</option>
+        <option value="Annule">Annulé</option>
+      </select>
       <select class="filter-select" [(ngModel)]="methodeFilter">
         <option value="">Toutes méthodes</option>
         <option value="Especes">Espèces</option>
         <option value="Virement">Virement</option>
         <option value="Cheque">Chèque</option>
         <option value="CarteBancaire">Carte bancaire</option>
-      </select>
-      <select class="filter-select" [(ngModel)]="statutFilter">
-        <option value="">Tous statuts</option>
-        <option value="Confirme">Payé</option>
-        <option value="EnAttente">En attente</option>
-        <option value="Annule">Annulé</option>
       </select>
       <div class="toolbar-divider"></div>
       <button class="btn btn-ghost btn-sm" (click)="resetFilters()">🔄 Réinitialiser</button>
@@ -122,18 +122,18 @@
         <input class="search-input" [(ngModel)]="search" />
       </div>
       <app-date-range [(from)]="dateFrom" [(to)]="dateTo"></app-date-range>
+      <select class="filter-select" [(ngModel)]="statutFilter">
+        <option value="">Tous statuts</option>
+        <option value="Confirme">Payé</option>
+        <option value="EnAttente">En attente</option>
+        <option value="Annule">Annulé</option>
+      </select>
       <select class="filter-select" [(ngModel)]="methodeFilter">
         <option value="">Toutes méthodes</option>
         <option value="Especes">Espèces</option>
         <option value="Virement">Virement</option>
         <option value="Cheque">Chèque</option>
         <option value="CarteBancaire">Carte bancaire</option>
-      </select>
-      <select class="filter-select" [(ngModel)]="statutFilter">
-        <option value="">Tous statuts</option>
-        <option value="Confirme">Payé</option>
-        <option value="EnAttente">En attente</option>
-        <option value="Annule">Annulé</option>
       </select>
       <div class="toolbar-divider"></div>
       <button class="btn btn-ghost btn-sm" (click)="resetFilters()">🔄 Réinitialiser</button>

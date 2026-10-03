@@ -25,18 +25,18 @@
       <input class="search-input" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
     </div>
     <app-date-range [(from)]="dateFrom" [(to)]="dateTo" (rangeChange)="onFilterChange()"></app-date-range>
-    <select class="filter-select" [(ngModel)]="categorieFilter" (ngModelChange)="onFilterChange()">
-      <option value="">Toutes catégories</option>
-      @for (cat of categories; track cat.id) {
-        <option [value]="cat.id">{{ cat.icone || '📋' }} {{ cat.nom }}</option>
-      }
-    </select>
     <select class="filter-select" [(ngModel)]="statusFilter" (ngModelChange)="onFilterChange()">
       <option value="">Tous statuts</option>
       <option value="Paye">Payée</option>
       <option value="Partiel">Partiel</option>
       <option value="EnAttente">En attente</option>
       <option value="Annule">Annulée</option>
+    </select>
+    <select class="filter-select" [(ngModel)]="categorieFilter" (ngModelChange)="onFilterChange()">
+      <option value="">Toutes catégories</option>
+      @for (cat of categories; track cat.id) {
+        <option [value]="cat.id">{{ cat.icone || '📋' }} {{ cat.nom }}</option>
+      }
     </select>
     <div class="toolbar-divider"></div>
     <button class="btn btn-ghost btn-sm" (click)="resetFilters()">🔄 Réinitialiser</button>

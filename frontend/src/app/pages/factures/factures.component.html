@@ -114,8 +114,8 @@
 
     <select class="filter-select" [(ngModel)]="clientFilter" (ngModelChange)="onFilterChange()">
       <option value="">Tous clients</option>
-      @for (c of uniqueClients; track c) {
-        <option [value]="c">{{ c }}</option>
+      @for (c of uniqueClients; track c.id) {
+        <option [value]="c.id">{{ c.nomClient }}</option>
       }
     </select>
 
