@@ -145,6 +145,18 @@ public class CreateVenteHandler : IRequestHandler<CreateVenteCommand, VenteDto>
         var client = await _db.Clients.FirstOrDefaultAsync(c => c.Id == dto.ClientId, ct)
             ?? throw new NotFoundException("Client", dto.ClientId);
 
+        // Commande d'origine : une commande déjà convertie (double clic, second onglet) ou annulée est refusée
+        Commande? commande = null;
+        if (dto.CommandeId.HasValue)
+        {
+            commande = await _db.Commandes.FirstOrDefaultAsync(c => c.Id == dto.CommandeId.Value, ct)
+                ?? throw new NotFoundException("Commande", dto.CommandeId.Value);
+            if (commande.Statut == StatutCommande.Convertie || commande.VenteId.HasValue)
+                throw new BusinessException($"La commande {commande.Reference} a déjà été convertie en vente");
+            if (commande.Statut == StatutCommande.Annulee)
+                throw new BusinessException($"La commande {commande.Reference} est annulée et ne peut pas être convertie en vente");
+        }
+
         // Vérifier stock disponible
         var produitIds = dto.Lignes.Select(l => l.ProduitId).ToList();
         var produits = await _db.Produits
@@ -191,14 +203,10 @@ public class CreateVenteHandler : IRequestHandler<CreateVenteCommand, VenteDto>
         await _db.SaveChangesAsync(ct);
 
         // Lier la commande si fournie
-        if (dto.CommandeId.HasValue)
+        if (commande != null)
         {
-            var commande = await _db.Commandes.FirstOrDefaultAsync(c => c.Id == dto.CommandeId.Value, ct);
-            if (commande != null)
-            {
-                commande.Statut = StatutCommande.Convertie;
-                commande.VenteId = vente.Id;
-            }
+            commande.Statut = StatutCommande.Convertie;
+            commande.VenteId = vente.Id;
         }
 
         // Décrémenter stock + créer mouvements
