@@ -18,6 +18,7 @@ const TVA_OPTIONS = [0, 7, 14, 20];
 export class ProduitFormComponent implements OnInit {
   id: number | null = null;
   isEdit = false;
+  stockInitial = 0;
   loading = false;
   saving = false;
   submitted = false;
@@ -51,6 +52,7 @@ export class ProduitFormComponent implements OnInit {
       this.loading = true;
       try {
         this.form = await this.api.produitGet(this.id);
+        this.stockInitial = this.form.quantiteStock ?? 0;
       } catch { this.toast.notify('Produit introuvable', 'error'); this.router.navigate(['/produits']); }
       finally { this.loading = false; }
     }
@@ -118,10 +120,13 @@ export class ProduitFormComponent implements OnInit {
     if (!this.form.nom?.trim()) { this.toast.notify('Le nom du produit est requis', 'warning'); return; }
     if ((this.form.prixHT ?? 0) <= 0) { this.toast.notify("Le prix d'achat HT doit être > 0", 'warning'); return; }
     if ((this.form.prixVenteHT ?? 0) <= 0) { this.toast.notify('Le prix de vente HT doit être > 0', 'warning'); return; }
+    if ((this.form.quantiteStock ?? 0) < 0) { this.toast.notify('La quantité en stock ne peut pas être négative', 'warning'); return; }
     this.saving = true;
     try {
       if (this.isEdit && this.id) {
-        await this.api.produitUpdate(this.id, this.form);
+        // La quantité n'est envoyée que si elle a été modifiée : le backend enregistre alors un mouvement de stock
+        const qte = this.form.quantiteStock ?? 0;
+        await this.api.produitUpdate(this.id, qte !== this.stockInitial ? { ...this.form, nouvelleQuantiteStock: qte } : this.form);
         this.toast.notify('Produit mis à jour', 'success');
         this.router.navigate(['/produits']);
       } else {

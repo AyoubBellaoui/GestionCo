@@ -24,7 +24,7 @@ var isDev = builder.Environment.IsDevelopment();
 // Tu peux override via variable d'env : ConnectionStrings__Default
 var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? builder.Configuration.GetConnectionString("DefaultConnection") // fallback ancien nom
-    ?? "Server=localhost;Database=StockVenteDb;Trusted_Connection=True;TrustServerCertificate=True;";
+    ?? "Server=localhost;Database=GestionCoDb;Trusted_Connection=True;TrustServerCertificate=True;";
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString, sql => sql.CommandTimeout(60)));
@@ -99,7 +99,6 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOrManager", p => p.RequireRole(
         RoleUtilisateur.Admin.ToString(),
         RoleUtilisateur.Gestionnaire.ToString()));
-    options.AddPolicy("ClientOnly", p => p.RequireRole(RoleUtilisateur.Client.ToString()));
 });
 
 // ============ CORS ============
@@ -188,9 +187,9 @@ using (var scope = app.Services.CreateScope())
         var created = await db.Database.EnsureCreatedAsync();
 
         if (created)
-            logger.LogInformation("✅ Base de données 'StockVenteDb' créée avec succès !");
+            logger.LogInformation("✅ Base de données 'GestionCoDb' créée avec succès !");
         else
-            logger.LogInformation("✅ Base de données 'StockVenteDb' déjà existante");
+            logger.LogInformation("✅ Base de données 'GestionCoDb' déjà existante");
 
         // Tables ajoutées après la création initiale (CREATE TABLE manuel)
         await ApplyManualTablesAsync(db, logger);

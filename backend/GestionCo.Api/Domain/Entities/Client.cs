@@ -29,10 +29,6 @@ public class Client : AuditableEntity
     // Délai de paiement spécifique (en jours) — remplace le délai global si défini
     public int? DelaiPaiement { get; set; }
 
-    // Lien vers utilisateur (optionnel — si client a un accès)
-    public int? UtilisateurId { get; set; }
-    public Utilisateur? Utilisateur { get; set; }
-
     // Navigation
     public ICollection<Vente> Ventes { get; set; } = new List<Vente>();
 

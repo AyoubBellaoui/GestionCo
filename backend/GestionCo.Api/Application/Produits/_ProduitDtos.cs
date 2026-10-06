@@ -48,4 +48,8 @@ public class CreateProduitDto
 public class UpdateProduitDto : CreateProduitDto
 {
     public int Id { get; set; }
+
+    // Renseignée seulement si l'utilisateur a modifié la quantité dans la fiche :
+    // l'écart est enregistré comme mouvement de stock (ajustement tracé)
+    public int? NouvelleQuantiteStock { get; set; }
 }

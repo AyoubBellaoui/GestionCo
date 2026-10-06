@@ -31,7 +31,6 @@ public class ClientDto
     public decimal TotalDepense { get; set; }
     public decimal TotalImpaye { get; set; }
     public DateTime CreatedAt { get; set; }
-    public int? UtilisateurId { get; set; }
 }
 
 public class CreateClientDto
@@ -49,8 +48,6 @@ public class CreateClientDto
     public bool IsActive { get; set; } = true;
     public string? SourceAcquisition { get; set; }
     public int? DelaiPaiement { get; set; }
-    public bool CreerCompte { get; set; } = false;
-    public string? MotDePasse { get; set; }
 }
 
 public class UpdateClientDto : CreateClientDto
@@ -71,49 +68,22 @@ public class CreateClientValidator : AbstractValidator<CreateClientCommand>
             RuleFor(x => x.Dto.ICE).NotEmpty().Length(15).Matches(@"^\d{15}$")
                 .WithMessage("ICE doit contenir exactement 15 chiffres");
         });
-        When(x => x.Dto.CreerCompte, () =>
-        {
-            RuleFor(x => x.Dto.Email).NotEmpty().EmailAddress();
-            RuleFor(x => x.Dto.MotDePasse).NotEmpty().MinimumLength(8);
-        });
     }
 }
 
 public class CreateClientHandler : IRequestHandler<CreateClientCommand, ClientDto>
 {
     private readonly IAppDbContext _db;
-    private readonly IPasswordHasher _hasher;
     private readonly IAuditLogger _audit;
 
-    public CreateClientHandler(IAppDbContext db, IPasswordHasher hasher, IAuditLogger audit)
+    public CreateClientHandler(IAppDbContext db, IAuditLogger audit)
     {
-        _db = db; _hasher = hasher; _audit = audit;
+        _db = db; _audit = audit;
     }
 
     public async Task<ClientDto> Handle(CreateClientCommand req, CancellationToken ct)
     {
         var dto = req.Dto;
-
-        Utilisateur? user = null;
-        if (dto.CreerCompte && !string.IsNullOrEmpty(dto.Email) && !string.IsNullOrEmpty(dto.MotDePasse))
-        {
-            if (await _db.Utilisateurs.AnyAsync(u => u.Email == dto.Email.ToLower(), ct))
-                throw new BusinessException($"Email déjà utilisé : {dto.Email}");
-
-            var parts = dto.NomClient.Split(' ', 2);
-            user = new Utilisateur
-            {
-                Nom = parts.Length > 1 ? parts[1] : dto.NomClient,
-                Prenom = parts.Length > 1 ? parts[0] : "",
-                Email = dto.Email.ToLower().Trim(),
-                PasswordHash = _hasher.Hash(dto.MotDePasse),
-                Telephone = dto.Telephone,
-                Role = RoleUtilisateur.Client,
-                IsActive = true
-            };
-            _db.Utilisateurs.Add(user);
-            await _db.SaveChangesAsync(ct);
-        }
 
         var client = new Client
         {
@@ -129,18 +99,11 @@ public class CreateClientHandler : IRequestHandler<CreateClientCommand, ClientDt
             PersonneContact = dto.PersonneContact?.Trim(),
             IsActive = dto.IsActive,
             SourceAcquisition = dto.SourceAcquisition?.Trim(),
-            DelaiPaiement = dto.DelaiPaiement > 0 ? dto.DelaiPaiement : null,
-            UtilisateurId = user?.Id
+            DelaiPaiement = dto.DelaiPaiement > 0 ? dto.DelaiPaiement : null
         };
 
         _db.Clients.Add(client);
         await _db.SaveChangesAsync(ct);
-
-        if (user != null)
-        {
-            user.ClientId = client.Id;
-            await _db.SaveChangesAsync(ct);
-        }
 
         var details = new List<string>();
         details.Add(client.Type.ToString());
@@ -385,7 +348,7 @@ public static class ClientMapper
         Email = c.Email, PersonneContact = c.PersonneContact,
         IsActive = c.IsActive, SourceAcquisition = c.SourceAcquisition,
         DelaiPaiement = c.DelaiPaiement,
-        Initiales = c.Initiales, CreatedAt = c.CreatedAt, UtilisateurId = c.UtilisateurId
+        Initiales = c.Initiales, CreatedAt = c.CreatedAt
     };
 }
 

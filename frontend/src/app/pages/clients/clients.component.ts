@@ -116,7 +116,6 @@ export class ClientsComponent implements OnInit {
         iF: r['IF'] || r['if'] || '',
         personneContact: r['Personne Contact'] || r['Contact'] || r['contact'] || '',
         isActive: true,
-        creerCompte: false,
       }));
 
       const result = await this.api.clientBulkImport(items);

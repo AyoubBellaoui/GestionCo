@@ -29,7 +29,6 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, AuthResp
             throw new UnauthorizedException("Token invalide");
 
         var user = await _db.Utilisateurs
-            .Include(u => u.Client)
             .FirstOrDefaultAsync(u => u.Id == userId.Value, ct)
             ?? throw new UnauthorizedException("Utilisateur introuvable");
 
@@ -51,7 +50,6 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, AuthResp
             {
                 Id = user.Id, Nom = user.Nom, Prenom = user.Prenom,
                 Email = user.Email, Role = user.Role, Telephone = user.Telephone,
-                ClientId = user.ClientId, NomClient = user.Client?.NomClient,
                 IsActive = user.IsActive, LastLoginAt = user.LastLoginAt
             }
         };
@@ -114,7 +112,6 @@ public class UpdateProfileHandler : IRequestHandler<UpdateProfileCommand, UserDt
         if (_current.UserId == null) throw new UnauthorizedException();
 
         var user = await _db.Utilisateurs
-            .Include(u => u.Client)
             .FirstOrDefaultAsync(u => u.Id == _current.UserId.Value, ct)
             ?? throw new NotFoundException("Utilisateur", _current.UserId.Value);
 
@@ -127,7 +124,6 @@ public class UpdateProfileHandler : IRequestHandler<UpdateProfileCommand, UserDt
         {
             Id = user.Id, Nom = user.Nom, Prenom = user.Prenom,
             Email = user.Email, Role = user.Role, Telephone = user.Telephone,
-            ClientId = user.ClientId, NomClient = user.Client?.NomClient,
             IsActive = user.IsActive, LastLoginAt = user.LastLoginAt
         };
     }
@@ -189,7 +185,6 @@ public class GetCurrentUserHandler : IRequestHandler<GetCurrentUserQuery, UserDt
         if (_current.UserId == null) throw new UnauthorizedException();
 
         var user = await _db.Utilisateurs
-            .Include(u => u.Client)
             .FirstOrDefaultAsync(u => u.Id == _current.UserId.Value, ct)
             ?? throw new NotFoundException("Utilisateur", _current.UserId.Value);
 
@@ -197,7 +192,6 @@ public class GetCurrentUserHandler : IRequestHandler<GetCurrentUserQuery, UserDt
         {
             Id = user.Id, Nom = user.Nom, Prenom = user.Prenom,
             Email = user.Email, Role = user.Role, Telephone = user.Telephone,
-            ClientId = user.ClientId, NomClient = user.Client?.NomClient,
             IsActive = user.IsActive, LastLoginAt = user.LastLoginAt
         };
     }

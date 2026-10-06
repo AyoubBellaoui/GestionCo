@@ -40,8 +40,6 @@ public class UserDto
             return (p + n).ToUpperInvariant();
         }
     }
-    public int? ClientId { get; set; }
-    public string? NomClient { get; set; }
     public bool IsActive { get; set; }
     public DateTime? LastLoginAt { get; set; }
 }

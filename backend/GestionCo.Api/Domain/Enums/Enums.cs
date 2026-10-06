@@ -3,8 +3,7 @@ namespace GestionCo.Api.Domain.Enums;
 public enum RoleUtilisateur
 {
     Admin = 1,
-    Gestionnaire = 2,
-    Client = 3
+    Gestionnaire = 2
 }
 
 public enum StatutVente

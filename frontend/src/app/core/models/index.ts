@@ -7,8 +7,6 @@ export interface User {
   telephone?: string;
   role: string;
   initiales?: string;
-  clientId?: number;
-  nomClient?: string;
   isActive: boolean;
   lastLoginAt?: string;
 }
@@ -118,7 +116,6 @@ export interface Client {
   totalDepense: number;
   totalImpaye: number;
   createdAt: string;
-  utilisateurId?: number;
 }
 
 // ============ FOURNISSEURS ============

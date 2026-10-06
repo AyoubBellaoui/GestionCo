@@ -1,7 +1,6 @@
 using GestionCo.Api.Application.Common.Exceptions;
 using GestionCo.Api.Application.Common.Interfaces;
 using GestionCo.Api.Application.Common.Models;
-using GestionCo.Api.Application.Common.Security;
 using GestionCo.Api.Domain.Entities;
 using GestionCo.Api.Domain.Enums;
 using MediatR;
@@ -47,11 +46,10 @@ public record GetFacturesQuery(
 public class GetFacturesHandler : IRequestHandler<GetFacturesQuery, PagedList<FactureDto>>
 {
     private readonly IAppDbContext _db;
-    private readonly ICurrentUserService _current;
 
-    public GetFacturesHandler(IAppDbContext db, ICurrentUserService current)
+    public GetFacturesHandler(IAppDbContext db)
     {
-        _db = db; _current = current;
+        _db = db;
     }
 
     public async Task<PagedList<FactureDto>> Handle(GetFacturesQuery q, CancellationToken ct)
@@ -60,10 +58,6 @@ public class GetFacturesHandler : IRequestHandler<GetFacturesQuery, PagedList<Fa
             .AsNoTracking()
             .Include(f => f.Vente).ThenInclude(v => v.Client)
             .AsQueryable();
-
-        // Filtre client si rôle Client
-        var scopeClientId = await ClientScope.GetClientIdAsync(_db, _current, ct);
-        if (scopeClientId.HasValue) query = query.Where(f => f.Vente.ClientId == scopeClientId.Value);
 
         if (!string.IsNullOrWhiteSpace(q.Search))
         {
@@ -114,11 +108,10 @@ public record GetFactureByIdQuery(int Id) : IRequest<FactureDto>;
 public class GetFactureByIdHandler : IRequestHandler<GetFactureByIdQuery, FactureDto>
 {
     private readonly IAppDbContext _db;
-    private readonly ICurrentUserService _current;
 
-    public GetFactureByIdHandler(IAppDbContext db, ICurrentUserService current)
+    public GetFactureByIdHandler(IAppDbContext db)
     {
-        _db = db; _current = current;
+        _db = db;
     }
 
     public async Task<FactureDto> Handle(GetFactureByIdQuery q, CancellationToken ct)
@@ -127,10 +120,6 @@ public class GetFactureByIdHandler : IRequestHandler<GetFactureByIdQuery, Factur
             .AsNoTracking()
             .Include(f => f.Vente).ThenInclude(v => v.Client)
             .AsQueryable();
-
-        // Même filtre que la liste : un client ne consulte que ses factures (404 sinon)
-        var scopeClientId = await ClientScope.GetClientIdAsync(_db, _current, ct);
-        if (scopeClientId.HasValue) query = query.Where(f => f.Vente.ClientId == scopeClientId.Value);
 
         var f = await query.FirstOrDefaultAsync(f => f.Id == q.Id, ct)
             ?? throw new NotFoundException("Facture", q.Id);

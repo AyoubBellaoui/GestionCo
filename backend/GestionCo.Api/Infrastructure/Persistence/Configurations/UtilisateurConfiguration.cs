@@ -18,10 +18,5 @@ public class UtilisateurConfiguration : IEntityTypeConfiguration<Utilisateur>
         b.Property(x => x.Role).HasConversion<int>();
         b.Property(x => x.RefreshToken).HasMaxLength(500);
         b.HasIndex(x => x.Email).IsUnique();
-
-        b.HasOne(x => x.Client)
-            .WithOne(c => c.Utilisateur)
-            .HasForeignKey<Utilisateur>(x => x.ClientId)
-            .OnDelete(DeleteBehavior.SetNull);
     }
 }

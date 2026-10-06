@@ -39,7 +39,6 @@ public class LoginHandler : IRequestHandler<LoginCommand, AuthResponse>
     public async Task<AuthResponse> Handle(LoginCommand req, CancellationToken ct)
     {
         var user = await _db.Utilisateurs
-            .Include(u => u.Client)
             .FirstOrDefaultAsync(u => u.Email == req.Email.ToLower().Trim(), ct);
 
         if (user == null || !_hasher.Verify(req.Password, user.PasswordHash))
@@ -76,8 +75,6 @@ public class LoginHandler : IRequestHandler<LoginCommand, AuthResponse>
                 Email = user.Email,
                 Telephone = user.Telephone,
                 Role = user.Role,
-                ClientId = user.ClientId,
-                NomClient = user.Client?.NomClient,
                 IsActive = user.IsActive,
                 LastLoginAt = user.LastLoginAt
             }

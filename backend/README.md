@@ -108,14 +108,12 @@ Authorization: Bearer eyJhbGc...
 
 ## 🎯 Rôles & Policies
 
-- **Admin** → toutes les actions
-- **Gestionnaire** → CRUD produits/ventes/achats/clients
-- **Client** → accès à son espace (ses ventes/factures)
+- **Admin** → toutes les actions, dont suppression des fiches (produits, clients, fournisseurs, catégories), annulation des ventes et des achats, utilisateurs, paramètres, journal d'audit
+- **Gestionnaire** → toutes les opérations courantes (devis, commandes, ventes, achats, factures, paiements, charges), sans suppression de fiche ni annulation de vente ou d'achat
 
 Policies déclarées :
 - `AdminOnly` — Admin uniquement
 - `AdminOrManager` — Admin ou Gestionnaire
-- `ClientOnly` — Client uniquement
 
 ## 🏗️ Architecture Clean
 

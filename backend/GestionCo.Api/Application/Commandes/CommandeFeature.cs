@@ -2,7 +2,6 @@ using FluentValidation;
 using GestionCo.Api.Application.Common.Exceptions;
 using GestionCo.Api.Application.Common.Interfaces;
 using GestionCo.Api.Application.Common.Models;
-using GestionCo.Api.Application.Common.Security;
 using GestionCo.Api.Domain.Entities;
 using GestionCo.Api.Domain.Enums;
 using MediatR;
@@ -453,11 +452,10 @@ public class DeleteCommandeHandler : IRequestHandler<DeleteCommandeCommand>
 public class GetCommandesHandler : IRequestHandler<GetCommandesQuery, PagedList<CommandeDto>>
 {
     private readonly IAppDbContext _db;
-    private readonly ICurrentUserService _current;
 
-    public GetCommandesHandler(IAppDbContext db, ICurrentUserService current)
+    public GetCommandesHandler(IAppDbContext db)
     {
-        _db = db; _current = current;
+        _db = db;
     }
 
     public async Task<PagedList<CommandeDto>> Handle(GetCommandesQuery req, CancellationToken ct)
@@ -470,10 +468,6 @@ public class GetCommandesHandler : IRequestHandler<GetCommandesQuery, PagedList<
             .Include(c => c.Vente)
             .Include(c => c.Lignes).ThenInclude(l => l.Produit)
             .AsQueryable();
-
-        // Filtre client si rôle Client : uniquement ses commandes
-        var scopeClientId = await ClientScope.GetClientIdAsync(_db, _current, ct);
-        if (scopeClientId.HasValue) q = q.Where(c => c.ClientId == scopeClientId.Value);
 
         if (!string.IsNullOrWhiteSpace(req.Search))
         {
@@ -509,21 +503,14 @@ public class GetCommandesHandler : IRequestHandler<GetCommandesQuery, PagedList<
 public class GetCommandeByIdHandler : IRequestHandler<GetCommandeByIdQuery, CommandeDto>
 {
     private readonly IAppDbContext _db;
-    private readonly ICurrentUserService _current;
 
-    public GetCommandeByIdHandler(IAppDbContext db, ICurrentUserService current)
+    public GetCommandeByIdHandler(IAppDbContext db)
     {
-        _db = db; _current = current;
+        _db = db;
     }
 
     public async Task<CommandeDto> Handle(GetCommandeByIdQuery req, CancellationToken ct)
     {
-        // Même filtre que la liste : un client ne consulte que ses commandes (404 sinon)
-        var scopeClientId = await ClientScope.GetClientIdAsync(_db, _current, ct);
-        if (scopeClientId.HasValue &&
-            !await _db.Commandes.AnyAsync(c => c.Id == req.Id && c.ClientId == scopeClientId.Value, ct))
-            throw new NotFoundException("Commande", req.Id);
-
         return await CommandeLoadHelper.LoadDto(_db, req.Id, ct);
     }
 }

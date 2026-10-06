@@ -233,6 +233,9 @@ public class UpdateProduitValidator : AbstractValidator<UpdateProduitCommand>
         RuleFor(x => x.Dto.Nom).NotEmpty().MaximumLength(200);
         RuleFor(x => x.Dto.PrixHT).GreaterThanOrEqualTo(0);
         RuleFor(x => x.Dto.PrixVenteHT).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.Dto.NouvelleQuantiteStock).GreaterThanOrEqualTo(0)
+            .When(x => x.Dto.NouvelleQuantiteStock.HasValue)
+            .WithMessage("La quantité en stock ne peut pas être négative");
     }
 }
 
@@ -240,10 +243,12 @@ public class UpdateProduitHandler : IRequestHandler<UpdateProduitCommand, Produi
 {
     private readonly IAppDbContext _db;
     private readonly IAuditLogger _audit;
+    private readonly ICurrentUserService _current;
+    private readonly IReapproService _reappro;
 
-    public UpdateProduitHandler(IAppDbContext db, IAuditLogger audit)
+    public UpdateProduitHandler(IAppDbContext db, IAuditLogger audit, ICurrentUserService current, IReapproService reappro)
     {
-        _db = db; _audit = audit;
+        _db = db; _audit = audit; _current = current; _reappro = reappro;
     }
 
     public async Task<ProduitDto> Handle(UpdateProduitCommand req, CancellationToken ct)
@@ -271,7 +276,37 @@ public class UpdateProduitHandler : IRequestHandler<UpdateProduitCommand, Produi
         produit.FournisseurId = dto.FournisseurId;
         produit.IsActive = dto.IsActive;
 
+        // Quantité modifiée depuis la fiche : l'écart passe par un mouvement de stock tracé
+        MouvementStock? mouvement = null;
+        if (dto.NouvelleQuantiteStock.HasValue && dto.NouvelleQuantiteStock.Value != produit.QuantiteStock)
+        {
+            var userId = _current.UserId ?? throw new UnauthorizedException();
+            var stockAvant = produit.QuantiteStock;
+            var stockApres = dto.NouvelleQuantiteStock.Value;
+            produit.QuantiteStock = stockApres;
+            mouvement = new MouvementStock
+            {
+                ProduitId = produit.Id,
+                Type = stockApres > stockAvant ? TypeMouvementStock.Entree : TypeMouvementStock.Sortie,
+                Quantite = Math.Abs(stockApres - stockAvant),
+                StockAvant = stockAvant,
+                StockApres = stockApres,
+                Source = SourceMouvementStock.Manuel,
+                UtilisateurId = userId,
+                Raison = "Correction de la quantité depuis la fiche produit",
+                DateMouvement = DateTime.UtcNow
+            };
+            _db.MouvementsStock.Add(mouvement);
+        }
+
         await _db.SaveChangesAsync(ct);
+
+        if (mouvement is { Type: TypeMouvementStock.Sortie } &&
+            produit.QuantiteStock <= produit.SeuilAlerte &&
+            produit.QuantiteReappro > 0 && produit.FournisseurId.HasValue)
+        {
+            await _reappro.TryGenererReapproAsync(produit.Id, mouvement.UtilisateurId, ct);
+        }
 
         await _audit.LogAsync(
             ActionLog.Update, "produits",

@@ -3,7 +3,6 @@ using GestionCo.Api.Application.Commandes;
 using GestionCo.Api.Application.Common.Exceptions;
 using GestionCo.Api.Application.Common.Interfaces;
 using GestionCo.Api.Application.Common.Models;
-using GestionCo.Api.Application.Common.Security;
 using GestionCo.Api.Domain.Entities;
 using GestionCo.Api.Domain.Enums;
 using MediatR;
@@ -563,11 +562,10 @@ public record GetDevisQuery(
 public class GetDevisHandler : IRequestHandler<GetDevisQuery, PagedList<DevisDto>>
 {
     private readonly IAppDbContext _db;
-    private readonly ICurrentUserService _current;
 
-    public GetDevisHandler(IAppDbContext db, ICurrentUserService current)
+    public GetDevisHandler(IAppDbContext db)
     {
-        _db = db; _current = current;
+        _db = db;
     }
 
     public async Task<PagedList<DevisDto>> Handle(GetDevisQuery q, CancellationToken ct)
@@ -578,10 +576,6 @@ public class GetDevisHandler : IRequestHandler<GetDevisQuery, PagedList<DevisDto
             .Include(d => d.Lignes)
             .Include(d => d.Vente)
             .AsQueryable();
-
-        // Filtre client si rôle Client : uniquement ses devis
-        var scopeClientId = await ClientScope.GetClientIdAsync(_db, _current, ct);
-        if (scopeClientId.HasValue) query = query.Where(d => d.ClientId == scopeClientId.Value);
 
         if (!string.IsNullOrWhiteSpace(q.Search))
         {
@@ -615,11 +609,10 @@ public record EnvoyerDevisEmailCommand(int Id, string ToEmail, string? Message =
 public class GetDevisByIdHandler : IRequestHandler<GetDevisByIdQuery, DevisDto>
 {
     private readonly IAppDbContext _db;
-    private readonly ICurrentUserService _current;
 
-    public GetDevisByIdHandler(IAppDbContext db, ICurrentUserService current)
+    public GetDevisByIdHandler(IAppDbContext db)
     {
-        _db = db; _current = current;
+        _db = db;
     }
 
     public async Task<DevisDto> Handle(GetDevisByIdQuery q, CancellationToken ct)
@@ -630,10 +623,6 @@ public class GetDevisByIdHandler : IRequestHandler<GetDevisByIdQuery, DevisDto>
             .Include(x => x.Lignes).ThenInclude(l => l.Produit)
             .Include(x => x.Vente)
             .AsQueryable();
-
-        // Même filtre que la liste : un client ne consulte que ses devis (404 sinon)
-        var scopeClientId = await ClientScope.GetClientIdAsync(_db, _current, ct);
-        if (scopeClientId.HasValue) query = query.Where(x => x.ClientId == scopeClientId.Value);
 
         var d = await query.FirstOrDefaultAsync(x => x.Id == q.Id, ct)
             ?? throw new NotFoundException("Devis", q.Id);

@@ -214,15 +214,18 @@
             <label class="form-label">Quantité {{ isEdit ? 'en stock' : 'initiale' }}@if (!isEdit) {<span class="required">*</span>}</label>
             <div class="input-group">
               <input type="number" min="0"
-                [class]="'form-input with-suffix' + (isEdit ? ' computed-field' : '')"
+                class="form-input with-suffix"
                 [value]="form.quantiteStock ?? 0"
-                [readonly]="isEdit"
-                (input)="!isEdit && setField('quantiteStock', +$any($event.target).value)" />
+                (input)="setField('quantiteStock', +$any($event.target).value)" />
               <span class="input-suffix">unités</span>
             </div>
             @if (isEdit) {
               <div class="form-help stock-locked-hint">
-                🔒 Géré via Achats ou <strong>Ajustement de stock</strong> depuis la liste des produits
+                @if ((form.quantiteStock ?? 0) !== stockInitial) {
+                  📝 {{ stockInitial }} → {{ form.quantiteStock ?? 0 }} : l'écart sera enregistré comme mouvement de stock
+                } @else {
+                  Toute modification est enregistrée comme mouvement de stock (traçabilité)
+                }
               </div>
             }
           </div>

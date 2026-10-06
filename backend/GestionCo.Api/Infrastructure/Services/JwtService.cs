@@ -41,9 +41,6 @@ public class JwtService : IJwtService
                 ClaimValueTypes.Integer64)
         };
 
-        if (user.ClientId.HasValue)
-            claims.Add(new Claim("clientId", user.ClientId.Value.ToString()));
-
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SecretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 

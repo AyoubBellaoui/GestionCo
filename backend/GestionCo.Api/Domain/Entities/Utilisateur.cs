@@ -17,10 +17,6 @@ public class Utilisateur : AuditableEntity
     public string? RefreshToken { get; set; }
     public DateTime? RefreshTokenExpiresAt { get; set; }
 
-    // Si le user est un client (role = Client), il est lié à un enregistrement Client
-    public int? ClientId { get; set; }
-    public Client? Client { get; set; }
-
     // Navigation
     public ICollection<Vente> Ventes { get; set; } = new List<Vente>();
     public ICollection<Log> Logs { get; set; } = new List<Log>();

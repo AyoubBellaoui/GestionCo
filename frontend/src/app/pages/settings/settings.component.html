@@ -564,7 +564,6 @@
                         <td>
                           @if (u.role === 'Admin') { <span class="status-badge" style="background:var(--danger-light);color:#dc2626">👑 Admin</span> }
                           @if (u.role === 'Gestionnaire') { <span class="status-badge" style="background:var(--info-light);color:#0891b2">💼 Gestionnaire</span> }
-                          @if (u.role === 'Client') { <span class="status-badge inactive">👤 Client</span> }
                         </td>
                         <td><span [class]="'status-badge ' + (u.isActive ? 'active' : 'inactive')">{{ u.isActive ? 'Actif' : 'Inactif' }}</span></td>
                         <td class="actions-cell">
