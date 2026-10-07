@@ -334,6 +334,7 @@ export interface UpdateUtilisateurPayload {
   telephone?: string;
   role: string;
   isActive: boolean;
+  newPassword?: string;
 }
 
 // ============ SETTINGS ============

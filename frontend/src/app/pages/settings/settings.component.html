@@ -649,6 +649,7 @@
           </div>
           <div class="form-field"><label class="label">Téléphone</label><app-phone-input [(ngModel)]="compteForm.telephone"></app-phone-input></div>
           @if (comptesModalMode === 'edit') {
+            <div class="form-field full"><label class="label">Nouveau mot de passe <span class="form-hint" style="font-weight:400">(min. 6 caractères — laisser vide pour ne pas changer)</span></label><input type="password" class="form-input" [(ngModel)]="compteForm.password" autocomplete="new-password" readonly (focus)="$any($event.target).removeAttribute('readonly')" /></div>
             <div class="form-field full">
               <div style="display:flex;align-items:center;gap:12px">
                 <label class="label" style="margin-bottom:0">Compte actif</label>

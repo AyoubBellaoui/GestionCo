@@ -41,6 +41,7 @@ public class UpdateUtilisateurDto
     public string? Telephone { get; set; }
     public RoleUtilisateur Role { get; set; }
     public bool IsActive { get; set; } = true;
+    public string? NewPassword { get; set; } // vide = mot de passe inchangé
 }
 
 // ============ GET ALL ============
@@ -125,9 +126,10 @@ public class UpdateUtilisateurHandler : IRequestHandler<UpdateUtilisateurCommand
     private readonly IAppDbContext _db;
     private readonly IAuditLogger _audit;
     private readonly ICurrentUserService _current;
+    private readonly IPasswordHasher _hasher;
 
-    public UpdateUtilisateurHandler(IAppDbContext db, IAuditLogger audit, ICurrentUserService current)
-        => (_db, _audit, _current) = (db, audit, current);
+    public UpdateUtilisateurHandler(IAppDbContext db, IAuditLogger audit, ICurrentUserService current, IPasswordHasher hasher)
+        => (_db, _audit, _current, _hasher) = (db, audit, current, hasher);
 
     public async Task<UtilisateurDto> Handle(UpdateUtilisateurCommand req, CancellationToken ct)
     {
@@ -137,17 +139,23 @@ public class UpdateUtilisateurHandler : IRequestHandler<UpdateUtilisateurCommand
         if (!req.Dto.IsActive && user.Id == _current.UserId)
             throw new BusinessException("Vous ne pouvez pas désactiver votre propre compte");
 
+        var passwordChanged = !string.IsNullOrEmpty(req.Dto.NewPassword);
+        if (passwordChanged && req.Dto.NewPassword!.Length < 6)
+            throw new BusinessException("Mot de passe min. 6 caractères");
+
         user.Nom = req.Dto.Nom.Trim();
         user.Prenom = req.Dto.Prenom.Trim();
         user.Telephone = req.Dto.Telephone?.Trim();
         user.Role = req.Dto.Role;
         user.IsActive = req.Dto.IsActive;
+        if (passwordChanged) user.PasswordHash = _hasher.Hash(req.Dto.NewPassword!);
 
         await _db.SaveChangesAsync(ct);
 
         await _audit.LogAsync(ActionLog.Update, "utilisateurs",
-            $"Compte modifié : {user.Prenom} {user.Nom} ({user.Email})",
-            user.Id, user.Email, ct: ct);
+            $"Compte modifié : {user.Prenom} {user.Nom} ({user.Email})"
+                + (passwordChanged ? " — mot de passe réinitialisé par l'admin" : ""),
+            user.Id, user.Email, estSensible: passwordChanged, ct: ct);
 
         return GetUtilisateursHandler.ToDto(user);
     }

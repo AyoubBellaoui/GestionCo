@@ -286,6 +286,9 @@ export class SettingsComponent implements OnInit {
     if (this.comptesModalMode === 'create' && (!this.compteForm.email.trim() || !this.compteForm.password)) {
       this.toast.notify('Email et mot de passe requis', 'warning'); return;
     }
+    if (this.comptesModalMode === 'edit' && this.compteForm.password && this.compteForm.password.length < 6) {
+      this.toast.notify('Mot de passe min. 6 caractères', 'warning'); return;
+    }
     this.comptesSaving = true;
     try {
       if (this.comptesModalMode === 'create') {
@@ -301,9 +304,10 @@ export class SettingsComponent implements OnInit {
           nom: this.compteForm.nom.trim(), prenom: this.compteForm.prenom.trim(),
           telephone: this.compteForm.telephone.trim() || undefined,
           role: this.compteForm.role, isActive: this.compteForm.isActive,
+          newPassword: this.compteForm.password || undefined,
         };
         await this.api.utilisateurUpdate(this.comptesEditId, payload);
-        this.toast.notify('Compte mis à jour', 'success');
+        this.toast.notify(payload.newPassword ? 'Compte et mot de passe mis à jour' : 'Compte mis à jour', 'success');
       }
       this.comptesModalOpen = false;
       await this.loadComptes();
