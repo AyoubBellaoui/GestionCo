@@ -50,7 +50,7 @@ public class PdfService : IPdfService
         var client = vente.Client;
 
         var factureStatus = facture.Statut;
-        if (factureStatus == StatutFacture.EnAttente && vente != null && vente.MontantPaye > 0 && vente.MontantPaye < vente.MontantTotal)
+        if (factureStatus == StatutFacture.EnAttente && vente.MontantPaye > 0 && vente.MontantPaye < vente.MontantTotal)
         {
             factureStatus = StatutFacture.PartiellementPayee;
         }

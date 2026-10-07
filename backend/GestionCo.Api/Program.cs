@@ -325,6 +325,10 @@ app.MapGet("/", () => Results.Redirect("/swagger"));
 
 app.Run();
 
+// EF1002 : les noms de tables/colonnes interpolés ci-dessous sont des constantes codées en dur
+// (aucune saisie utilisateur), et SQL Server n'accepte pas d'identifiants en paramètres SQL.
+#pragma warning disable EF1002
+
 // Crée les tables ajoutées après la création initiale de la DB
 static async Task ApplyManualTablesAsync(AppDbContext db, ILogger logger)
 {
@@ -566,3 +570,5 @@ static async Task ApplyManualColumnAlterationsAsync(AppDbContext db, ILogger log
         }
     }
 }
+
+#pragma warning restore EF1002
