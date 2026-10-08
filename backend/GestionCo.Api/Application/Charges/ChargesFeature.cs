@@ -268,11 +268,10 @@ public class GenererChargesRecurrentesHandler : IRequestHandler<GenererChargesRe
                 FournisseurId     = source.FournisseurId,
                 DateCharge        = source.DateProchaine!.Value,
                 UtilisateurId     = userId,
-                EstRecurrente     = true,
-                Periodicite       = source.Periodicite,
-                DateProchaine     = NextDate(source.DateProchaine.Value, source.Periodicite),
+                // La copie générée est une charge simple : seule la charge source porte la récurrence
+                EstRecurrente     = false,
             };
-            source.DateProchaine = newCharge.DateProchaine;
+            source.DateProchaine = NextDate(source.DateProchaine.Value, source.Periodicite);
             _db.Charges.Add(newCharge);
             await _audit.LogAsync(ActionLog.Create, "charges",
                 $"Charge récurrente générée : {reference} — {newCharge.Titre}",
