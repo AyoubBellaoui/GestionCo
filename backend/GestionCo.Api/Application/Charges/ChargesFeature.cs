@@ -114,23 +114,33 @@ public static class Periodicites
 
     public static bool EstValide(string? p) => p is not null && Valeurs.Contains(p);
 
-    public static DateTime? NextDate(DateTime from, string? p) => p switch
+    private static int? Mois(string? p) => p switch
     {
-        "Mensuelle"     => from.AddMonths(1),
-        "Bimestrielle"  => from.AddMonths(2),
-        "Trimestrielle" => from.AddMonths(3),
-        "Annuelle"      => from.AddYears(1),
+        "Mensuelle"     => 1,
+        "Bimestrielle"  => 2,
+        "Trimestrielle" => 3,
+        "Annuelle"      => 12,
         _               => null
     };
 
-    public static DateTime? PreviousDate(DateTime from, string? p) => p switch
+    private static int IndexMois(DateTime d) => d.Year * 12 + d.Month;
+
+    public static DateTime? PreviousDate(DateTime from, string? p) => Mois(p) is int m ? from.AddMonths(-m) : null;
+
+    // Prochaine échéance du calendrier de la charge (date de la charge + n périodes, sans glissement du jour :
+    // le 31 reste le 31 quand le mois le permet), postérieure à la période déjà couverte.
+    // Avec nonPassee, les périodes antérieures à aujourd'hui sont sautées au lieu d'être rattrapées.
+    public static DateTime? Prochaine(DateTime dateCharge, string? p, DateTime? periodeCouverte, bool nonPassee)
     {
-        "Mensuelle"     => from.AddMonths(-1),
-        "Bimestrielle"  => from.AddMonths(-2),
-        "Trimestrielle" => from.AddMonths(-3),
-        "Annuelle"      => from.AddYears(-1),
-        _               => null
-    };
+        if (Mois(p) is not int m) return null;
+        var moisMin = periodeCouverte is DateTime c ? IndexMois(c) + m : 0;
+        for (var n = 1; ; n++)
+        {
+            var echeance = dateCharge.AddMonths(m * n);
+            if (IndexMois(echeance) >= moisMin && (!nonPassee || echeance >= DateTime.Today))
+                return echeance;
+        }
+    }
 }
 
 public record AddPaiementChargeCommand(AddPaiementChargeDto Dto) : IRequest<ChargeDto>;
@@ -210,7 +220,8 @@ public class CreateChargeHandler : IRequestHandler<CreateChargeCommand, ChargeDt
             Justificatif = dto.Justificatif?.Trim(),
             EstRecurrente   = dto.EstRecurrente,
             Periodicite     = dto.EstRecurrente ? dto.Periodicite : null,
-            DateProchaine   = dto.EstRecurrente ? Periodicites.NextDate(dto.DateCharge ?? now, dto.Periodicite) : null,
+            // Charge saisie avec une date ancienne : pas de rattrapage des périodes déjà passées
+            DateProchaine   = dto.EstRecurrente ? Periodicites.Prochaine(dto.DateCharge ?? now, dto.Periodicite, null, nonPassee: true) : null,
             PrelevementAuto = dto.EstRecurrente && dto.PrelevementAuto,
         };
 
@@ -289,7 +300,7 @@ public class GenererChargesRecurrentesHandler : IRequestHandler<GenererChargesRe
         foreach (var source in recurrentes)
         {
             // Échéance jamais calculée : on la déduit de la date de la charge
-            source.DateProchaine ??= Periodicites.NextDate(source.DateCharge, source.Periodicite);
+            source.DateProchaine ??= Periodicites.Prochaine(source.DateCharge, source.Periodicite, null, nonPassee: true);
 
             while (source.DateProchaine is DateTime echeance && echeance < demain)
             {
@@ -323,7 +334,7 @@ public class GenererChargesRecurrentesHandler : IRequestHandler<GenererChargesRe
                     });
                 }
 
-                source.DateProchaine = Periodicites.NextDate(echeance, source.Periodicite);
+                source.DateProchaine = Periodicites.Prochaine(source.DateCharge, source.Periodicite, echeance, nonPassee: false);
                 _db.Charges.Add(newCharge);
                 // Sauvegarde à chaque charge : la référence suivante est calculée depuis la base
                 await _db.SaveChangesAsync(ct);
@@ -481,19 +492,17 @@ public class UpdateChargeHandler : IRequestHandler<UpdateChargeCommand, ChargeDt
     {
         if (!c.EstRecurrente) return null;
 
-        // Récurrence activée, ou aucune échéance encore générée : on part de la date de la charge
-        if (!etaitRecurrente || c.DateProchaine is null
-            || c.DateProchaine == Periodicites.NextDate(ancienneDate, anciennePeriodicite))
-            return Periodicites.NextDate(c.DateCharge, c.Periodicite);
+        // Calendrier inchangé : l'échéance en cours est conservée
+        if (etaitRecurrente && c.DateProchaine is not null
+            && c.Periodicite == anciennePeriodicite && c.DateCharge.Date == ancienneDate.Date)
+            return c.DateProchaine;
 
-        // Périodicité changée : on repart de la dernière échéance générée
-        if (c.Periodicite != anciennePeriodicite)
-        {
-            var derniere = Periodicites.PreviousDate(c.DateProchaine.Value, anciennePeriodicite) ?? c.DateCharge;
-            return Periodicites.NextDate(derniere, c.Periodicite);
-        }
-
-        return c.DateProchaine;
+        // Nouveau calendrier : on reprend après la dernière période couverte (générée ou passée),
+        // sans recréer une charge pour une période déjà couverte ni rattraper les périodes passées
+        var periodeCouverte = etaitRecurrente && c.DateProchaine is DateTime p
+            ? Periodicites.PreviousDate(p, anciennePeriodicite)
+            : null;
+        return Periodicites.Prochaine(c.DateCharge, c.Periodicite, periodeCouverte, nonPassee: true);
     }
 }
 

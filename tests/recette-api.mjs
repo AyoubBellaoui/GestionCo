@@ -342,6 +342,7 @@ await test('VEN-10', 'Paiements', 'Paiement sur une vente annulée', '400', asyn
 await test('CHG-01', 'Charges', 'Création d\'une charge avec paiement initial', `200, CHG-${YEAR}-NNNN`, async () => {
   const cats = await api('GET', '/api/categories-charge', { token: ctx.gest });
   const catId = (Array.isArray(cats.data) ? cats.data : items(cats.data) ?? [])[0]?.id;
+  ctx.catCharge = catId;
   const r = await api('POST', '/api/charges', { token: ctx.gest, body: { titre: 'Loyer recette', montant: 3000, categorieChargeId: catId, paiementInitial: 1000, methodePaiementInitial: 'Virement' } });
   ctx.charge = r.data?.id;
   return { ok: r.status === 200 && new RegExp(`^CHG-${YEAR}-\\d{4}$`).test(r.data?.reference ?? ''), obtained: `${r.status}, ${r.data?.reference}` };
@@ -349,6 +350,43 @@ await test('CHG-01', 'Charges', 'Création d\'une charge avec paiement initial',
 await test('CHG-02', 'Charges', 'Suppression d\'une charge ayant des paiements', '400', async () => {
   const r = await api('DELETE', `/api/charges/${ctx.charge}`, { token: ctx.admin });
   return { ok: r.status === 400, obtained: String(r.status) };
+});
+
+// Charge récurrente annuelle datée d'il y a 2 ans jour pour jour : son échéance tombe aujourd'hui
+const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const decaler = (mois) => { // aujourd'hui + n mois, le jour étant ramené au dernier jour du mois si besoin
+  const d = new Date(), j = d.getDate();
+  d.setDate(1); d.setMonth(d.getMonth() + mois);
+  d.setDate(Math.min(j, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+  return iso(d);
+};
+const TODAY = iso(new Date());
+
+await test('CHG-03', 'Charges', 'Charge récurrente avec une périodicité invalide', '400', async () => {
+  const r = await api('POST', '/api/charges', { token: ctx.gest, body: { titre: 'Récurrente invalide', montant: 100, categorieChargeId: ctx.catCharge, estRecurrente: true, periodicite: 'Hebdomadaire' } });
+  return { ok: r.status === 400, obtained: String(r.status) };
+});
+await test('CHG-04', 'Charges', 'Charge récurrente annuelle datée d\'il y a 2 ans (prélèvement automatique)', `200, prochaine échéance ${TODAY} (périodes passées non rattrapées)`, async () => {
+  const r = await api('POST', '/api/charges', { token: ctx.gest, body: { titre: 'Assurance recette', montant: 1200, categorieChargeId: ctx.catCharge, dateCharge: decaler(-24), estRecurrente: true, periodicite: 'Annuelle', prelevementAuto: true } });
+  ctx.chargeRec = r.data?.id;
+  const next = r.data?.dateProchaine?.slice(0, 10);
+  return { ok: r.status === 200 && next === TODAY, obtained: `${r.status}, prochaine échéance ${next}` };
+});
+await test('CHG-05', 'Charges', 'Génération des charges récurrentes arrivées à échéance', `200, 1 charge du ${TODAY} payée, échéance suivante ${decaler(12)}`, async () => {
+  const r = await api('POST', '/api/charges/generer-recurrentes', { token: ctx.gest });
+  const list = items((await api('GET', '/api/charges?search=Assurance%20recette', { token: ctx.gest })).data) ?? [];
+  const copies = list.filter(c => !c.estRecurrente);
+  const next = list.find(c => c.id === ctx.chargeRec)?.dateProchaine?.slice(0, 10);
+  const ok = r.status === 200 && copies.length === 1 && copies[0].statut === 'Paye'
+    && copies[0].dateCharge?.slice(0, 10) === TODAY && next === decaler(12);
+  return { ok, obtained: `${r.status}, ${copies.length} générée(s) [${copies.map(c => `${c.dateCharge?.slice(0, 10)} ${c.statut}`).join(', ')}], échéance suivante ${next}` };
+});
+await test('CHG-06', 'Charges', 'Passage de la périodicité annuelle à mensuelle', `200, prochaine échéance ${decaler(1)}, aucune charge régénérée pour ce mois`, async () => {
+  const src = (await api('GET', `/api/charges/${ctx.chargeRec}`, { token: ctx.gest })).data;
+  const r = await api('PUT', `/api/charges/${ctx.chargeRec}`, { token: ctx.gest, body: { titre: src.titre, montant: src.montant, categorieChargeId: src.categorieChargeId, dateCharge: src.dateCharge.slice(0, 10), estRecurrente: true, periodicite: 'Mensuelle', prelevementAuto: true } });
+  const g = await api('POST', '/api/charges/generer-recurrentes', { token: ctx.gest });
+  const next = r.data?.dateProchaine?.slice(0, 10);
+  return { ok: r.status === 200 && next === decaler(1) && g.data?.count === 0, obtained: `${r.status}, prochaine échéance ${next}, ${g.data?.count} générée(s)` };
 });
 
 // ───────────────────────── Rapports, tableau de bord, audit ─────────────────────────
