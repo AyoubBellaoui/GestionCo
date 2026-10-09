@@ -36,6 +36,7 @@ public class ChargeDto
     public bool EstRecurrente { get; set; }
     public string? Periodicite { get; set; }
     public DateTime? DateProchaine { get; set; }
+    public bool PrelevementAuto { get; set; }
 }
 
 public class PaiementChargeDto
@@ -74,6 +75,7 @@ public class CreateChargeDto
     public MethodePaiement? MethodePaiementInitial { get; set; }
     public bool EstRecurrente { get; set; } = false;
     public string? Periodicite { get; set; }
+    public bool PrelevementAuto { get; set; } = false;
 }
 
 public class AddPaiementChargeDto
@@ -100,7 +102,35 @@ public class CreateChargeValidator : AbstractValidator<CreateChargeCommand>
         RuleFor(x => x.Dto.Titre).NotEmpty().WithMessage("Le titre est requis").MaximumLength(200);
         RuleFor(x => x.Dto.Montant).GreaterThan(0).WithMessage("Le montant doit être supérieur à 0");
         RuleFor(x => x.Dto.CategorieChargeId).GreaterThan(0).WithMessage("La catégorie est requise");
+        RuleFor(x => x.Dto.Periodicite).Must(Periodicites.EstValide)
+            .When(x => x.Dto.EstRecurrente).WithMessage("Périodicité invalide");
     }
+}
+
+// ── Périodicités des charges récurrentes ─────────────────────────────────────
+public static class Periodicites
+{
+    public static readonly string[] Valeurs = { "Mensuelle", "Bimestrielle", "Trimestrielle", "Annuelle" };
+
+    public static bool EstValide(string? p) => p is not null && Valeurs.Contains(p);
+
+    public static DateTime? NextDate(DateTime from, string? p) => p switch
+    {
+        "Mensuelle"     => from.AddMonths(1),
+        "Bimestrielle"  => from.AddMonths(2),
+        "Trimestrielle" => from.AddMonths(3),
+        "Annuelle"      => from.AddYears(1),
+        _               => null
+    };
+
+    public static DateTime? PreviousDate(DateTime from, string? p) => p switch
+    {
+        "Mensuelle"     => from.AddMonths(-1),
+        "Bimestrielle"  => from.AddMonths(-2),
+        "Trimestrielle" => from.AddMonths(-3),
+        "Annuelle"      => from.AddYears(-1),
+        _               => null
+    };
 }
 
 public record AddPaiementChargeCommand(AddPaiementChargeDto Dto) : IRequest<ChargeDto>;
@@ -118,9 +148,19 @@ public class UpdateChargeDto
     public string? Justificatif { get; set; }
     public bool EstRecurrente { get; set; } = false;
     public string? Periodicite { get; set; }
+    public bool PrelevementAuto { get; set; } = false;
 }
 
 public record UpdateChargeCommand(int Id, UpdateChargeDto Dto) : IRequest<ChargeDto>;
+
+public class UpdateChargeValidator : AbstractValidator<UpdateChargeCommand>
+{
+    public UpdateChargeValidator()
+    {
+        RuleFor(x => x.Dto.Periodicite).Must(Periodicites.EstValide)
+            .When(x => x.Dto.EstRecurrente).WithMessage("Périodicité invalide");
+    }
+}
 public record DeleteChargeCommand(int Id) : IRequest;
 
 public record DeleteCategorieChargeCommand(int Id) : IRequest;
@@ -168,9 +208,10 @@ public class CreateChargeHandler : IRequestHandler<CreateChargeCommand, ChargeDt
             UtilisateurId = userId,
             FournisseurId = dto.FournisseurId,
             Justificatif = dto.Justificatif?.Trim(),
-            EstRecurrente = dto.EstRecurrente,
-            Periodicite   = dto.EstRecurrente ? dto.Periodicite : null,
-            DateProchaine = dto.EstRecurrente ? ComputeNextDate(dto.DateCharge ?? now, dto.Periodicite) : null,
+            EstRecurrente   = dto.EstRecurrente,
+            Periodicite     = dto.EstRecurrente ? dto.Periodicite : null,
+            DateProchaine   = dto.EstRecurrente ? Periodicites.NextDate(dto.DateCharge ?? now, dto.Periodicite) : null,
+            PrelevementAuto = dto.EstRecurrente && dto.PrelevementAuto,
         };
 
         var paiementInitial = dto.PaiementInitial ?? 0;
@@ -216,17 +257,9 @@ public class CreateChargeHandler : IRequestHandler<CreateChargeCommand, ChargeDt
             .FirstAsync(x => x.Id == id, ct);
         return ChargeMapper.ToDto(c);
     }
-
-    private static DateTime? ComputeNextDate(DateTime from, string? periodicite) => periodicite switch
-    {
-        "Mensuelle"     => from.AddMonths(1),
-        "Trimestrielle" => from.AddMonths(3),
-        "Annuelle"      => from.AddYears(1),
-        _               => null
-    };
 }
 
-// ── Génération des charges récurrentes du mois ───────────────────────────────
+// ── Génération des charges récurrentes arrivées à échéance ───────────────────
 public record GenererChargesRecurrentesCommand(int? SystemUserId = null) : IRequest<int>;
 
 public class GenererChargesRecurrentesHandler : IRequestHandler<GenererChargesRecurrentesCommand, int>
@@ -244,51 +277,67 @@ public class GenererChargesRecurrentesHandler : IRequestHandler<GenererChargesRe
 
     public async Task<int> Handle(GenererChargesRecurrentesCommand req, CancellationToken ct)
     {
-        var today     = DateTime.UtcNow;
-        var debutMois = new DateTime(today.Year, today.Month, 1);
-        var finMois   = debutMois.AddMonths(1);
-        var userId    = req.SystemUserId ?? _current.UserId ?? throw new UnauthorizedException();
+        var demain = DateTime.Today.AddDays(1);
+        var userId = req.SystemUserId ?? _current.UserId ?? throw new UnauthorizedException();
 
+        // Toutes les échéances passées, y compris les mois manqués quand l'application était arrêtée
         var recurrentes = await _db.Charges
-            .Where(c => c.EstRecurrente && c.DateProchaine.HasValue
-                     && c.DateProchaine.Value >= debutMois && c.DateProchaine.Value < finMois)
+            .Where(c => c.EstRecurrente && (c.DateProchaine == null || c.DateProchaine < demain))
             .ToListAsync(ct);
 
         int count = 0;
         foreach (var source in recurrentes)
         {
-            var reference = await _refGen.GenerateChargeReferenceAsync(ct);
-            var newCharge = new Charge
+            // Échéance jamais calculée : on la déduit de la date de la charge
+            source.DateProchaine ??= Periodicites.NextDate(source.DateCharge, source.Periodicite);
+
+            while (source.DateProchaine is DateTime echeance && echeance < demain)
             {
-                Reference         = reference,
-                Titre             = source.Titre,
-                Description       = source.Description,
-                Montant           = source.Montant,
-                CategorieChargeId = source.CategorieChargeId,
-                FournisseurId     = source.FournisseurId,
-                DateCharge        = source.DateProchaine!.Value,
-                UtilisateurId     = userId,
-                // La copie générée est une charge simple : seule la charge source porte la récurrence
-                EstRecurrente     = false,
-            };
-            source.DateProchaine = NextDate(source.DateProchaine.Value, source.Periodicite);
-            _db.Charges.Add(newCharge);
-            await _audit.LogAsync(ActionLog.Create, "charges",
-                $"Charge récurrente générée : {reference} — {newCharge.Titre}",
-                0, reference, ct: ct);
-            count++;
+                var reference = await _refGen.GenerateChargeReferenceAsync(ct);
+                var newCharge = new Charge
+                {
+                    Reference         = reference,
+                    Titre             = source.Titre,
+                    Description       = source.Description,
+                    Montant           = source.Montant,
+                    CategorieChargeId = source.CategorieChargeId,
+                    FournisseurId     = source.FournisseurId,
+                    DateCharge        = echeance,
+                    UtilisateurId     = userId,
+                    // La copie générée est une charge simple : seule la charge source porte la récurrence
+                    EstRecurrente     = false,
+                };
+
+                // Prélèvement automatique : la charge est payée à sa date et sort de la trésorerie
+                if (source.PrelevementAuto)
+                {
+                    newCharge.MontantPaye = newCharge.Montant;
+                    newCharge.Statut      = StatutCharge.Paye;
+                    newCharge.Paiements.Add(new PaiementCharge
+                    {
+                        Montant      = newCharge.Montant,
+                        Methode      = MethodePaiement.Virement,
+                        Statut       = StatutPaiement.Confirme,
+                        DatePaiement = echeance,
+                        Notes        = "Prélèvement automatique"
+                    });
+                }
+
+                source.DateProchaine = Periodicites.NextDate(echeance, source.Periodicite);
+                _db.Charges.Add(newCharge);
+                // Sauvegarde à chaque charge : la référence suivante est calculée depuis la base
+                await _db.SaveChangesAsync(ct);
+
+                await _audit.LogAsync(ActionLog.Create, "charges",
+                    $"Charge récurrente générée : {reference} — {newCharge.Titre}"
+                        + (source.PrelevementAuto ? " (prélèvement automatique)" : ""),
+                    newCharge.Id, reference, ct: ct);
+                count++;
+            }
         }
-        if (count > 0) await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesAsync(ct);
         return count;
     }
-
-    private static DateTime? NextDate(DateTime from, string? p) => p switch
-    {
-        "Mensuelle"     => from.AddMonths(1),
-        "Trimestrielle" => from.AddMonths(3),
-        "Annuelle"      => from.AddYears(1),
-        _               => null
-    };
 }
 
 public class AddPaiementChargeHandler : IRequestHandler<AddPaiementChargeCommand, ChargeDto>
@@ -392,6 +441,10 @@ public class UpdateChargeHandler : IRequestHandler<UpdateChargeCommand, ChargeDt
             if (!fExists) throw new NotFoundException("Fournisseur", dto.FournisseurId.Value);
         }
 
+        var etaitRecurrente     = charge.EstRecurrente;
+        var anciennePeriodicite = charge.Periodicite;
+        var ancienneDate        = charge.DateCharge;
+
         charge.Titre           = dto.Titre.Trim();
         charge.Description     = dto.Description?.Trim();
         charge.Montant         = dto.Montant;
@@ -401,6 +454,8 @@ public class UpdateChargeHandler : IRequestHandler<UpdateChargeCommand, ChargeDt
         charge.Justificatif    = dto.Justificatif?.Trim();
         charge.EstRecurrente   = dto.EstRecurrente;
         charge.Periodicite     = dto.EstRecurrente ? dto.Periodicite : null;
+        charge.PrelevementAuto = dto.EstRecurrente && dto.PrelevementAuto;
+        charge.DateProchaine   = RecalculerDateProchaine(charge, etaitRecurrente, anciennePeriodicite, ancienneDate);
 
         charge.Statut = charge.MontantPaye >= charge.Montant ? StatutCharge.Paye
                       : charge.MontantPaye > 0               ? StatutCharge.Partiel
@@ -419,6 +474,26 @@ public class UpdateChargeHandler : IRequestHandler<UpdateChargeCommand, ChargeDt
             .Include(c => c.Paiements)
             .FirstAsync(c => c.Id == charge.Id, ct);
         return ChargeMapper.ToDto(updated);
+    }
+
+    // Prochaine échéance après modification de la récurrence
+    private static DateTime? RecalculerDateProchaine(Charge c, bool etaitRecurrente, string? anciennePeriodicite, DateTime ancienneDate)
+    {
+        if (!c.EstRecurrente) return null;
+
+        // Récurrence activée, ou aucune échéance encore générée : on part de la date de la charge
+        if (!etaitRecurrente || c.DateProchaine is null
+            || c.DateProchaine == Periodicites.NextDate(ancienneDate, anciennePeriodicite))
+            return Periodicites.NextDate(c.DateCharge, c.Periodicite);
+
+        // Périodicité changée : on repart de la dernière échéance générée
+        if (c.Periodicite != anciennePeriodicite)
+        {
+            var derniere = Periodicites.PreviousDate(c.DateProchaine.Value, anciennePeriodicite) ?? c.DateCharge;
+            return Periodicites.NextDate(derniere, c.Periodicite);
+        }
+
+        return c.DateProchaine;
     }
 }
 
@@ -663,9 +738,10 @@ public static class ChargeMapper
             Reference = p.Reference,
             Notes = p.Notes
         }).ToList() ?? new(),
-        EstRecurrente = c.EstRecurrente,
-        Periodicite   = c.Periodicite,
-        DateProchaine = c.DateProchaine,
+        EstRecurrente   = c.EstRecurrente,
+        Periodicite     = c.Periodicite,
+        DateProchaine   = c.DateProchaine,
+        PrelevementAuto = c.PrelevementAuto,
     };
 }
 

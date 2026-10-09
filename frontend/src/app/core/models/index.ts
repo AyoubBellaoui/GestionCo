@@ -469,6 +469,7 @@ export interface Charge {
   estRecurrente: boolean;
   periodicite?: string;
   dateProchaine?: string;
+  prelevementAuto?: boolean;
   paiements: PaiementCharge[];
 }
 

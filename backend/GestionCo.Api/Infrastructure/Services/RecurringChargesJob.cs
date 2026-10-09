@@ -23,6 +23,9 @@ public class RecurringChargesJob : BackgroundService
     {
         _logger.LogInformation("RecurringChargesJob started.");
 
+        // Rattrapage au démarrage : l'application peut être arrêtée à minuit
+        await RunAsync(stoppingToken);
+
         while (!stoppingToken.IsCancellationRequested)
         {
             var delay = TimeUntilNextMidnightUtc();

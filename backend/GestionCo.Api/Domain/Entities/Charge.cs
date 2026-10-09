@@ -28,8 +28,9 @@ public class Charge : AuditableEntity
 
     // Récurrence
     public bool EstRecurrente { get; set; } = false;
-    public string? Periodicite { get; set; } // Mensuelle | Trimestrielle | Annuelle
+    public string? Periodicite { get; set; } // Mensuelle | Bimestrielle | Trimestrielle | Annuelle
     public DateTime? DateProchaine { get; set; }
+    public bool PrelevementAuto { get; set; } = false; // chaque échéance générée est payée automatiquement
 
     public decimal Reste => Montant - MontantPaye;
     public bool EstPaye => MontantPaye >= Montant;

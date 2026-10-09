@@ -15,7 +15,7 @@
     </button>
   }
   @if (activeTab === 'charges') {
-    <button class="btn btn-ghost btn-sm" (click)="genererRecurrentes()" [disabled]="chargesGenerating" title="Générer les charges récurrentes du mois en cours">
+    <button class="btn btn-ghost btn-sm" (click)="genererRecurrentes()" [disabled]="chargesGenerating" title="Générer les charges récurrentes arrivées à échéance">
       🔁 {{ chargesGenerating ? 'Génération…' : 'Générer récurrentes' }}
     </button>
   }

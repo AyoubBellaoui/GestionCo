@@ -4,7 +4,7 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
       Catégories
     </button>
-    <button class="btn btn-ghost btn-sm" (click)="genererRecurrentes()" [disabled]="generatingRecurrentes" title="Générer les charges récurrentes du mois en cours">
+    <button class="btn btn-ghost btn-sm" (click)="genererRecurrentes()" [disabled]="generatingRecurrentes" title="Générer les charges récurrentes arrivées à échéance">
       🔁 {{ generatingRecurrentes ? 'Génération…' : 'Générer récurrentes' }}
     </button>
     <button class="btn btn-primary" (click)="router.navigate(['/charges/nouvelle'])">+ Nouvelle charge</button>
@@ -105,7 +105,7 @@
                 <div style="display:flex;align-items:center;gap:6px">
                   <div style="font-weight:600;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.titre }}</div>
                   @if (c.estRecurrente) {
-                    <span title="Charge récurrente — {{ c.periodicite }}" style="font-size:11px;background:#dbeafe;color:#1d4ed8;padding:1px 7px;border-radius:20px;font-weight:700;flex-shrink:0">🔁 {{ c.periodicite }}</span>
+                    <span title="Charge récurrente — {{ c.periodicite }}" style="font-size:11px;background:#dbeafe;color:#1d4ed8;padding:1px 7px;border-radius:20px;font-weight:700;flex-shrink:0">🔁 {{ c.periodicite }}{{ c.prelevementAuto ? ' · auto' : '' }}</span>
                   }
                 </div>
                 @if (c.nomFournisseur) { <div style="font-size:11.5px;color:var(--text-muted)">{{ c.iconeFournisseur || '🏢' }} {{ c.nomFournisseur }}</div> }
@@ -330,9 +330,19 @@
         @if (editEstRecurrente) {
           <select class="form-select" [(ngModel)]="editPeriodicite">
             <option value="Mensuelle">Mensuelle (chaque mois)</option>
+            <option value="Bimestrielle">Bimestrielle (tous les 2 mois)</option>
             <option value="Trimestrielle">Trimestrielle (tous les 3 mois)</option>
             <option value="Annuelle">Annuelle (chaque année)</option>
           </select>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+            <div style="font-size:13px">Prélèvement automatique <span style="color:var(--text-muted);font-size:12px">(payée à chaque échéance)</span></div>
+            <div (click)="editPrelevementAuto = !editPrelevementAuto"
+                 [style.background]="editPrelevementAuto ? '#4f46e5' : '#cbd5e1'"
+                 style="width:44px;height:24px;border-radius:12px;cursor:pointer;transition:background .2s;position:relative;flex-shrink:0">
+              <div [style.transform]="editPrelevementAuto ? 'translateX(20px)' : 'translateX(2px)'"
+                   style="position:absolute;top:2px;width:20px;height:20px;border-radius:50%;background:white;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .2s"></div>
+            </div>
+          </div>
         }
       </div>
     </div>

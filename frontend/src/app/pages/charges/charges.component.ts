@@ -55,6 +55,7 @@ export class ChargesComponent implements OnInit {
   editJustificatif = '';
   editEstRecurrente = false;
   editPeriodicite = 'Mensuelle';
+  editPrelevementAuto = false;
   editSaving = false;
   fournisseurs: any[] = [];
 
@@ -156,6 +157,7 @@ export class ChargesComponent implements OnInit {
     this.editJustificatif = c.justificatif ?? '';
     this.editEstRecurrente = c.estRecurrente;
     this.editPeriodicite = c.periodicite ?? 'Mensuelle';
+    this.editPrelevementAuto = c.prelevementAuto ?? false;
     this.editSaving = false;
     this.editModalOpen = true;
   }
@@ -179,6 +181,7 @@ export class ChargesComponent implements OnInit {
         justificatif: this.editJustificatif.trim() || null,
         estRecurrente: this.editEstRecurrente,
         periodicite: this.editEstRecurrente ? this.editPeriodicite : null,
+        prelevementAuto: this.editEstRecurrente && this.editPrelevementAuto,
       });
       this.editModalOpen = false;
       this.editCharge = null;

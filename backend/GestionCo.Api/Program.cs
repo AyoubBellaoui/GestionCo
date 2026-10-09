@@ -522,6 +522,7 @@ static async Task ApplyManualColumnsAsync(AppDbContext db, ILogger logger)
         ("lignes_devis",  "Remise",             "DECIMAL(5,2) NOT NULL DEFAULT 0"),
         ("Produits",                "QuantiteReappro", "INT NOT NULL DEFAULT 0"),
         ("parametres_facturation", "IncludeAnnee",    "BIT NOT NULL DEFAULT 1"),
+        ("charges",                "PrelevementAuto", "BIT NOT NULL DEFAULT 0"),
     };
 
     foreach (var (table, column, definition) in columns)

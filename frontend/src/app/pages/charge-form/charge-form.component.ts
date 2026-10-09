@@ -31,6 +31,7 @@ export class ChargeFormComponent implements OnInit {
 
   estRecurrente = false;
   periodicite = 'Mensuelle';
+  prelevementAuto = false;
 
   newCatNom = '';
   newCatIcone = '📋';
@@ -99,6 +100,7 @@ export class ChargeFormComponent implements OnInit {
         methodePaiementInitial: this.paiementInitial > 0 ? this.methodePaiement : undefined,
         estRecurrente: this.estRecurrente,
         periodicite: this.estRecurrente ? this.periodicite : undefined,
+        prelevementAuto: this.estRecurrente && this.prelevementAuto,
       });
       this.toast.notify('Charge créée avec succès', 'success');
       this.router.navigate(['/depenses'], { queryParams: { tab: 'charges' } });
