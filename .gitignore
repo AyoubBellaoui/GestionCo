@@ -71,6 +71,8 @@ Thumbs.db
 # ============ Logs ============
 logs/
 *.log
+# Dossier de code source (Git sous Windows ignore la casse : "logs/" l'excluait)
+!backend/GestionCo.Api/Application/Logs/
 
 # ============ Migrations (à générer en local) ============
 # Décommente si tu ne veux pas committer les migrations
