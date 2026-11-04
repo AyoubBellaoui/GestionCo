@@ -20,14 +20,15 @@ public class AuthController : ControllerBase
         _mediator = mediator; _attempts = attempts;
     }
 
-    // RG-S2 : seuls les mots de passe erronés sont comptés (5 par IP sur 15 minutes) ;
-    // une connexion réussie n'est jamais bloquée et remet le compteur à zéro
+    // RG-S2 : seuls les mots de passe erronés sont comptés (5 par compte et par IP, 20 par IP,
+    // sur 15 minutes) ; une connexion réussie remet à zéro le compteur du compte
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginRequest req, CancellationToken ct)
     {
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "inconnue";
-        if (_attempts.IsBlocked(ip, out var retryAfter))
+        var email = req.Email ?? string.Empty;
+        if (_attempts.IsBlocked(ip, email, out var retryAfter))
         {
             Response.Headers["Retry-After"] = ((int)Math.Ceiling(retryAfter.TotalSeconds)).ToString();
             return StatusCode(StatusCodes.Status429TooManyRequests,
@@ -36,13 +37,13 @@ public class AuthController : ControllerBase
 
         try
         {
-            var result = await _mediator.Send(new LoginCommand(req.Email, req.Password), ct);
-            _attempts.Reset(ip);
+            var result = await _mediator.Send(new LoginCommand(email, req.Password), ct);
+            _attempts.Reset(ip, email);
             return Ok(result);
         }
         catch (UnauthorizedException)
         {
-            _attempts.RecordFailure(ip);
+            _attempts.RecordFailure(ip, email);
             throw;
         }
     }

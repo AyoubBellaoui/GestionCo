@@ -7,6 +7,7 @@ using GestionCo.Api.Application.Notifications;
 using GestionCo.Api.Application.Paiements;
 using GestionCo.Api.Application.Common.Interfaces;
 using GestionCo.Api.Application.Reports;
+using GestionCo.Api.Application.Settings;
 using GestionCo.Api.Application.Ventes;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -202,10 +203,10 @@ public class FacturesController : ControllerBase
         => Ok(await _mediator.Send(new GetFactureByIdQuery(id), ct));
 
     [HttpPost("{id}/pdf")]
-    public async Task<IActionResult> DownloadPdf(int id, [FromBody] EntrepriseInfoDto? info, CancellationToken ct)
+    public async Task<IActionResult> DownloadPdf(int id, CancellationToken ct)
     {
         var facture = await _mediator.Send(new GetFactureByIdQuery(id), ct);
-        var bytes = await _mediator.Send(new DownloadFacturePdfQuery(id, info), ct);
+        var bytes = await _mediator.Send(new DownloadFacturePdfQuery(id), ct);
         var fileName = $"Facture-{facture.NumeroFacture}.pdf";
         return File(bytes, "application/pdf", fileName);
     }
@@ -224,7 +225,7 @@ public class FacturesController : ControllerBase
     [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> SendEmail(int id, [FromBody] SendFactureEmailDto dto, CancellationToken ct)
     {
-        await _mediator.Send(new EnvoyerFactureEmailCommand(id, dto.Email, dto.Message, dto.EntrepriseInfo), ct);
+        await _mediator.Send(new EnvoyerFactureEmailCommand(id, dto.Email, dto.Message), ct);
         return Ok(new { message = "Facture envoyée par email" });
     }
 }
@@ -233,7 +234,6 @@ public class SendFactureEmailDto
 {
     public string Email { get; set; } = string.Empty;
     public string? Message { get; set; }
-    public EntrepriseInfoDto? EntrepriseInfo { get; set; }
 }
 
 [ApiController]
@@ -409,10 +409,10 @@ public class DevisController(IMediator mediator, IConfiguration config) : Contro
         => Ok(await mediator.Send(new ConvertirDevisEnCommandeCommand(id), ct));
 
     [HttpPost("{id}/pdf")]
-    public async Task<IActionResult> DownloadPdf(int id, [FromBody] EntrepriseInfoDto? info, CancellationToken ct)
+    public async Task<IActionResult> DownloadPdf(int id, CancellationToken ct)
     {
         var devis = await mediator.Send(new GetDevisByIdQuery(id), ct);
-        var bytes = await mediator.Send(new GenerateDevisPdfQuery(id, info), ct);
+        var bytes = await mediator.Send(new GenerateDevisPdfQuery(id), ct);
         return File(bytes, "application/pdf", $"Devis-{devis.Reference}.pdf");
     }
 
@@ -440,7 +440,7 @@ public class DevisController(IMediator mediator, IConfiguration config) : Contro
     [Authorize(Policy = "AdminOrManager")]
     public async Task<IActionResult> SendEmail(int id, [FromBody] SendDevisEmailDto dto, CancellationToken ct)
     {
-        await mediator.Send(new EnvoyerDevisEmailCommand(id, dto.Email, dto.Message, dto.EntrepriseInfo), ct);
+        await mediator.Send(new EnvoyerDevisEmailCommand(id, dto.Email, dto.Message), ct);
         return Ok(new { message = "Devis envoyé par email" });
     }
 
@@ -457,15 +457,16 @@ public class SendDevisEmailDto
 {
     public string Email { get; set; } = string.Empty;
     public string? Message { get; set; }
-    public EntrepriseInfoDto? EntrepriseInfo { get; set; }
 }
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = "AdminOrManager")]
-public class ReportsController(IMediator mediator, IPdfService pdf, IConfiguration config) : ControllerBase
+public class ReportsController(IMediator mediator, IPdfService pdf) : ControllerBase
 {
-    private string EntrepriseName => config["EntrepriseInfo:RaisonSociale"] ?? "GestionCo.";
+    // Même source que les factures : Paramètres → Entreprise
+    private async Task<string> EntrepriseNameAsync(CancellationToken ct)
+        => (await mediator.Send(new GetEntrepriseSettingsQuery(), ct)).RaisonSociale;
 
     [HttpGet("pl/{annee:int}")]
     public async Task<IActionResult> GetPL(int annee, CancellationToken ct)
@@ -479,7 +480,7 @@ public class ReportsController(IMediator mediator, IPdfService pdf, IConfigurati
     public async Task<IActionResult> GetPLPdf(int annee, CancellationToken ct)
     {
         var report = await mediator.Send(new GetPLReportQuery(annee), ct);
-        var bytes = pdf.GeneratePLReportPdf(report, EntrepriseName);
+        var bytes = pdf.GeneratePLReportPdf(report, await EntrepriseNameAsync(ct));
         return File(bytes, "application/pdf", $"rapport-pl-{annee}.pdf");
     }
 
@@ -487,7 +488,7 @@ public class ReportsController(IMediator mediator, IPdfService pdf, IConfigurati
     public async Task<IActionResult> GetTVAPdf(int annee, CancellationToken ct)
     {
         var report = await mediator.Send(new GetTVAReportQuery(annee), ct);
-        var bytes = pdf.GenerateTVAReportPdf(report, EntrepriseName);
+        var bytes = pdf.GenerateTVAReportPdf(report, await EntrepriseNameAsync(ct));
         return File(bytes, "application/pdf", $"rapport-tva-{annee}.pdf");
     }
 

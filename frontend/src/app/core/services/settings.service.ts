@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { AppSettings } from '../models';
+import { AppSettings, EntrepriseSettings } from '../models';
 
 const STORAGE_KEY = 'gestionco_settings';
 
@@ -73,6 +73,31 @@ export class SettingsService {
 
   setDraft<K extends keyof AppSettings>(key: K, value: AppSettings[K]): void {
     this.settingsSubject.next({ ...this.settings, [key]: value });
+  }
+
+  /**
+   * Remplace la copie locale des infos entreprise par celle du serveur, qui est la seule
+   * source de vérité (c'est elle qui figure sur les factures et devis PDF).
+   * Le fetcher est passé en paramètre pour éviter une dépendance circulaire avec ApiService.
+   */
+  async refreshEntrepriseFromServer(fetch: () => Promise<EntrepriseSettings>): Promise<void> {
+    const d = await fetch();
+    this.setDraftEntreprise({
+      raisonSociale: d.raisonSociale ?? '',
+      adresse: d.adresse ?? '',
+      telephone: d.telephone ?? '',
+      email: d.email ?? '',
+      ice: d.ice ?? '',
+      rc: d.rc ?? '',
+      if: d.if ?? '',
+      patente: d.patente ?? '',
+      cnss: d.cnss ?? '',
+      capital: d.capital ?? '',
+      rib: d.rib ?? '',
+      banque: d.banque ?? '',
+      swift: d.swift ?? '',
+      logo: d.logo ?? '',
+    });
   }
 
   setDraftEntreprise(patch: Partial<AppSettings['entreprise']>): void {

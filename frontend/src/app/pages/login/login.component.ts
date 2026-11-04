@@ -30,7 +30,10 @@ export class LoginComponent {
     private router: Router,
     public settings: SettingsService,
     public theme: ThemeService,
-  ) {}
+  ) {
+    // Endpoint public : affiche le nom et le logo réels même sur un navigateur jamais utilisé
+    settings.refreshEntrepriseFromServer(() => api.getEntrepriseSettings()).catch(() => { /* copie locale */ });
+  }
 
   get nomEntreprise(): string { return this.settings.settings.entreprise.raisonSociale || 'GestionCo.'; }
   get logoEntreprise(): string { return this.settings.settings.entreprise.logo || ''; }

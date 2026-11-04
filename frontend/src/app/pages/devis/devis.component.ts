@@ -176,7 +176,7 @@ export class DevisComponent implements OnInit {
 
   async printPdf(d: Devis): Promise<void> {
     try {
-      const blob = await this.api.devisPdf(d.id, this.settings.settings.entreprise as any);
+      const blob = await this.api.devisPdf(d.id);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = `Devis-${d.reference}.pdf`; a.click();
@@ -203,7 +203,7 @@ export class DevisComponent implements OnInit {
     }
     this.emailSending = true;
     try {
-      await this.api.devisEmail(this.emailTarget.id, this.emailTo.trim(), this.emailMessage.trim() || undefined, this.settings.settings.entreprise as any);
+      await this.api.devisEmail(this.emailTarget.id, this.emailTo.trim(), this.emailMessage.trim() || undefined);
       await this.api.devisUpdateStatut(this.emailTarget.id, 'Envoye');
       await this.load();
       this.emailModalOpen = false;

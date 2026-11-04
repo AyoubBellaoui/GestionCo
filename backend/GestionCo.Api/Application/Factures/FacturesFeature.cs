@@ -128,7 +128,7 @@ public class GetFactureByIdHandler : IRequestHandler<GetFactureByIdQuery, Factur
 }
 
 // Download PDF
-public record DownloadFacturePdfQuery(int Id, EntrepriseInfoDto? Info = null) : IRequest<byte[]>;
+public record DownloadFacturePdfQuery(int Id) : IRequest<byte[]>;
 
 public class DownloadFacturePdfHandler : IRequestHandler<DownloadFacturePdfQuery, byte[]>
 {
@@ -136,7 +136,7 @@ public class DownloadFacturePdfHandler : IRequestHandler<DownloadFacturePdfQuery
     public DownloadFacturePdfHandler(IPdfService pdf) => _pdf = pdf;
 
     public async Task<byte[]> Handle(DownloadFacturePdfQuery q, CancellationToken ct)
-        => await _pdf.GenerateInvoicePdfAsync(q.Id, q.Info, ct);
+        => await _pdf.GenerateInvoicePdfAsync(q.Id, ct);
 }
 
 // ============ CREATE FACTURE (manuelle pour vente existante sans facture) ============
@@ -250,7 +250,7 @@ public class GetVentesSansFactureHandler : IRequestHandler<GetVentesSansFactureQ
 }
 
 // ============ ENVOYER FACTURE PAR EMAIL ============
-public record EnvoyerFactureEmailCommand(int Id, string ToEmail, string? Message = null, EntrepriseInfoDto? Info = null) : IRequest;
+public record EnvoyerFactureEmailCommand(int Id, string ToEmail, string? Message = null) : IRequest;
 
 public class EnvoyerFactureEmailHandler : IRequestHandler<EnvoyerFactureEmailCommand>
 {
@@ -258,7 +258,7 @@ public class EnvoyerFactureEmailHandler : IRequestHandler<EnvoyerFactureEmailCom
     public EnvoyerFactureEmailHandler(IEmailService email) => _email = email;
 
     public Task Handle(EnvoyerFactureEmailCommand cmd, CancellationToken ct)
-        => _email.SendFactureAsync(cmd.Id, cmd.ToEmail, cmd.Message, cmd.Info, ct);
+        => _email.SendFactureAsync(cmd.Id, cmd.ToEmail, cmd.Message, ct);
 }
 
 public static class FactureMapper

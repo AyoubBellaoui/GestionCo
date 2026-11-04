@@ -185,11 +185,12 @@ using (var scope = app.Services.CreateScope())
 
         // EnsureCreated = crée la DB + toutes les tables si pas existantes
         var created = await db.Database.EnsureCreatedAsync();
+        var dbName = db.Database.GetDbConnection().Database;
 
         if (created)
-            logger.LogInformation("✅ Base de données 'GestionCoDb' créée avec succès !");
+            logger.LogInformation("✅ Base de données '{DbName}' créée avec succès !", dbName);
         else
-            logger.LogInformation("✅ Base de données 'GestionCoDb' déjà existante");
+            logger.LogInformation("✅ Base de données '{DbName}' déjà existante", dbName);
 
         // Tables ajoutées après la création initiale (CREATE TABLE manuel)
         await ApplyManualTablesAsync(db, logger);
@@ -218,11 +219,31 @@ using (var scope = app.Services.CreateScope())
         // Seed par défaut pour parametres_entreprise
         try
         {
+            // Première installation : on part de la section EntrepriseInfo (appsettings ou variables
+            // d'environnement EntrepriseInfo__*). L'administrateur les modifie ensuite dans Paramètres → Entreprise.
             if (!await db.ParametresEntreprise.AnyAsync())
             {
-                db.ParametresEntreprise.Add(new GestionCo.Api.Domain.Entities.ParametresEntreprise());
+                var ei = app.Configuration.GetSection("EntrepriseInfo");
+                string? Val(string key) => string.IsNullOrWhiteSpace(ei[key]) ? null : ei[key]!.Trim();
+                db.ParametresEntreprise.Add(new GestionCo.Api.Domain.Entities.ParametresEntreprise
+                {
+                    RaisonSociale = Val("RaisonSociale") ?? "GestionCo. SARL",
+                    Adresse       = Val("Adresse"),
+                    Telephone     = Val("Telephone"),
+                    Email         = Val("Email"),
+                    Ice           = Val("ICE"),
+                    Rc            = Val("RC"),
+                    If            = Val("IF"),
+                    Patente       = Val("Patente"),
+                    Cnss          = Val("CNSS"),
+                    Capital       = Val("CapitalSocial"),
+                    Rib           = Val("RIB"),
+                    Banque        = Val("Banque"),
+                    Swift         = Val("Swift"),
+                    UpdatedAt     = DateTime.UtcNow,
+                });
                 await db.SaveChangesAsync();
-                logger.LogInformation("✅ Paramètres entreprise initialisés par défaut");
+                logger.LogInformation("✅ Paramètres entreprise initialisés depuis appsettings (EntrepriseInfo)");
             }
         }
         catch (Exception ex)
@@ -266,10 +287,9 @@ using (var scope = app.Services.CreateScope())
         logger.LogInformation("📚 Swagger UI — http://localhost:5000/swagger");
         logger.LogInformation("================================================");
         logger.LogInformation("");
-        logger.LogInformation("👤 Comptes de démo :");
-        logger.LogInformation("   🔐 Admin    : admin@gestionco.ma / Admin123!");
-        logger.LogInformation("   📋 Manager  : s.fassi@gestionco.ma / Manager123!");
-        logger.LogInformation("   👤 Client   : direction@atlas.ma / Client123!");
+        logger.LogInformation("👤 Compte administrateur initial : admin@gestionco.ma / Admin123!");
+        logger.LogInformation("   ⚠️  Changez ce mot de passe dès la première connexion.");
+        logger.LogInformation("   Les comptes Gestionnaire se créent dans Paramètres → Utilisateurs.");
         logger.LogInformation("");
     }
     catch (Exception ex)
@@ -470,10 +490,9 @@ static async Task ApplyManualTablesAsync(AppDbContext db, ILogger logger)
                 [Rib]          NVARCHAR(100) NULL,
                 [Banque]       NVARCHAR(200) NULL,
                 [Swift]        NVARCHAR(20)  NULL,
-                [Logo]         NVARCHAR(2000) NULL,
+                [Logo]         NVARCHAR(MAX) NULL,
                 [UpdatedAt]    DATETIME2 NOT NULL DEFAULT GETUTCDATE()
             )
-            INSERT INTO [parametres_entreprise] ([RaisonSociale],[UpdatedAt]) VALUES ('GestionCo. SARL',GETUTCDATE())
             """),
 
         ("parametres_smtp", """
@@ -553,6 +572,8 @@ static async Task ApplyManualColumnAlterationsAsync(AppDbContext db, ILogger log
     var alterations = new[]
     {
         ("produits", "Image", "NVARCHAR(MAX) NULL"),
+        // Logo en data URL base64 (jusqu'à 2 Mo côté UI) : NVARCHAR(2000) faisait échouer la sauvegarde
+        ("parametres_entreprise", "Logo", "NVARCHAR(MAX) NULL"),
     };
 
     foreach (var (table, column, newDefinition) in alterations)

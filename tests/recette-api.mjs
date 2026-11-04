@@ -3,6 +3,7 @@
 // À exécuter sur une base de test vierge (ex. GestionCoDb_Recette) : le script crée des données.
 
 import fs from 'node:fs';
+import zlib from 'node:zlib';
 
 const BASE = process.argv[2] ?? 'http://localhost:5000';
 const OUT = process.argv[3] ?? 'recette-api-resultats.json';
@@ -38,6 +39,25 @@ async function test(id, module, title, expected, fn) {
 }
 const near = (a, b) => Math.abs(Number(a) - Number(b)) < 0.01;
 const items = d => d?.items ?? d?.Items ?? d;
+
+// PNG valide généré sans dépendance (dégradé bruité, ~15 Ko) : sert de logo d'entreprise
+function makePng(w, h) {
+  const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+  const crc32 = buf => { let c = 0xFFFFFFFF; for (const b of buf) c = crcTable[(c ^ b) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  const chunk = (type, data) => {
+    const len = Buffer.alloc(4); len.writeUInt32BE(data.length);
+    const td = Buffer.concat([Buffer.from(type), data]);
+    const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(td));
+    return Buffer.concat([len, td, crc]);
+  };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;
+  const raw = Buffer.alloc(h * (1 + w * 3));
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const o = y * (1 + w * 3) + 1 + x * 3, n = Math.floor(Math.random() * 40);
+    raw[o] = 79 + n; raw[o + 1] = 70 + n; raw[o + 2] = 229 - n;
+  }
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
+}
 
 // ───────────────────────── Authentification ─────────────────────────
 await test('AUT-01', 'Authentification', 'Connexion avec des identifiants valides', '200 + jeton d\'accès et jeton de rafraîchissement', async () => {
@@ -206,6 +226,12 @@ await test('DEV-08', 'Devis', 'Génération du PDF du devis', '200 + application
   const ok = r.status === 200 && r.type.includes('pdf') && r.data.subarray(0, 4).toString() === '%PDF';
   return { ok, obtained: `${r.status}, ${r.type}, ${r.data?.length ?? 0} octets` };
 });
+await test('DEV-09', 'Devis', 'Modification d\'un devis brouillon avec une quantité négative (validation)', '400, devis inchangé', async () => {
+  const c = await api('POST', '/api/devis', { token: ctx.gest, body: { clientId: ctx.client, lignes: [{ produitId: ctx.p1, quantite: 1, prixUnitaire: 8000, tva: 20 }] } });
+  const r = await api('PUT', `/api/devis/${c.data?.id}`, { token: ctx.gest, body: { clientId: ctx.client, lignes: [{ produitId: ctx.p1, quantite: -5, prixUnitaire: 8000, tva: 20 }] } });
+  const after = (await api('GET', `/api/devis/${c.data?.id}`, { token: ctx.gest })).data;
+  return { ok: c.status === 200 && r.status === 400 && after?.lignes?.[0]?.quantite === 1, obtained: `${r.status}, quantité en base ${after?.lignes?.[0]?.quantite}` };
+});
 
 // ───────────────────────── Commandes ─────────────────────────
 await test('CMD-01', 'Commandes', 'Commande issue du devis : statut et lignes reprises', 'Brouillon, 2 lignes, devis d\'origine renseigné', async () => {
@@ -274,12 +300,32 @@ await test('VEN-08', 'Ventes', 'Vente sans aucune ligne (validation)', '400', as
   const r = await api('POST', '/api/ventes', { token: ctx.gest, body: { clientId: ctx.client, lignes: [] } });
   return { ok: r.status === 400, obtained: String(r.status) };
 });
+await test('VEN-11', 'Ventes', 'Vente avec une remise de 150 % (montant négatif)', '400, stock inchangé', async () => {
+  const before = (await api('GET', `/api/produits/${ctx.p1}`, { token: ctx.gest })).data?.quantiteStock;
+  const r = await api('POST', '/api/ventes', { token: ctx.gest, body: { clientId: ctx.client, lignes: [{ produitId: ctx.p1, quantite: 1, prixUnitaire: 8000, remise: 150, tva: 20 }] } });
+  const after = (await api('GET', `/api/produits/${ctx.p1}`, { token: ctx.gest })).data?.quantiteStock;
+  return { ok: r.status === 400 && after === before, obtained: `${r.status}, stock ${before} → ${after}` };
+});
+await test('VEN-12', 'Ventes', 'Vente avec une TVA négative (validation)', '400', async () => {
+  const r = await api('POST', '/api/ventes', { token: ctx.gest, body: { clientId: ctx.client, lignes: [{ produitId: ctx.p1, quantite: 1, prixUnitaire: 100, tva: -20 }] } });
+  return { ok: r.status === 400, obtained: String(r.status) };
+});
 await test('FAC-01', 'Facturation', 'Seconde facture pour la même vente', '400', async () => {
   const r = await api('POST', '/api/factures', { token: ctx.gest, body: { venteId: ctx.vente } });
   return { ok: r.status === 400, obtained: `${r.status}${r.data?.message ? ' — ' + r.data.message : ''}` };
 });
+await test('PAR-01', 'Paramètres', 'Enregistrement des coordonnées entreprise avec un logo PNG', '200, logo relu à l\'identique', async () => {
+  const cur = (await api('GET', '/api/parametres/entreprise', { token: ctx.admin })).data ?? {};
+  const logo = 'data:image/png;base64,' + makePng(64, 64).toString('base64');
+  ctx.rib = 'RIB-RECETTE-0001';
+  const r = await api('PUT', '/api/parametres/entreprise', { token: ctx.admin, body: { ...cur, raisonSociale: 'Entreprise Recette SARL', ice: '000111222333444', rib: ctx.rib, logo } });
+  const back = (await api('GET', '/api/parametres/entreprise', { token: ctx.gest })).data;
+  return { ok: r.status === 200 && back?.logo === logo && back?.rib === ctx.rib, obtained: `${r.status}, logo ${logo.length} caractères ${back?.logo === logo ? 'relu' : 'différent'}` };
+});
 await test('FAC-02', 'Facturation', 'Génération du PDF de la facture (QuestPDF)', '200 + application/pdf', async () => {
-  const r = await api('POST', `/api/factures/${ctx.facture}/pdf`, { token: ctx.gest, body: {}, raw: true });
+  // Le corps tente d'imposer un autre RIB : le serveur doit l'ignorer et utiliser les paramètres en base
+  // (contrôle visuel sur le PDF enregistré : RIB-RECETTE-0001 et le logo de PAR-01).
+  const r = await api('POST', `/api/factures/${ctx.facture}/pdf`, { token: ctx.gest, body: { rib: 'RIB-FALSIFIE', banque: 'Banque falsifiée' }, raw: true });
   const ok = r.status === 200 && r.type.includes('pdf') && r.data.subarray(0, 4).toString() === '%PDF';
   if (ok) fs.writeFileSync(OUT.replace(/\.json$/, '') + '-facture.pdf', r.data);
   return { ok, obtained: `${r.status}, ${r.type}, ${r.data?.length ?? 0} octets` };
@@ -425,11 +471,15 @@ await test('LOG-01', 'Journal d\'audit', 'Actions tracées dans le journal d\'au
 });
 
 // ───────────────────────── Sécurité : limitation des échecs de connexion ─────────────────────────
-await test('SEC-01', 'Sécurité', '6e tentative après 5 échecs de connexion depuis la même adresse IP', '429 (blocage 15 minutes)', async () => {
+await test('SEC-01', 'Sécurité', '6e tentative sur un compte après 5 échecs depuis la même adresse IP', '429 (blocage 15 minutes)', async () => {
   const codes = [];
   for (let i = 0; i < 5; i++) codes.push((await api('POST', '/api/auth/login', { body: { email: 'gestionnaire@recette.ma', password: 'MauvaisMotDePasse' + i } })).status);
   const r = await api('POST', '/api/auth/login', { body: { email: 'gestionnaire@recette.ma', password: 'MauvaisMotDePasse' } });
   return { ok: codes.every(c => c === 401) && r.status === 429, obtained: `${codes.join(', ')} puis ${r.status}` };
+});
+await test('SEC-02', 'Sécurité', 'Connexion d\'un autre compte depuis la même adresse IP pendant ce blocage', '200 (le blocage vise le compte, pas tout le réseau)', async () => {
+  const r = await api('POST', '/api/auth/login', { body: ADMIN });
+  return { ok: r.status === 200 && !!r.data?.accessToken, obtained: String(r.status) };
 });
 
 const passed = results.filter(r => r.ok).length;

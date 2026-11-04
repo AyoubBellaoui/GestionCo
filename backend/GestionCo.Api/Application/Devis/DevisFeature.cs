@@ -101,12 +101,29 @@ public class CreateDevisValidator : AbstractValidator<CreateDevisCommand>
     {
         RuleFor(x => x.Dto.ClientId).GreaterThan(0).WithMessage("Client requis");
         RuleFor(x => x.Dto.Lignes).NotEmpty().WithMessage("Au moins une ligne requise");
-        RuleForEach(x => x.Dto.Lignes).ChildRules(l =>
-        {
-            l.RuleFor(x => x.ProduitId).GreaterThan(0);
-            l.RuleFor(x => x.Quantite).GreaterThan(0);
-            l.RuleFor(x => x.PrixUnitaire).GreaterThanOrEqualTo(0);
-        });
+        RuleForEach(x => x.Dto.Lignes).SetValidator(new LigneDevisValidator());
+    }
+}
+
+public class UpdateDevisValidator : AbstractValidator<UpdateDevisCommand>
+{
+    public UpdateDevisValidator()
+    {
+        RuleFor(x => x.Dto.ClientId).GreaterThan(0).WithMessage("Client requis");
+        RuleFor(x => x.Dto.Lignes).NotEmpty().WithMessage("Au moins une ligne requise");
+        RuleForEach(x => x.Dto.Lignes).SetValidator(new LigneDevisValidator());
+    }
+}
+
+public class LigneDevisValidator : AbstractValidator<CreateLigneDevisDto>
+{
+    public LigneDevisValidator()
+    {
+        RuleFor(x => x.ProduitId).GreaterThan(0);
+        RuleFor(x => x.Quantite).GreaterThan(0);
+        RuleFor(x => x.PrixUnitaire).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.Remise).InclusiveBetween(0, 100).WithMessage("La remise doit être comprise entre 0 et 100 %");
+        RuleFor(x => x.Tva).InclusiveBetween(0, 30).WithMessage("La TVA doit être comprise entre 0 et 30 %");
     }
 }
 
@@ -603,8 +620,8 @@ public class GetDevisHandler : IRequestHandler<GetDevisQuery, PagedList<DevisDto
 }
 
 public record GetDevisByIdQuery(int Id) : IRequest<DevisDto>;
-public record GenerateDevisPdfQuery(int Id, EntrepriseInfoDto? Info = null) : IRequest<byte[]>;
-public record EnvoyerDevisEmailCommand(int Id, string ToEmail, string? Message = null, EntrepriseInfoDto? Info = null) : IRequest;
+public record GenerateDevisPdfQuery(int Id) : IRequest<byte[]>;
+public record EnvoyerDevisEmailCommand(int Id, string ToEmail, string? Message = null) : IRequest;
 
 public class GetDevisByIdHandler : IRequestHandler<GetDevisByIdQuery, DevisDto>
 {
@@ -636,7 +653,7 @@ public class GenerateDevisPdfHandler : IRequestHandler<GenerateDevisPdfQuery, by
     public GenerateDevisPdfHandler(IPdfService pdf) => _pdf = pdf;
 
     public Task<byte[]> Handle(GenerateDevisPdfQuery q, CancellationToken ct)
-        => _pdf.GenerateDevisPdfAsync(q.Id, q.Info, ct);
+        => _pdf.GenerateDevisPdfAsync(q.Id, ct);
 }
 
 public class EnvoyerDevisEmailHandler : IRequestHandler<EnvoyerDevisEmailCommand>
@@ -645,7 +662,7 @@ public class EnvoyerDevisEmailHandler : IRequestHandler<EnvoyerDevisEmailCommand
     public EnvoyerDevisEmailHandler(IEmailService email) => _email = email;
 
     public Task Handle(EnvoyerDevisEmailCommand cmd, CancellationToken ct)
-        => _email.SendDevisAsync(cmd.Id, cmd.ToEmail, cmd.Message, cmd.Info, ct);
+        => _email.SendDevisAsync(cmd.Id, cmd.ToEmail, cmd.Message, ct);
 }
 
 // ============ MAPPER ============

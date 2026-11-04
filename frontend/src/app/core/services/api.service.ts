@@ -252,9 +252,10 @@ export class ApiService {
         .pipe(map(normalizeList))
     );
   }
-  factureDownloadPdf(id: number, entreprise?: Record<string, string>): Promise<Blob> {
+  // Les coordonnées de l'entreprise sont lues côté serveur (Paramètres → Entreprise)
+  factureDownloadPdf(id: number): Promise<Blob> {
     return firstValueFrom(
-      this.http.post(`${this.base}/factures/${id}/pdf`, entreprise ?? {}, { responseType: 'blob' })
+      this.http.post(`${this.base}/factures/${id}/pdf`, {}, { responseType: 'blob' })
     );
   }
   factureCreate(data: { venteId: number; dateEmission?: string; dateEcheance?: string }): Promise<Facture> {
@@ -351,14 +352,14 @@ export class ApiService {
   devisDelete(id: number): Promise<void> {
     return firstValueFrom(this.http.delete<void>(`${this.base}/devis/${id}`));
   }
-  devisPdf(id: number, entreprise?: Record<string, string>): Promise<Blob> {
-    return firstValueFrom(this.http.post(`${this.base}/devis/${id}/pdf`, entreprise ?? {}, { responseType: 'blob' }));
+  devisPdf(id: number): Promise<Blob> {
+    return firstValueFrom(this.http.post(`${this.base}/devis/${id}/pdf`, {}, { responseType: 'blob' }));
   }
   devisShareLink(id: number): Promise<{ url: string }> {
     return firstValueFrom(this.http.get<{ url: string }>(`${this.base}/devis/${id}/share-link`));
   }
-  devisEmail(id: number, email: string, message?: string, entreprise?: Record<string, string>): Promise<void> {
-    return firstValueFrom(this.http.post<void>(`${this.base}/devis/${id}/email`, { email, message, entrepriseInfo: entreprise ?? {} }));
+  devisEmail(id: number, email: string, message?: string): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.base}/devis/${id}/email`, { email, message }));
   }
   // ── COMMANDES ──
   commandesList(): Promise<Commande[]> {
@@ -395,8 +396,8 @@ export class ApiService {
     return firstValueFrom(this.http.post<ConversionCommandeResult>(`${this.base}/devis/${id}/convertir-commande`, {}));
   }
 
-  factureEmail(id: number, email: string, message?: string, entreprise?: Record<string, string>): Promise<void> {
-    return firstValueFrom(this.http.post<void>(`${this.base}/factures/${id}/email`, { email, message, entrepriseInfo: entreprise ?? {} }));
+  factureEmail(id: number, email: string, message?: string): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.base}/factures/${id}/email`, { email, message }));
   }
 
   // ── AUDIT ──

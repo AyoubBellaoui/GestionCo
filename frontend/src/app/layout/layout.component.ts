@@ -6,6 +6,8 @@ import { GlobalSearchComponent } from '../shared/global-search/global-search.com
 import { AuthService } from '../core/services/auth.service';
 import { ThemeService } from '../core/services/theme.service';
 import { InactivityService } from '../core/services/inactivity.service';
+import { ApiService } from '../core/services/api.service';
+import { SettingsService } from '../core/services/settings.service';
 
 @Component({
   selector: 'app-layout',
@@ -19,11 +21,15 @@ export class LayoutComponent implements OnDestroy {
     private router: Router,
     private inactivity: InactivityService,
     _theme: ThemeService,
+    api: ApiService,
+    settings: SettingsService,
   ) {
     if (!auth.user && !localStorage.getItem('gc_token')) {
       this.router.navigate(['/login']);
     } else {
       this.inactivity.start();
+      // Nom et logo de la barre latérale : ceux enregistrés par l'administrateur, pour tous les rôles
+      settings.refreshEntrepriseFromServer(() => api.getEntrepriseSettings()).catch(() => { /* copie locale */ });
     }
   }
 

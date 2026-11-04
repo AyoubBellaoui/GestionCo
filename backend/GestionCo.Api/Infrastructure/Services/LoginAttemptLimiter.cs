@@ -3,11 +3,16 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace GestionCo.Api.Infrastructure.Services;
 
-// RG-S2 : au plus 5 mots de passe erronés par adresse IP sur une fenêtre de 15 minutes.
-// Les connexions réussies ne sont jamais bloquées et remettent le compteur à zéro.
+// RG-S2 : limitation des mots de passe erronés sur une fenêtre glissante de 15 minutes.
+//  - 5 échecs pour un même compte depuis une même adresse IP bloquent ce compte pour cette IP,
+//    sans pénaliser les autres utilisateurs du même réseau (bureau derrière une seule IP publique) ;
+//  - 20 échecs depuis une même IP, tous comptes confondus, bloquent l'IP (protection contre
+//    le « password spraying » sur plusieurs comptes).
+// Une connexion réussie remet à zéro le compteur du compte (pas celui de l'IP).
 public class LoginAttemptLimiter : ILoginAttemptLimiter
 {
-    private const int MaxFailures = 5;
+    private const int MaxFailuresPerAccount = 5;
+    private const int MaxFailuresPerIp = 20;
     private static readonly TimeSpan Window = TimeSpan.FromMinutes(15);
 
     private sealed class Entry
@@ -19,23 +24,40 @@ public class LoginAttemptLimiter : ILoginAttemptLimiter
     private readonly IMemoryCache _cache;
     public LoginAttemptLimiter(IMemoryCache cache) => _cache = cache;
 
-    private static string Key(string ip) => $"login-failures:{ip}";
+    private static string IpKey(string ip) => $"login-failures:ip:{ip}";
+    private static string AccountKey(string ip, string email) =>
+        $"login-failures:acct:{ip}:{email.Trim().ToLowerInvariant()}";
 
-    public bool IsBlocked(string ip, out TimeSpan retryAfter)
+    public bool IsBlocked(string ip, string email, out TimeSpan retryAfter)
     {
-        retryAfter = TimeSpan.Zero;
-        if (!_cache.TryGetValue(Key(ip), out Entry? entry) || entry == null) return false;
+        var acct = Remaining(AccountKey(ip, email), MaxFailuresPerAccount);
+        var all  = Remaining(IpKey(ip), MaxFailuresPerIp);
+        retryAfter = acct > all ? acct : all;
+        return retryAfter > TimeSpan.Zero;
+    }
+
+    public void RecordFailure(string ip, string email)
+    {
+        Increment(AccountKey(ip, email));
+        Increment(IpKey(ip));
+    }
+
+    public void Reset(string ip, string email) => _cache.Remove(AccountKey(ip, email));
+
+    private TimeSpan Remaining(string key, int max)
+    {
+        if (!_cache.TryGetValue(key, out Entry? entry) || entry == null) return TimeSpan.Zero;
         lock (entry)
         {
-            if (entry.Failures < MaxFailures) return false;
-            retryAfter = entry.ResetAt - DateTimeOffset.UtcNow;
-            return retryAfter > TimeSpan.Zero;
+            if (entry.Failures < max) return TimeSpan.Zero;
+            var left = entry.ResetAt - DateTimeOffset.UtcNow;
+            return left > TimeSpan.Zero ? left : TimeSpan.Zero;
         }
     }
 
-    public void RecordFailure(string ip)
+    private void Increment(string key)
     {
-        var entry = _cache.GetOrCreate(Key(ip), e =>
+        var entry = _cache.GetOrCreate(key, e =>
         {
             var resetAt = DateTimeOffset.UtcNow.Add(Window);
             e.AbsoluteExpiration = resetAt;
@@ -43,6 +65,4 @@ public class LoginAttemptLimiter : ILoginAttemptLimiter
         })!;
         lock (entry) entry.Failures++;
     }
-
-    public void Reset(string ip) => _cache.Remove(Key(ip));
 }

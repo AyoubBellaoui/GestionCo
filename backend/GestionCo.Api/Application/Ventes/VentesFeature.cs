@@ -101,6 +101,8 @@ public class CreateVenteValidator : AbstractValidator<CreateVenteCommand>
             l.RuleFor(x => x.ProduitId).GreaterThan(0);
             l.RuleFor(x => x.Quantite).GreaterThan(0);
             l.RuleFor(x => x.PrixUnitaire).GreaterThanOrEqualTo(0);
+            l.RuleFor(x => x.Remise).InclusiveBetween(0, 100).WithMessage("La remise doit être comprise entre 0 et 100 %");
+            l.RuleFor(x => x.TVA).InclusiveBetween(0, 30).WithMessage("La TVA doit être comprise entre 0 et 30 %");
         });
     }
 }
@@ -116,6 +118,8 @@ public class UpdateVenteValidator : AbstractValidator<UpdateVenteCommand>
             l.RuleFor(x => x.ProduitId).GreaterThan(0);
             l.RuleFor(x => x.Quantite).GreaterThan(0);
             l.RuleFor(x => x.PrixUnitaire).GreaterThanOrEqualTo(0);
+            l.RuleFor(x => x.Remise).InclusiveBetween(0, 100).WithMessage("La remise doit être comprise entre 0 et 100 %");
+            l.RuleFor(x => x.TVA).InclusiveBetween(0, 30).WithMessage("La TVA doit être comprise entre 0 et 30 %");
         });
     }
 }

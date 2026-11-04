@@ -100,6 +100,7 @@ public class CreateAchatValidator : AbstractValidator<CreateAchatCommand>
             l.RuleFor(x => x.ProduitId).GreaterThan(0);
             l.RuleFor(x => x.Quantite).GreaterThan(0);
             l.RuleFor(x => x.PrixUnitaire).GreaterThanOrEqualTo(0);
+            l.RuleFor(x => x.Remise).InclusiveBetween(0, 100).WithMessage("La remise doit être comprise entre 0 et 100 %");
         });
     }
 }
@@ -115,6 +116,7 @@ public class UpdateAchatValidator : AbstractValidator<UpdateAchatCommand>
             l.RuleFor(x => x.ProduitId).GreaterThan(0);
             l.RuleFor(x => x.Quantite).GreaterThan(0);
             l.RuleFor(x => x.PrixUnitaire).GreaterThanOrEqualTo(0);
+            l.RuleFor(x => x.Remise).InclusiveBetween(0, 100).WithMessage("La remise doit être comprise entre 0 et 100 %");
         });
     }
 }

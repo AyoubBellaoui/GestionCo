@@ -37,7 +37,32 @@ public class PdfService : IPdfService
         Swift         = _config["EntrepriseInfo:Swift"]         ?? "",
     };
 
-    public async Task<byte[]> GenerateInvoicePdfAsync(int factureId, EntrepriseInfoDto? info = null, CancellationToken ct = default)
+    // Source de vérité : les paramètres entreprise saisis par l'administrateur (Paramètres → Entreprise).
+    // appsettings n'est utilisé que si la ligne n'existe pas encore.
+    private async Task<EntrepriseInfoDto> LoadEntrepriseAsync(CancellationToken ct)
+    {
+        var pe = await _db.ParametresEntreprise.AsNoTracking().OrderBy(p => p.Id).FirstOrDefaultAsync(ct);
+        if (pe == null) return InfoFromConfig();
+        return new EntrepriseInfoDto
+        {
+            RaisonSociale = pe.RaisonSociale,
+            Adresse       = pe.Adresse,
+            Telephone     = pe.Telephone,
+            Email         = pe.Email,
+            Ice           = pe.Ice,
+            Rc            = pe.Rc,
+            If            = pe.If,
+            Patente       = pe.Patente,
+            Cnss          = pe.Cnss,
+            Capital       = pe.Capital,
+            Rib           = pe.Rib,
+            Banque        = pe.Banque,
+            Swift         = pe.Swift,
+            Logo          = pe.Logo,
+        };
+    }
+
+    public async Task<byte[]> GenerateInvoicePdfAsync(int factureId, CancellationToken ct = default)
     {
         var facture = await _db.Factures
             .Include(f => f.Vente).ThenInclude(v => v.Client)
@@ -45,7 +70,7 @@ public class PdfService : IPdfService
             .FirstOrDefaultAsync(f => f.Id == factureId, ct)
             ?? throw new InvalidOperationException($"Facture {factureId} non trouvée");
 
-        var e = info ?? InfoFromConfig();
+        var e = await LoadEntrepriseAsync(ct);
         var vente = facture.Vente;
         var client = vente.Client;
 
@@ -365,7 +390,7 @@ public class PdfService : IPdfService
     // ═══════════════════════════════════════════════════════
     // DEVIS PDF
     // ═══════════════════════════════════════════════════════
-    public async Task<byte[]> GenerateDevisPdfAsync(int devisId, EntrepriseInfoDto? info = null, CancellationToken ct = default)
+    public async Task<byte[]> GenerateDevisPdfAsync(int devisId, CancellationToken ct = default)
     {
         var devis = await _db.Devis
             .Include(d => d.Client)
@@ -373,7 +398,7 @@ public class PdfService : IPdfService
             .FirstOrDefaultAsync(d => d.Id == devisId, ct)
             ?? throw new InvalidOperationException($"Devis {devisId} non trouvé");
 
-        var e = info ?? InfoFromConfig();
+        var e = await LoadEntrepriseAsync(ct);
         var client = devis.Client;
 
         const string primary = "#4F46E5";

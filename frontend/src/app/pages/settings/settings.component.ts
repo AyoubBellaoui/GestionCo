@@ -111,24 +111,10 @@ export class SettingsComponent implements OnInit {
 
   async loadEntrepriseSettings(): Promise<void> {
     try {
-      const data = await this.api.getEntrepriseSettings();
-      this.settings.setDraftEntreprise({
-        raisonSociale: data.raisonSociale ?? this.settings.settings.entreprise.raisonSociale,
-        adresse: data.adresse ?? this.settings.settings.entreprise.adresse,
-        telephone: data.telephone ?? this.settings.settings.entreprise.telephone,
-        email: data.email ?? this.settings.settings.entreprise.email,
-        ice: data.ice ?? this.settings.settings.entreprise.ice,
-        rc: data.rc ?? this.settings.settings.entreprise.rc,
-        if: data.if ?? this.settings.settings.entreprise.if,
-        patente: data.patente ?? this.settings.settings.entreprise.patente,
-        cnss: data.cnss ?? this.settings.settings.entreprise.cnss,
-        capital: data.capital ?? this.settings.settings.entreprise.capital,
-        rib: data.rib ?? this.settings.settings.entreprise.rib,
-        banque: data.banque ?? this.settings.settings.entreprise.banque,
-        swift: data.swift ?? this.settings.settings.entreprise.swift,
-        logo: data.logo ?? this.settings.settings.entreprise.logo,
-      });
-    } catch { /* use local defaults if backend unreachable */ }
+      // Le formulaire affiche exactement ce qui est enregistré en base (c'est ce qui figure
+      // sur les factures et devis) : un champ vide reste vide au lieu d'afficher une valeur locale.
+      await this.settings.refreshEntrepriseFromServer(() => this.api.getEntrepriseSettings());
+    } catch { /* garde la dernière copie locale si le serveur est injoignable */ }
   }
 
   setIce(value: string): void {

@@ -31,9 +31,9 @@ public interface IPasswordHasher
 // RG-S2 : limitation des mots de passe erronés (les connexions réussies ne sont pas limitées)
 public interface ILoginAttemptLimiter
 {
-    bool IsBlocked(string ip, out TimeSpan retryAfter);
-    void RecordFailure(string ip);
-    void Reset(string ip);
+    bool IsBlocked(string ip, string email, out TimeSpan retryAfter);
+    void RecordFailure(string ip, string email);
+    void Reset(string ip, string email);
 }
 
 public interface IReferenceGenerator
@@ -97,16 +97,17 @@ public class EntrepriseInfoDto
 
 public interface IPdfService
 {
-    Task<byte[]> GenerateInvoicePdfAsync(int factureId, EntrepriseInfoDto? info = null, CancellationToken ct = default);
-    Task<byte[]> GenerateDevisPdfAsync(int devisId, EntrepriseInfoDto? info = null, CancellationToken ct = default);
+    // Les coordonnées de l'émetteur viennent toujours de parametres_entreprise (jamais du client)
+    Task<byte[]> GenerateInvoicePdfAsync(int factureId, CancellationToken ct = default);
+    Task<byte[]> GenerateDevisPdfAsync(int devisId, CancellationToken ct = default);
     byte[] GeneratePLReportPdf(GestionCo.Api.Application.Reports.PLReportDto report, string entreprise);
     byte[] GenerateTVAReportPdf(GestionCo.Api.Application.Reports.TVAReportDto report, string entreprise);
 }
 
 public interface IEmailService
 {
-    Task SendDevisAsync(int devisId, string toEmail, string? message = null, EntrepriseInfoDto? info = null, CancellationToken ct = default);
-    Task SendFactureAsync(int factureId, string toEmail, string? message = null, EntrepriseInfoDto? info = null, CancellationToken ct = default);
+    Task SendDevisAsync(int devisId, string toEmail, string? message = null, CancellationToken ct = default);
+    Task SendFactureAsync(int factureId, string toEmail, string? message = null, CancellationToken ct = default);
 }
 
 public class ReapproResultDto

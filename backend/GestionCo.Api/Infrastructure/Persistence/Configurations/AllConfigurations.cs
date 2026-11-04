@@ -67,6 +67,10 @@ public class ProduitConfiguration : IEntityTypeConfiguration<Produit>
         b.Property(x => x.PrixHT).HasColumnType("decimal(18,2)");
         b.Property(x => x.PrixTTC).HasColumnType("decimal(18,2)");
         b.Property(x => x.TVA).HasColumnType("decimal(5,2)");
+        // Types explicites (identiques aux colonnes existantes) : supprime l'avertissement EF 30000
+        b.Property(x => x.PrixVenteHT).HasColumnType("decimal(18,2)");
+        b.Property(x => x.PrixVenteTTC).HasColumnType("decimal(18,2)");
+        b.Property(x => x.TVAVente).HasColumnType("decimal(18,2)");
         b.HasIndex(x => x.Reference).IsUnique();
         b.HasIndex(x => x.CodeBarre);
 
@@ -90,6 +94,7 @@ public class AchatConfiguration : IEntityTypeConfiguration<Achat>
         b.HasKey(x => x.Id);
         b.Property(x => x.Reference).HasMaxLength(30).IsRequired();
         b.Property(x => x.MontantTotal).HasColumnType("decimal(18,2)");
+        b.Property(x => x.MontantPaye).HasColumnType("decimal(18,2)");
         b.Property(x => x.Notes).HasMaxLength(1000);
         b.HasIndex(x => x.Reference).IsUnique();
 
@@ -385,6 +390,13 @@ public class ParametresFacturationConfiguration : IEntityTypeConfiguration<Param
     }
 }
 
+public class PaiementAchatConfiguration : IEntityTypeConfiguration<PaiementAchat>
+{
+    // Table "PaiementsAchat" (nom par défaut du DbSet) : seule la précision est précisée ici
+    public void Configure(EntityTypeBuilder<PaiementAchat> b)
+        => b.Property(x => x.Montant).HasColumnType("decimal(18,2)");
+}
+
 public class ParametresEntrepriseConfiguration : IEntityTypeConfiguration<ParametresEntreprise>
 {
     public void Configure(EntityTypeBuilder<ParametresEntreprise> b)
@@ -404,7 +416,7 @@ public class ParametresEntrepriseConfiguration : IEntityTypeConfiguration<Parame
         b.Property(x => x.Rib).HasMaxLength(100);
         b.Property(x => x.Banque).HasMaxLength(200);
         b.Property(x => x.Swift).HasMaxLength(20);
-        b.Property(x => x.Logo).HasMaxLength(2000);
+        b.Property(x => x.Logo).HasColumnType("nvarchar(max)");
     }
 }
 

@@ -272,7 +272,7 @@ export class FacturesComponent implements OnInit {
 
   async openInvoice(id: number): Promise<void> {
     try {
-      const blob = await this.api.factureDownloadPdf(id, this.settings.settings.entreprise as any);
+      const blob = await this.api.factureDownloadPdf(id);
       const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
       window.open(url, '_blank');
       setTimeout(() => URL.revokeObjectURL(url), 60000);
@@ -281,7 +281,7 @@ export class FacturesComponent implements OnInit {
 
   async downloadPdf(id: number, ref: string): Promise<void> {
     try {
-      const blob = await this.api.factureDownloadPdf(id, this.settings.settings.entreprise as any);
+      const blob = await this.api.factureDownloadPdf(id);
       const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
       const a = document.createElement('a');
       a.href = url; a.download = `Facture-${ref}.pdf`; a.click();
@@ -303,7 +303,7 @@ export class FacturesComponent implements OnInit {
     }
     this.emailSending = true;
     try {
-      await this.api.factureEmail(this.emailTarget.id, this.emailTo.trim(), this.emailMessage.trim() || undefined, this.settings.settings.entreprise as any);
+      await this.api.factureEmail(this.emailTarget.id, this.emailTo.trim(), this.emailMessage.trim() || undefined);
       this.emailModalOpen = false;
       this.toast.notify(`Facture envoyée à ${this.emailTo}`, 'success');
       await this.load();

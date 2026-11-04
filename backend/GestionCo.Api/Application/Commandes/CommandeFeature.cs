@@ -131,12 +131,29 @@ public class CreateCommandeValidator : AbstractValidator<CreateCommandeCommand>
     {
         RuleFor(x => x.Dto.ClientId).GreaterThan(0).WithMessage("Client requis");
         RuleFor(x => x.Dto.Lignes).NotEmpty().WithMessage("Au moins une ligne requise");
-        RuleForEach(x => x.Dto.Lignes).ChildRules(l =>
-        {
-            l.RuleFor(x => x.ProduitId).GreaterThan(0);
-            l.RuleFor(x => x.Quantite).GreaterThan(0);
-            l.RuleFor(x => x.PrixUnitaire).GreaterThanOrEqualTo(0);
-        });
+        RuleForEach(x => x.Dto.Lignes).SetValidator(new LigneCommandeValidator());
+    }
+}
+
+public class UpdateCommandeValidator : AbstractValidator<UpdateCommandeCommand>
+{
+    public UpdateCommandeValidator()
+    {
+        RuleFor(x => x.Dto.ClientId).GreaterThan(0).WithMessage("Client requis");
+        RuleFor(x => x.Dto.Lignes).NotEmpty().WithMessage("Au moins une ligne requise");
+        RuleForEach(x => x.Dto.Lignes).SetValidator(new LigneCommandeValidator());
+    }
+}
+
+public class LigneCommandeValidator : AbstractValidator<CreateLigneCommandeDto>
+{
+    public LigneCommandeValidator()
+    {
+        RuleFor(x => x.ProduitId).GreaterThan(0);
+        RuleFor(x => x.Quantite).GreaterThan(0);
+        RuleFor(x => x.PrixUnitaire).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.Remise).InclusiveBetween(0, 100).WithMessage("La remise doit être comprise entre 0 et 100 %");
+        RuleFor(x => x.Tva).InclusiveBetween(0, 30).WithMessage("La TVA doit être comprise entre 0 et 30 %");
     }
 }
 

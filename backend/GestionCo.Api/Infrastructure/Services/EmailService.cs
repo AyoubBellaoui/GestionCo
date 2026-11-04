@@ -27,7 +27,7 @@ public class EmailService : IEmailService
         return (ps.Host, ps.Port, ps.EnableSsl, ps.Username, ps.Password, ps.FromName, ps.FromAddress);
     }
 
-    public async Task SendDevisAsync(int devisId, string toEmail, string? message = null, EntrepriseInfoDto? info = null, CancellationToken ct = default)
+    public async Task SendDevisAsync(int devisId, string toEmail, string? message = null, CancellationToken ct = default)
     {
         var devis = await _db.Devis
             .Include(d => d.Client)
@@ -36,7 +36,7 @@ public class EmailService : IEmailService
 
         var (host, port, enableSsl, username, password, fromName, fromAddr) = await LoadSmtpConfig(ct);
 
-        var pdfBytes = await _pdf.GenerateDevisPdfAsync(devisId, info, ct);
+        var pdfBytes = await _pdf.GenerateDevisPdfAsync(devisId, ct);
 
         var bodyText = $"""
             Bonjour {devis.Client.NomClient},
@@ -62,7 +62,7 @@ public class EmailService : IEmailService
         await Send(host, port, enableSsl, username, password, mimeMessage, ct);
     }
 
-    public async Task SendFactureAsync(int factureId, string toEmail, string? message = null, EntrepriseInfoDto? info = null, CancellationToken ct = default)
+    public async Task SendFactureAsync(int factureId, string toEmail, string? message = null, CancellationToken ct = default)
     {
         var facture = await _db.Factures
             .Include(f => f.Vente).ThenInclude(v => v.Client)
@@ -71,7 +71,7 @@ public class EmailService : IEmailService
 
         var (host, port, enableSsl, username, password, fromName, fromAddr) = await LoadSmtpConfig(ct);
 
-        var pdfBytes = await _pdf.GenerateInvoicePdfAsync(factureId, info, ct);
+        var pdfBytes = await _pdf.GenerateInvoicePdfAsync(factureId, ct);
         var client   = facture.Vente.Client;
         var reste    = facture.Vente.MontantTotal - facture.Vente.MontantPaye;
 

@@ -26,7 +26,7 @@ I built it as my final-year internship project (PFE, 2026) for the needs of a Mo
 | | |
 |---|---|
 | **123** REST endpoints across 21 controllers | **25** domain entities |
-| **69** automated API acceptance scenarios | **26** lazy-loaded Angular screens |
+| **76** automated API acceptance scenarios | **26** lazy-loaded Angular screens |
 | **2** roles enforced on both API and UI | **2** scheduled background jobs |
 
 ## Features
@@ -88,7 +88,8 @@ flowchart LR
 - Short-lived JWT access tokens (15 min, no clock skew) and **rotating refresh tokens** (7 days). A refresh token that has already been used is rejected.
 - Passwords hashed with **BCrypt**.
 - Role-based authorization policies (`AdminOnly`, `AdminOrManager`) on every controller.
-- **Brute-force protection**: after 5 failed logins from the same IP within 15 minutes, the API answers HTTP 429.
+- **Brute-force protection**: after 5 failed logins on the same account from the same IP within 15 minutes, that account is blocked for that IP (HTTP 429) without locking out colleagues on the same network. 20 failures from one IP across all accounts block the IP, to stop password spraying.
+- **Issuer data on invoices and quotes is server-side only**: the company name, legal identifiers, bank details and logo printed on PDFs always come from the admin's company settings, never from the request.
 - The API refuses to start in production with a weak or default JWT signing key. HTTPS and HSTS are enforced outside development.
 
 ### Frontend (Angular 18)
@@ -193,7 +194,7 @@ The repository includes an end-to-end acceptance suite that drives the real API 
 node tests/recette-api.mjs http://localhost:5000 report.json
 ```
 
-The 69 scenarios cover authentication, role permissions, catalogue, quotes, orders, sales, stock, invoicing, payments, expenses, reports, notifications, audit log and login rate limiting. Each case prints the expected and actual result. The JSON report adds response-time statistics (mean, median, p95, max), and the script exits with a non-zero code on any failure, so it can gate a CI pipeline.
+The 76 scenarios cover authentication, role permissions, catalogue, quotes, orders, sales, stock, invoicing, company settings, payments, expenses, reports, notifications, audit log and login rate limiting. Each case prints the expected and actual result. The JSON report adds response-time statistics (mean, median, p95, max), and the script exits with a non-zero code on any failure, so it can gate a CI pipeline.
 
 ## Roles and permissions
 
