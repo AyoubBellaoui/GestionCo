@@ -187,8 +187,7 @@ input, select, textarea { font-family: inherit; }
 .logo-text { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; color: var(--text); }
 .logo-text span { color: var(--primary); }
 
-.sidebar-nav { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 0 12px; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
-.sidebar-nav::-webkit-scrollbar { display: none; }
+.sidebar-nav { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 0 12px; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 
 .nav-item { display: flex; align-items: center; gap: 11px; padding: 8px 13px; font-size: 13.5px; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.15s; border-radius: 8px; }
 .nav-item:hover { background: var(--surface2); color: var(--text); }
@@ -866,7 +865,29 @@ input, select, textarea { font-family: inherit; }
 @keyframes slideIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
 
 /* ============ RESPONSIVE ============ */
-@media (max-width: 1280px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 1100px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+
+/* Small laptops (13–14" screens, usually with Windows scaling at 125–150%):
+   narrower sidebar and tighter page spacing so the content keeps its room. */
+@media (max-width: 1440px) and (min-width: 769px) {
+  .sidebar { width: 216px; }
+  .sidebar-logo { padding: 0 16px 12px; }
+  .sidebar-nav { padding: 0 10px; }
+  .nav-item { padding: 7px 11px; gap: 10px; font-size: 13px; }
+  .topbar { padding: 12px 20px; }
+  .topbar-left h1 { font-size: 18px; }
+  .content, .form-page-content { padding: 16px 20px; }
+}
+
+/* Short screens: compact the sidebar vertically so every menu item stays visible. */
+@media (max-height: 760px) and (min-width: 769px) {
+  .sidebar { padding: 10px 0 8px; }
+  .sidebar-logo { padding-bottom: 10px; margin-bottom: 6px; }
+  .sidebar-nav { gap: 1px; }
+  .nav-item { padding-top: 4px; padding-bottom: 4px; }
+  .sidebar-divider { margin: 2px; }
+  .sidebar-user { margin-top: 4px; padding-top: 8px; }
+}
 @media (max-width: 768px) {
   .sidebar { display: none; }
   .content { padding: 16px; }
@@ -2321,7 +2342,7 @@ kbd {
 .db-no-data { text-align: center; padding: 24px 0; color: var(--text-muted); font-size: 12.5px; }
 
 /* ── Responsive ── */
-@media (max-width: 1280px) {
+@media (max-width: 1100px) {
   .db-charts-row { grid-template-columns: 1fr; }
   .db-bottom-row { grid-template-columns: 1fr; }
   .db-side-col { flex-direction: row; }
