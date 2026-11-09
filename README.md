@@ -13,6 +13,8 @@ Quotes · Orders · Sales · Invoicing · Purchasing · Inventory · Expenses ·
 ![SQL Server](https://img.shields.io/badge/SQL_Server-EF_Core_9-CC2927?logo=microsoftsqlserver&logoColor=white)
 ![JWT](https://img.shields.io/badge/Auth-JWT-000000?logo=jsonwebtokens&logoColor=white)
 
+<img width="1920" height="897" alt="Screenshot 2026-11-09 at 11-45-20 GestionCo" src="https://github.com/user-attachments/assets/0903ab33-1403-4ce9-95cd-04637e0be508" />
+
 </div>
 
 ---
